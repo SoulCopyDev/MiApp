@@ -9,9 +9,10 @@ import { MaterialIcons } from '@expo/vector-icons';
 import useCustomFonts from './src/hooks/useCustomFonts';
 import HomeScreen from './src/screens/HomeScreen';
 import MapScreen from './src/screens/MapScreen';
+import WorldScreen from './src/screens/WorldScreen';
 import BadgesScreen from './src/screens/BadgesScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
-import LevelScreen from './src/levels/LevelScreen'; 
+import LevelScreen from './src/levels/LevelScreen';
 import { colors, typography } from './src/theme';
 import { RootStackParamList, MainTabParamList } from './src/types/navigation';
 
@@ -79,10 +80,11 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="MainTabs" component={MainTabs} />
-        <Stack.Screen name="GameLevel" component={LevelScreen} />
-      </Stack.Navigator>
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="MainTabs" component={MainTabs} />
+          <Stack.Screen name="World" component={WorldScreen} />
+          <Stack.Screen name="GameLevel" component={LevelScreen} />
+        </Stack.Navigator>
       </NavigationContainer>
     </SafeAreaProvider>
   );

@@ -7,10 +7,12 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
+  BackHandler,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useGameStore } from '../store/gameStore';
-import { colors, typography } from '../theme';
+import { useNavigation } from '@react-navigation/native';
+import { useGameStore } from '../../store/gameStore';
+import { colors, typography } from '../../theme';
 
 // ---------- Tipos y constantes ----------
 type DragItem = { text: string; correct: string };
@@ -149,7 +151,16 @@ const pickN = <T,>(arr: T[], n: number): T[] => {
   return shuffled.slice(0, n);
 };
 
-export default function GameLevel1({ navigation }: any) {
+interface LevelProps {
+  navigation?: any;
+  setAllowBack?: (allow: boolean) => void;
+}
+
+export default function GameLevel1({ navigation: propsNavigation, setAllowBack }: LevelProps) {
+  // Si no nos pasan navigation, usamos el hook
+  const navigationFromHook = useNavigation();
+  const navigation = propsNavigation || navigationFromHook;
+
   const [step, setStep] = useState(0);
   const [xp, setXp] = useState(0);
   const completeLevel = useGameStore((state) => state.completeLevel);
@@ -189,6 +200,34 @@ export default function GameLevel1({ navigation }: any) {
 
   const [exampleExpanded, setExampleExpanded] = useState<number | null>(null);
 
+  const isExamMode = step >= 4 && step <= 11;
+
+  // Notificar al padre si se puede hacer retroceso o no (para control global)
+  useEffect(() => {
+    setAllowBack?.(!isExamMode);
+  }, [isExamMode, setAllowBack]);
+
+  // Manejo del botón físico de retroceso (Android)
+  useEffect(() => {
+    const onBackPress = () => {
+      if (isExamMode) {
+        Alert.alert(
+          'Examen en curso',
+          'No puedes regresar mientras realizas el examen. Si sales, perderás el progreso no guardado.',
+          [
+            { text: 'Cancelar', style: 'cancel' },
+            { text: 'Salir', style: 'destructive', onPress: () => navigation.goBack() }
+          ]
+        );
+        return true;
+      }
+      return false;
+    };
+
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => backHandler.remove();
+  }, [isExamMode, navigation]);
+
   // Inicializar rightOrder y sortOrder al entrar en sus pasos
   useEffect(() => {
     if (step === 5) {
@@ -216,10 +255,21 @@ export default function GameLevel1({ navigation }: any) {
   };
 
   const handleClose = () => {
-    Alert.alert('Salir', '¿Seguro que quieres salir del juego? Perderás el progreso no guardado.', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Salir', onPress: () => navigation.goBack() },
-    ]);
+    if (isExamMode) {
+      Alert.alert(
+        'Examen en curso',
+        'Estás en medio del examen. Si sales, perderás todo el progreso de este nivel. ¿Seguro que quieres salir?',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Salir', style: 'destructive', onPress: () => navigation.goBack() },
+        ]
+      );
+    } else {
+      Alert.alert('Salir', '¿Seguro que quieres salir del juego? Perderás el progreso no guardado.', [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Salir', onPress: () => navigation.goBack() },
+      ]);
+    }
   };
 
   const handleFinish = () => {
@@ -227,7 +277,7 @@ export default function GameLevel1({ navigation }: any) {
     if (xp >= 80) stars = 3;
     else if (xp >= 50) stars = 2;
     else if (xp >= 20) stars = 1;
-    completeLevel(1, stars, xp); // Nivel 1
+    completeLevel(1, 1, stars, xp);
     navigation.goBack();
   };
 
@@ -761,7 +811,7 @@ export default function GameLevel1({ navigation }: any) {
   );
 }
 
-// Estilos (adaptados del original + nuevos)
+// Estilos
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   progressBar: { flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: colors.border },

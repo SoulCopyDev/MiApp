@@ -3,7 +3,8 @@ import type { StackScreenProps } from '@react-navigation/stack';
 
 export type RootStackParamList = {
   MainTabs: undefined;
-  GameLevel: { levelId: number };
+  World: { worldId: number };
+  GameLevel: { worldId: number; levelId: number };
 };
 
 export type MainTabParamList = {
@@ -17,4 +18,5 @@ export type HomeScreenProps = BottomTabScreenProps<MainTabParamList, 'Inicio'>;
 export type MapScreenProps = BottomTabScreenProps<MainTabParamList, 'Mapa'>;
 export type BadgesScreenProps = BottomTabScreenProps<MainTabParamList, 'Trofeos'>;
 export type SettingsScreenProps = BottomTabScreenProps<MainTabParamList, 'Configuración'>;
+export type WorldScreenProps = StackScreenProps<RootStackParamList, 'World'>;
 export type GameLevelScreenProps = StackScreenProps<RootStackParamList, 'GameLevel'>;

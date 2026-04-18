@@ -13,6 +13,14 @@ export interface LevelProgress {
   stars: number;
 }
 
+export interface World {
+  id: number;
+  name: string;
+  icon: string;
+  description: string;
+  levels: LevelProgress[];
+}
+
 export interface Badge {
   id: number;
   name: string;
@@ -30,60 +38,85 @@ export interface UserProfile {
 
 export interface GameState {
   profile: UserProfile;
-  level: number;
+  playerLevel: number;
   currentXP: number;
   maxXP: number;
   streak: number;
   totalStars: number;
-  levels: LevelProgress[];
+  worlds: World[];
   badges: Badge[];
   devMode: boolean;
 
   setProfile: (profile: Partial<UserProfile>) => void;
-  completeLevel: (levelId: number, starsEarned: number, xpEarned: number) => void;
+  completeLevel: (worldId: number, levelId: number, starsEarned: number, xpEarned: number) => void;
   unlockBadge: (badgeId: number) => void;
   addXP: (amount: number) => void;
   resetProgress: () => void;
   calculateMaxXP: (level: number) => number;
   setDevMode: (enabled: boolean) => void;
-  updateLevelName: (levelId: number, newName: string) => void; // ✅ NUEVA
+  updateLevelName: (worldId: number, levelId: number, newName: string) => void;
+  updateWorldName: (worldId: number, newName: string) => void;
 }
 
 // ---------- Datos iniciales ----------
-const INITIAL_LEVELS: LevelProgress[] = [
-  { id: 1, name: 'Logic Basics', icon: 'shield', status: 'completed', stars: 3 },
-  { id: 2, name: 'AI Chatting', icon: 'chat', status: 'completed', stars: 2 },
-  { id: 3, name: 'Neural Networks', icon: 'psychology', status: 'current', stars: 0 },
-  { id: 4, name: 'Data Sorting', icon: 'storage', status: 'locked', stars: 0 },
-  { id: 5, name: 'Final Boss', icon: 'sports-esports', status: 'locked', stars: 0 },
-  { id: 6, name: 'Computer Vision', icon: 'image', status: 'locked', stars: 0 },
-  { id: 7, name: 'NLP Basics', icon: 'record-voice-over', status: 'locked', stars: 0 },
-  { id: 8, name: 'Ethics in AI', icon: 'gavel', status: 'locked', stars: 0 },
-  { id: 9, name: 'Robotics', icon: 'smart-toy', status: 'locked', stars: 0 },
-  { id: 10, name: 'Big Data', icon: 'analytics', status: 'locked', stars: 0 },
-  { id: 11, name: 'Cloud AI', icon: 'cloud', status: 'locked', stars: 0 },
-  { id: 12, name: 'Edge Computing', icon: 'devices', status: 'locked', stars: 0 },
-  { id: 13, name: 'AI Art', icon: 'palette', status: 'locked', stars: 0 },
-  { id: 14, name: 'Reinforcement Learning', icon: 'trending-up', status: 'locked', stars: 0 },
-  { id: 15, name: 'Master Challenge', icon: 'workspace-premium', status: 'locked', stars: 0 },
+const INITIAL_WORLDS: World[] = [
+  {
+    id: 1,
+    name: 'Fundamentos de IA',
+    icon: 'school',
+    description: 'Aprende los conceptos básicos de la Inteligencia Artificial',
+    levels: [
+      { id: 1, name: 'Robots vs. Humanos 🤖', icon: 'robot', status: 'completed', stars: 3 },
+      { id: 2, name: 'Machine Learning', icon: 'psychology', status: 'completed', stars: 2 },
+      { id: 3, name: 'Redes Neuronales', icon: 'account-tree', status: 'current', stars: 0 },
+      { id: 4, name: 'Procesamiento de Datos', icon: 'storage', status: 'locked', stars: 0 },
+      { id: 5, name: 'Ética en IA', icon: 'gavel', status: 'locked', stars: 0 },
+    ],
+  },
+  {
+    id: 2,
+    name: 'Aplicaciones Prácticas',
+    icon: 'rocket',
+    description: 'Descubre cómo se aplica la IA en el mundo real',
+    levels: [
+      { id: 1, name: 'Visión Computacional', icon: 'image', status: 'locked', stars: 0 },
+      { id: 2, name: 'Procesamiento de Texto', icon: 'record-voice-over', status: 'locked', stars: 0 },
+      { id: 3, name: 'Robótica', icon: 'smart-toy', status: 'locked', stars: 0 },
+      { id: 4, name: 'Big Data', icon: 'analytics', status: 'locked', stars: 0 },
+      { id: 5, name: 'IA en la Nube', icon: 'cloud', status: 'locked', stars: 0 },
+    ],
+  },
+  {
+    id: 3,
+    name: 'Especialización',
+    icon: 'workspace-premium',
+    description: 'Conviértete en un experto en IA',
+    levels: [
+      { id: 1, name: 'Edge Computing', icon: 'devices', status: 'locked', stars: 0 },
+      { id: 2, name: 'IA Generativa', icon: 'palette', status: 'locked', stars: 0 },
+      { id: 3, name: 'Aprendizaje Reforzado', icon: 'trending-up', status: 'locked', stars: 0 },
+      { id: 4, name: 'Sistemas Expertos', icon: 'psychology', status: 'locked', stars: 0 },
+      { id: 5, name: 'Proyecto Final', icon: 'workspace-premium', status: 'locked', stars: 0 },
+    ],
+  },
 ];
 
 const INITIAL_BADGES: Badge[] = [
-  { id: 1, name: 'Safe Surfer', icon: 'shield', unlocked: true, color: '#005ca8', bgColor: '#eef3ff' },
-  { id: 2, name: 'Chat Master', icon: 'forum', unlocked: true, color: '#8126cf', bgColor: '#f3e8ff' },
-  { id: 3, name: 'Robot Friend', icon: 'smart-toy', unlocked: true, color: '#16a34a', bgColor: '#dcfce7' },
-  { id: 4, name: 'Pattern Picker', icon: 'psychology', unlocked: false, color: '#747779', bgColor: '#e5e9eb' },
-  { id: 5, name: 'AI Detective', icon: 'manage-search', unlocked: false, color: '#747779', bgColor: '#e5e9eb' },
-  { id: 6, name: 'Computer Vision', icon: 'image', unlocked: false, color: '#747779', bgColor: '#e5e9eb' },
-  { id: 7, name: 'NLP Basics', icon: 'record-voice-over', unlocked: false, color: '#747779', bgColor: '#e5e9eb' },
-  { id: 8, name: 'Ethics in AI', icon: 'gavel', unlocked: false, color: '#747779', bgColor: '#e5e9eb' },
-  { id: 9, name: 'Robotics', icon: 'smart-toy', unlocked: false, color: '#747779', bgColor: '#e5e9eb' },
-  { id: 10, name: 'Big Data', icon: 'analytics', unlocked: false, color: '#747779', bgColor: '#e5e9eb' },
-  { id: 11, name: 'Cloud AI', icon: 'cloud', unlocked: false, color: '#747779', bgColor: '#e5e9eb' },
-  { id: 12, name: 'Edge Computing', icon: 'devices', unlocked: false, color: '#747779', bgColor: '#e5e9eb' },
-  { id: 13, name: 'AI Art', icon: 'palette', unlocked: false, color: '#747779', bgColor: '#e5e9eb' },
-  { id: 14, name: 'Reinforcement Learning', icon: 'trending-up', unlocked: false, color: '#747779', bgColor: '#e5e9eb' },
-  { id: 15, name: 'Master Challenge', icon: 'workspace-premium', unlocked: false, color: '#747779', bgColor: '#e5e9eb' },
+  { id: 1, name: 'Explorador IA', icon: 'shield', unlocked: true, color: '#005ca8', bgColor: '#eef3ff' },
+  { id: 2, name: 'Aprendiz de ML', icon: 'forum', unlocked: true, color: '#8126cf', bgColor: '#f3e8ff' },
+  { id: 3, name: 'Amigo Robot', icon: 'smart-toy', unlocked: true, color: '#16a34a', bgColor: '#dcfce7' },
+  { id: 4, name: 'Detective de Datos', icon: 'manage-search', unlocked: false, color: '#747779', bgColor: '#e5e9eb' },
+  { id: 5, name: 'Maestro de Redes', icon: 'account-tree', unlocked: false, color: '#747779', bgColor: '#e5e9eb' },
+  { id: 6, name: 'Visionario', icon: 'image', unlocked: false, color: '#747779', bgColor: '#e5e9eb' },
+  { id: 7, name: 'Lingüista Digital', icon: 'record-voice-over', unlocked: false, color: '#747779', bgColor: '#e5e9eb' },
+  { id: 8, name: 'Ético Digital', icon: 'gavel', unlocked: false, color: '#747779', bgColor: '#e5e9eb' },
+  { id: 9, name: 'Constructor de Robots', icon: 'smart-toy', unlocked: false, color: '#747779', bgColor: '#e5e9eb' },
+  { id: 10, name: 'Analista de Datos', icon: 'analytics', unlocked: false, color: '#747779', bgColor: '#e5e9eb' },
+  { id: 11, name: 'Cloud Master', icon: 'cloud', unlocked: false, color: '#747779', bgColor: '#e5e9eb' },
+  { id: 12, name: 'Edge Innovator', icon: 'devices', unlocked: false, color: '#747779', bgColor: '#e5e9eb' },
+  { id: 13, name: 'Artista IA', icon: 'palette', unlocked: false, color: '#747779', bgColor: '#e5e9eb' },
+  { id: 14, name: 'Estratega de RL', icon: 'trending-up', unlocked: false, color: '#747779', bgColor: '#e5e9eb' },
+  { id: 15, name: 'Campeón IA', icon: 'workspace-premium', unlocked: false, color: '#747779', bgColor: '#e5e9eb' },
 ];
 
 const DEFAULT_PROFILE: UserProfile = {
@@ -101,12 +134,12 @@ export const useGameStore = create<GameState>()(
   persist(
     (set, get) => ({
       profile: DEFAULT_PROFILE,
-      level: 3,
+      playerLevel: 3,
       currentXP: 750,
       maxXP: calculateMaxXP(3),
       streak: 5,
       totalStars: 5,
-      levels: INITIAL_LEVELS,
+      worlds: INITIAL_WORLDS,
       badges: INITIAL_BADGES,
       devMode: false,
 
@@ -114,12 +147,18 @@ export const useGameStore = create<GameState>()(
         profile: { ...state.profile, ...newProfile }
       })),
 
-      completeLevel: (levelId, starsEarned, xpEarned) => {
+      completeLevel: (worldId, levelId, starsEarned, xpEarned) => {
         const state = get();
-        const levelIndex = state.levels.findIndex(l => l.id === levelId);
+        const worldIndex = state.worlds.findIndex(w => w.id === worldId);
+        if (worldIndex === -1) return;
+        
+        const world = state.worlds[worldIndex];
+        const levelIndex = world.levels.findIndex(l => l.id === levelId);
         if (levelIndex === -1) return;
 
-        const updatedLevels = [...state.levels];
+        const updatedWorlds = [...state.worlds];
+        const updatedLevels = [...world.levels];
+        
         updatedLevels[levelIndex] = {
           ...updatedLevels[levelIndex],
           status: 'completed',
@@ -131,28 +170,34 @@ export const useGameStore = create<GameState>()(
           updatedLevels[nextLevelIndex].status = 'current';
         }
 
-        const newTotalStars = state.totalStars + starsEarned - (state.levels[levelIndex].stars || 0);
+        updatedWorlds[worldIndex] = { ...world, levels: updatedLevels };
+
+        const newTotalStars = updatedWorlds.reduce((sum, w) => 
+          sum + w.levels.reduce((s, l) => s + l.stars, 0), 0
+        );
+
         const newXP = state.currentXP + xpEarned;
-        let newLevel = state.level;
+        let newPlayerLevel = state.playerLevel;
         let newMaxXP = state.maxXP;
         let remainingXP = newXP;
 
         while (remainingXP >= newMaxXP) {
           remainingXP -= newMaxXP;
-          newLevel += 1;
-          newMaxXP = calculateMaxXP(newLevel);
+          newPlayerLevel += 1;
+          newMaxXP = calculateMaxXP(newPlayerLevel);
         }
 
         set({
-          levels: updatedLevels,
+          worlds: updatedWorlds,
           totalStars: newTotalStars,
           currentXP: remainingXP,
-          level: newLevel,
+          playerLevel: newPlayerLevel,
           maxXP: newMaxXP,
         });
 
-        if (starsEarned >= 3 && levelId === 3) get().unlockBadge(4);
-        if (state.totalStars >= 10) get().unlockBadge(5);
+        if (starsEarned >= 3 && worldId === 1 && levelId === 3) get().unlockBadge(4);
+        if (newTotalStars >= 10) get().unlockBadge(5);
+        if (worldId === 1 && levelId === 5) get().unlockBadge(6);
       },
 
       unlockBadge: (badgeId) => set((state) => ({
@@ -162,52 +207,72 @@ export const useGameStore = create<GameState>()(
       addXP: (amount) => {
         const state = get();
         let newXP = state.currentXP + amount;
-        let newLevel = state.level;
+        let newPlayerLevel = state.playerLevel;
         let newMaxXP = state.maxXP;
 
         while (newXP >= newMaxXP) {
           newXP -= newMaxXP;
-          newLevel += 1;
-          newMaxXP = calculateMaxXP(newLevel);
+          newPlayerLevel += 1;
+          newMaxXP = calculateMaxXP(newPlayerLevel);
         }
 
         set({
           currentXP: newXP,
-          level: newLevel,
+          playerLevel: newPlayerLevel,
           maxXP: newMaxXP,
         });
       },
 
-      resetProgress: () => set({
-        profile: DEFAULT_PROFILE,
-        level: 1,
-        currentXP: 0,
-        maxXP: calculateMaxXP(1),
-        streak: 0,
-        totalStars: 0,
-        levels: INITIAL_LEVELS.map(l => ({
-          ...l,
-          status: l.id === 1 ? 'current' : 'locked',
-          stars: 0,
-        })),
-        badges: INITIAL_BADGES.map(b => ({ ...b, unlocked: b.id === 1 })),
-        devMode: true,
-      }),
+      resetProgress: () => {
+        const resetWorlds: World[] = INITIAL_WORLDS.map((world, wIndex) => ({
+          ...world,
+          levels: world.levels.map((level, lIndex) => ({
+            ...level,
+            status: (wIndex === 0 && lIndex === 0) ? 'current' : 'locked' as LevelStatus,
+            stars: 0,
+          })),
+        }));
+        
+        set({
+          profile: DEFAULT_PROFILE,
+          playerLevel: 1,
+          currentXP: 0,
+          maxXP: calculateMaxXP(1),
+          streak: 0,
+          totalStars: 0,
+          worlds: resetWorlds,
+          badges: INITIAL_BADGES.map(b => ({ ...b, unlocked: b.id === 1 })),
+          devMode: true,
+        });
+      },
 
       calculateMaxXP,
 
       setDevMode: (enabled) => set({ devMode: enabled }),
 
-      // ✅ Nueva función para editar nombre del nivel
-      updateLevelName: (levelId, newName) =>
+      updateLevelName: (worldId, levelId, newName) =>
         set((state) => ({
-          levels: state.levels.map((level) =>
-            level.id === levelId ? { ...level, name: newName } : level
+          worlds: state.worlds.map(world =>
+            world.id === worldId
+              ? {
+                  ...world,
+                  levels: world.levels.map(level =>
+                    level.id === levelId ? { ...level, name: newName } : level
+                  ),
+                }
+              : world
+          ),
+        })),
+
+      updateWorldName: (worldId, newName) =>
+        set((state) => ({
+          worlds: state.worlds.map(world =>
+            world.id === worldId ? { ...world, name: newName } : world
           ),
         })),
     }),
     {
-      name: 'ai-explorer-storage',
+      name: 'ai-explorer-storage-v2',
       storage: createJSONStorage(() => AsyncStorage),
     }
   )
