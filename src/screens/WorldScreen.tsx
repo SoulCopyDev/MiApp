@@ -7,7 +7,6 @@ import { useGameStore } from '../store/gameStore';
 import { colors, typography } from '../theme';
 import { RootStackParamList } from '../types/navigation';
 
-
 type WorldScreenRouteProp = RouteProp<RootStackParamList, 'World'>;
 type WorldScreenNavigationProp = StackNavigationProp<RootStackParamList, 'World'>;
 
@@ -15,10 +14,11 @@ export default function WorldScreen() {
   const route = useRoute<WorldScreenRouteProp>();
   const navigation = useNavigation<WorldScreenNavigationProp>();
   const { worldId } = route.params;
-  
+
   const worlds = useGameStore((state) => state.worlds);
+  const devMode = useGameStore((state) => state.devMode); // 👈 Leemos el modo dev
   const updateLevelName = useGameStore((state) => state.updateLevelName);
-  
+
   const world = worlds.find(w => w.id === worldId);
 
   if (!world) {
@@ -32,11 +32,11 @@ export default function WorldScreen() {
   const renderStars = (stars: number) => (
     <View style={styles.starsContainer}>
       {[0, 1, 2].map(i => (
-        <MaterialIcons 
-          key={i} 
-          name="star" 
-          size={14} 
-          color={i < stars ? colors.accent : colors.borderLight} 
+        <MaterialIcons
+          key={i}
+          name="star"
+          size={14}
+          color={i < stars ? colors.accent : colors.borderLight}
         />
       ))}
     </View>
@@ -65,11 +65,18 @@ export default function WorldScreen() {
     }
   };
 
+  // 👇 Función para determinar si un nivel es accesible (devMode anula bloqueos)
+  const isAccessible = (status: string) => {
+    if (devMode) return true; // En modo desarrollo, todo está desbloqueado
+    return status !== 'locked';
+  };
+
   const renderLevel = ({ item: level, index }: { item: typeof world.levels[0]; index: number }) => {
     const isEven = index % 2 === 0;
     const translateX = isEven ? 0 : 40;
-    const isCurrent = level.status === 'current';
+    const isCurrent = level.status === 'current' && !devMode; // En devMode no resaltamos "current" como obligatorio
     const nodeSize = isCurrent ? 96 : 80;
+    const accessible = isAccessible(level.status);
 
     return (
       <View style={[styles.levelWrapper, { transform: [{ translateX }], marginBottom: 40 }]}>
@@ -81,24 +88,33 @@ export default function WorldScreen() {
           style={[
             styles.levelNode,
             { width: nodeSize, height: nodeSize, borderRadius: nodeSize / 2 },
-            level.status === 'completed' && styles.levelCompleted,
-            level.status === 'current' && styles.levelCurrent,
-            level.status === 'locked' && styles.levelLocked,
+            level.status === 'completed' && !devMode && styles.levelCompleted,
+            level.status === 'current' && !devMode && styles.levelCurrent,
+            !accessible && styles.levelLocked,
+            // En devMode, estilo especial para niveles bloqueados (opcional)
+            devMode && level.status === 'locked' && styles.devUnlocked,
           ]}
-          activeOpacity={level.status === 'locked' ? 0.7 : 0.5}
+          activeOpacity={accessible ? 0.5 : 0.7}
           onPress={() => {
-            if (level.status === 'locked') {
+            if (!accessible) {
               Alert.alert('🔒 Bloqueado', 'Completa el nivel anterior para desbloquear');
             } else {
               navigation.navigate('GameLevel', { worldId: world.id, levelId: level.id });
             }
           }}
         >
-          {level.status === 'locked' && <MaterialIcons name="lock" size={32} color={colors.textDisabled} />}
-          {level.status === 'completed' && <MaterialIcons name={level.icon as any} size={40} color={colors.surface} />}
-          {level.status === 'current' && <MaterialIcons name={level.icon as any} size={44} color={colors.primaryDark} />}
+          {!accessible ? (
+            <MaterialIcons name="lock" size={32} color={colors.textDisabled} />
+          ) : level.status === 'completed' && !devMode ? (
+            <MaterialIcons name={level.icon as any} size={40} color={colors.surface} />
+          ) : devMode && level.status === 'locked' ? (
+            <MaterialIcons name="lock-open" size={36} color={colors.accent} /> // Icono de desarrollador
+          ) : (
+            <MaterialIcons name={level.icon as any} size={44} color={colors.primaryDark} />
+          )}
         </TouchableOpacity>
 
+        {/* Solo mostramos la chapa "JUGAR" en el nivel actual (fuera de devMode) */}
         {isCurrent && (
           <View style={styles.playNowBadge}>
             <Text style={styles.playNowText}>JUGAR</Text>
@@ -108,7 +124,10 @@ export default function WorldScreen() {
         {level.status === 'completed' && renderStars(level.stars)}
 
         <View style={styles.levelNameContainer}>
-          <Text style={styles.levelName}>{level.name}</Text>
+          <Text style={styles.levelName}>
+            {level.name}
+            {devMode && level.status === 'locked' ? ' 🔓' : ''}
+          </Text>
           <TouchableOpacity onPress={() => handleEditLevelName(level)} style={styles.editButton}>
             <MaterialIcons name="edit" size={14} color={colors.textSecondary} />
           </TouchableOpacity>
@@ -129,6 +148,12 @@ export default function WorldScreen() {
           <MaterialIcons name={world.icon as any} size={64} color={colors.primary} />
           <Text style={styles.worldTitle}>{world.name}</Text>
           <Text style={styles.worldDescription}>{world.description}</Text>
+          {devMode && (
+            <View style={styles.devBanner}>
+              <MaterialIcons name="engineering" size={18} color={colors.surface} />
+              <Text style={styles.devBannerText}>Modo Desarrollo - Niveles desbloqueados</Text>
+            </View>
+          )}
         </View>
       }
     />
@@ -158,6 +183,12 @@ const styles = StyleSheet.create({
   levelCompleted: { backgroundColor: colors.success, borderColor: colors.success },
   levelCurrent: { backgroundColor: colors.primaryLight, borderColor: colors.primary, borderWidth: 4, shadowOpacity: 0.4 },
   levelLocked: { backgroundColor: colors.borderLight, opacity: 0.6, borderColor: colors.borderLight },
+  devUnlocked: {
+    backgroundColor: colors.surfaceVariant,
+    borderColor: colors.accent,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+  },
   starsContainer: { flexDirection: 'row', marginTop: 8, gap: 4 },
   levelNameContainer: { flexDirection: 'row', alignItems: 'center', marginTop: 8, gap: 6 },
   levelName: { ...typography.bold, fontSize: 14, color: colors.textSecondary, textAlign: 'center' },
@@ -173,4 +204,19 @@ const styles = StyleSheet.create({
   },
   connectorRight: { right: -70, transform: [{ rotate: '15deg' }] },
   connectorLeft: { left: -70, transform: [{ rotate: '-15deg' }] },
+  devBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.accent,
+    borderRadius: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    marginTop: 12,
+    gap: 8,
+  },
+  devBannerText: {
+    ...typography.bold,
+    fontSize: 13,
+    color: colors.surface,
+  },
 });

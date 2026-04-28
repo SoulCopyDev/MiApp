@@ -66,11 +66,12 @@ const INITIAL_WORLDS: World[] = [
     icon: 'school',
     description: 'Aprende los conceptos básicos de la Inteligencia Artificial',
     levels: [
-      { id: 1, name: 'Robots vs. Humanos 🤖', icon: 'robot', status: 'completed', stars: 3 },
+      { id: 1, name: 'Robots vs. Humanos 🤖', icon: 'smart-toy', status: 'completed', stars: 3 },
       { id: 2, name: 'Machine Learning', icon: 'psychology', status: 'completed', stars: 2 },
       { id: 3, name: 'Redes Neuronales', icon: 'account-tree', status: 'current', stars: 0 },
       { id: 4, name: 'Procesamiento de Datos', icon: 'storage', status: 'locked', stars: 0 },
       { id: 5, name: 'Ética en IA', icon: 'gavel', status: 'locked', stars: 0 },
+      { id: 6, name: 'Tu primera misión real', icon: 'image', status: 'locked', stars: 0 },
     ],
   },
   {
@@ -79,11 +80,13 @@ const INITIAL_WORLDS: World[] = [
     icon: 'rocket',
     description: 'Descubre cómo se aplica la IA en el mundo real',
     levels: [
-      { id: 1, name: 'Visión Computacional', icon: 'image', status: 'locked', stars: 0 },
+      { id: 1, name: 'Visión Computacional', icon: 'image', status: 'locked', stars: 3 },
       { id: 2, name: 'Procesamiento de Texto', icon: 'record-voice-over', status: 'locked', stars: 0 },
       { id: 3, name: 'Robótica', icon: 'smart-toy', status: 'locked', stars: 0 },
       { id: 4, name: 'Big Data', icon: 'analytics', status: 'locked', stars: 0 },
       { id: 5, name: 'IA en la Nube', icon: 'cloud', status: 'locked', stars: 0 },
+      { id: 6, name: 'IA en la Nube2', icon: 'cloud', status: 'locked', stars: 0 },
+      { id: 7, name: 'IA en la Nube3', icon: 'cloud', status: 'locked', stars: 0 },
     ],
   },
   {
@@ -155,7 +158,7 @@ export const useGameStore = create<GameState>()(
         const world = state.worlds[worldIndex];
         const levelIndex = world.levels.findIndex(l => l.id === levelId);
         if (levelIndex === -1) return;
-
+      
         const updatedWorlds = [...state.worlds];
         const updatedLevels = [...world.levels];
         
@@ -164,29 +167,46 @@ export const useGameStore = create<GameState>()(
           status: 'completed',
           stars: Math.max(updatedLevels[levelIndex].stars, starsEarned),
         };
-
+      
+        // Desbloquear el siguiente nivel en el mismo mundo
         const nextLevelIndex = levelIndex + 1;
         if (nextLevelIndex < updatedLevels.length && updatedLevels[nextLevelIndex].status === 'locked') {
           updatedLevels[nextLevelIndex].status = 'current';
         }
-
+      
+        // 🆕 Si acabamos de completar el último nivel del mundo, desbloquear el primer nivel del siguiente mundo
+        const isLastLevel = levelIndex === updatedLevels.length - 1;
+        if (isLastLevel) {
+          const nextWorldIndex = worldIndex + 1;
+          if (nextWorldIndex < updatedWorlds.length) {
+            const nextWorld = updatedWorlds[nextWorldIndex];
+            const firstLevel = nextWorld.levels[0];
+            if (firstLevel && firstLevel.status === 'locked') {
+              const updatedNextWorldLevels = [...nextWorld.levels];
+              updatedNextWorldLevels[0] = { ...firstLevel, status: 'current' };
+              updatedWorlds[nextWorldIndex] = { ...nextWorld, levels: updatedNextWorldLevels };
+            }
+          }
+        }
+      
         updatedWorlds[worldIndex] = { ...world, levels: updatedLevels };
-
+      
+        // ... el resto del cálculo de estrellas, XP e insignias queda igual
         const newTotalStars = updatedWorlds.reduce((sum, w) => 
           sum + w.levels.reduce((s, l) => s + l.stars, 0), 0
         );
-
+      
         const newXP = state.currentXP + xpEarned;
         let newPlayerLevel = state.playerLevel;
         let newMaxXP = state.maxXP;
         let remainingXP = newXP;
-
+      
         while (remainingXP >= newMaxXP) {
           remainingXP -= newMaxXP;
           newPlayerLevel += 1;
           newMaxXP = calculateMaxXP(newPlayerLevel);
         }
-
+      
         set({
           worlds: updatedWorlds,
           totalStars: newTotalStars,
@@ -194,7 +214,7 @@ export const useGameStore = create<GameState>()(
           playerLevel: newPlayerLevel,
           maxXP: newMaxXP,
         });
-
+      
         if (starsEarned >= 3 && worldId === 1 && levelId === 3) get().unlockBadge(4);
         if (newTotalStars >= 10) get().unlockBadge(5);
         if (worldId === 1 && levelId === 5) get().unlockBadge(6);
@@ -274,6 +294,41 @@ export const useGameStore = create<GameState>()(
     {
       name: 'ai-explorer-storage-v2',
       storage: createJSONStorage(() => AsyncStorage),
+      version: 8,
+      migrate: (persistedState: any, version: number) => {
+        if (persistedState?.worlds) {
+          // Añade cualquier nivel faltante comparando con INITIAL_WORLDS
+          INITIAL_WORLDS.forEach((templateWorld) => {
+            const world = persistedState.worlds.find((w: World) => w.id === templateWorld.id);
+            if (world) {
+              templateWorld.levels.forEach((templateLevel) => {
+                const exists = world.levels.some((l: any) => l.id === templateLevel.id);
+                if (!exists) {
+                  world.levels.push({
+                    id: templateLevel.id,
+                    name: templateLevel.name,
+                    icon: templateLevel.icon,
+                    status: 'locked',
+                    stars: 0,
+                  });
+                }
+              });
+            }
+          });
+
+          // Desbloqueo de primer nivel del mundo siguiente si el anterior está completo
+          for (let i = 0; i < persistedState.worlds.length - 1; i++) {
+            const currentWorld = persistedState.worlds[i];
+            const allCompleted = currentWorld.levels.every((l: any) => l.status === 'completed');
+            const nextWorld = persistedState.worlds[i + 1];
+            if (allCompleted && nextWorld && nextWorld.levels[0]?.status === 'locked') {
+              nextWorld.levels[0].status = 'current';
+            }
+          }
+        }
+
+        return persistedState as GameState;
+      },
     }
   )
 );

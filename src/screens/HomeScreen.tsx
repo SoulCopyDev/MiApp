@@ -17,7 +17,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../types/navigation';
 
 export default function HomeScreen({ navigation }: HomeScreenProps) {
-  const { profile, level, currentXP, maxXP, streak, totalStars } = useGameStore();
+  const { profile, playerLevel, currentXP, maxXP, streak, totalStars } = useGameStore();
 
   const porcentajeXP = maxXP > 0 ? (currentXP / maxXP) * 100 : 0;
   const stackNavigation = useNavigation<StackNavigationProp<RootStackParamList>>();
@@ -63,7 +63,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
             style={styles.robotImage}
           />
           <View style={styles.levelBadge}>
-            <Text style={styles.levelText}>LVL {level}</Text>
+            <Text style={styles.levelText}>LVL {playerLevel}</Text>
           </View>
         </View>
         <Text style={styles.userName}>{profile.name}</Text>
@@ -71,7 +71,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
           <View style={[styles.progressFill, { width: `${porcentajeXP}%` }]} />
         </View>
         <Text style={styles.xpText}>
-          {currentXP} / {maxXP} XP PARA NIVEL {level + 1}
+          {currentXP} / {maxXP} XP PARA NIVEL {playerLevel + 1}
         </Text>
       </View>
 

@@ -10,12 +10,15 @@ import World1Level2 from './World1/Level2';
 import World1Level3 from './World1/Level3';
 import World1Level4 from './World1/Level4';
 import World1Level5 from './World1/Level5';
+import World1Level6 from './World1/Level6';
 
 import World2Level1 from './World2/Level1';
 import World2Level2 from './World2/Level2';
 import World2Level3 from './World2/Level3';
 import World2Level4 from './World2/Level4';
 import World2Level5 from './World2/Level5';
+import World2Level6 from './World2/Level6';
+import World2Level7 from './World2/Level7';
 
 import World3Level1 from './World3/Level1';
 import World3Level2 from './World3/Level2';
@@ -38,6 +41,7 @@ const levelComponents: Record<number, Record<number, React.ComponentType<LevelCo
     3: World1Level3,
     4: World1Level4,
     5: World1Level5,
+    6: World1Level6,
   },
   2: {
     1: World2Level1,
@@ -45,6 +49,8 @@ const levelComponents: Record<number, Record<number, React.ComponentType<LevelCo
     3: World2Level3,
     4: World2Level4,
     5: World2Level5,
+    6: World2Level6,
+    7: World2Level7,
   },
   3: {
     1: World3Level1,
