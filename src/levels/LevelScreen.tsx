@@ -25,6 +25,8 @@ import World3Level2 from './World3/Level2';
 import World3Level3 from './World3/Level3';
 import World3Level4 from './World3/Level4';
 import World3Level5 from './World3/Level5';
+import World3Level6 from './World3/Level6';
+import World3Level7 from './World3/Level7';
 
 type LevelScreenRouteProp = RouteProp<RootStackParamList, 'GameLevel'>;
 
@@ -58,6 +60,8 @@ const levelComponents: Record<number, Record<number, React.ComponentType<LevelCo
     3: World3Level3,
     4: World3Level4,
     5: World3Level5,
+    6: World3Level6,
+    7: World3Level7,
   },
 };
 

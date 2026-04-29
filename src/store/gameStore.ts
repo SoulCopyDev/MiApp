@@ -100,6 +100,8 @@ const INITIAL_WORLDS: World[] = [
       { id: 3, name: 'Aprendizaje Reforzado', icon: 'trending-up', status: 'locked', stars: 0 },
       { id: 4, name: 'Sistemas Expertos', icon: 'psychology', status: 'locked', stars: 0 },
       { id: 5, name: 'Proyecto Final', icon: 'workspace-premium', status: 'locked', stars: 0 },
+      { id: 6, name: 'Proyecto Final', icon: 'workspace-premium', status: 'locked', stars: 0 },
+      { id: 7, name: 'Proyecto Final', icon: 'workspace-premium', status: 'locked', stars: 0 },
     ],
   },
 ];
@@ -294,7 +296,7 @@ export const useGameStore = create<GameState>()(
     {
       name: 'ai-explorer-storage-v2',
       storage: createJSONStorage(() => AsyncStorage),
-      version: 8,
+      version: 9,
       migrate: (persistedState: any, version: number) => {
         if (persistedState?.worlds) {
           // Añade cualquier nivel faltante comparando con INITIAL_WORLDS
