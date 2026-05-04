@@ -89,21 +89,66 @@ const INITIAL_WORLDS: World[] = [
       { id: 7, name: 'IA en la Nube3', icon: 'cloud', status: 'locked', stars: 0 },
     ],
   },
-  {
-    id: 3,
-    name: 'Especialización',
-    icon: 'workspace-premium',
-    description: 'Conviértete en un experto en IA',
-    levels: [
-      { id: 1, name: 'Edge Computing', icon: 'devices', status: 'locked', stars: 0 },
-      { id: 2, name: 'IA Generativa', icon: 'palette', status: 'locked', stars: 0 },
-      { id: 3, name: 'Aprendizaje Reforzado', icon: 'trending-up', status: 'locked', stars: 0 },
-      { id: 4, name: 'Sistemas Expertos', icon: 'psychology', status: 'locked', stars: 0 },
-      { id: 5, name: 'Proyecto Final', icon: 'workspace-premium', status: 'locked', stars: 0 },
-      { id: 6, name: 'Proyecto Final', icon: 'workspace-premium', status: 'locked', stars: 0 },
-      { id: 7, name: 'Proyecto Final', icon: 'workspace-premium', status: 'locked', stars: 0 },
-    ],
-  },
+    {
+      id: 3,
+      name: 'Especialización',
+      icon: 'workspace-premium',
+      description: 'Conviértete en un experto en IA',
+      levels: [
+        { id: 1, name: 'Edge Computing', icon: 'devices', status: 'locked', stars: 0 },
+        { id: 2, name: 'IA Generativa', icon: 'palette', status: 'locked', stars: 0 },
+        { id: 3, name: 'Aprendizaje Reforzado', icon: 'trending-up', status: 'locked', stars: 0 },
+        { id: 4, name: 'Sistemas Expertos', icon: 'psychology', status: 'locked', stars: 0 },
+        { id: 5, name: 'Proyecto Final', icon: 'workspace-premium', status: 'locked', stars: 0 },
+        { id: 6, name: 'Proyecto Final', icon: 'workspace-premium', status: 'locked', stars: 0 },
+        { id: 7, name: 'Proyecto Final', icon: 'workspace-premium', status: 'locked', stars: 0 },
+      ],
+    },
+    {
+      id: 4,
+      name: 'El Gran Torneo de Herramientas',
+      icon: 'emoji-events', // 🏆 trofeo
+      description: 'Compara y domina las mejores IAs',
+      levels: [
+        { id: 1, name: 'ChatGPT: El Pionero', icon: 'smart-toy', status: 'locked', stars: 0 },
+        { id: 2, name: 'Claude', icon: 'psychology', status: 'locked', stars: 0 },
+        { id: 3, name: 'Gemini', icon: 'star', status: 'locked', stars: 0 },
+        { id: 4, name: 'Grok', icon: 'bolt', status: 'locked', stars: 0 },
+        { id: 5, name: 'Perplexity, Copilot y Más', icon: 'search', status: 'locked', stars: 0 },
+        { id: 6, name: '¿Cuál Herramienta Uso?', icon: 'compare-arrows', status: 'locked', stars: 0 },
+        { id: 7, name: 'Evaluación M4', icon: 'quiz', status: 'locked', stars: 0 },
+      ],
+    },
+    {
+      id: 5,
+      name: 'Herramientas en la Nube',
+      icon: 'emoji-events', // 🏆 trofeo
+      description: 'Aprende a usar las herramientas en la nube',
+      levels: [
+        { id: 1, name: 'AWS', icon: 'cloud', status: 'locked', stars: 0 },
+        { id: 2, name: 'Azure', icon: 'cloud', status: 'locked', stars: 0 },
+        { id: 3, name: 'Google Cloud', icon: 'cloud', status: 'locked', stars: 0 }, { id: 4, name: 'Grok', icon: 'bolt', status: 'locked', stars: 0 },
+        { id: 5, name: 'Perplexity, Copilot y Más', icon: 'search', status: 'locked', stars: 0 },
+        { id: 6, name: '¿Cuál Herramienta Uso?', icon: 'compare-arrows', status: 'locked', stars: 0 },
+        { id: 7, name: 'Evaluación M4', icon: 'quiz', status: 'locked', stars: 0 },
+      ],
+    },
+    {
+      id: 6,
+      name: 'World 6',
+      icon: 'emoji-events', // 🏆 trofeo
+      description: 'Aprende a usar las herramientas en la nube',
+      levels: [
+        { id: 1, name: 'AWS', icon: 'cloud', status: 'locked', stars: 0 },
+        { id: 2, name: 'Azure', icon: 'cloud', status: 'locked', stars: 0 },
+        { id: 3, name: 'Google Cloud', icon: 'cloud', status: 'locked', stars: 0 },
+        { id: 4, name: 'Grok', icon: 'bolt', status: 'locked', stars: 0 },
+        { id: 5, name: 'Perplexity, Copilot y Más', icon: 'search', status: 'locked', stars: 0 },
+        { id: 6, name: '¿Cuál Herramienta Uso?', icon: 'compare-arrows', status: 'locked', stars: 0 },
+        { id: 7, name: 'Evaluación M4', icon: 'quiz', status: 'locked', stars: 0 }, 
+        { id: 8, name: 'Evaluación M4', icon: 'quiz', status: 'locked', stars: 0 },
+      ],
+    },
 ];
 
 const INITIAL_BADGES: Badge[] = [
@@ -296,13 +341,30 @@ export const useGameStore = create<GameState>()(
     {
       name: 'ai-explorer-storage-v2',
       storage: createJSONStorage(() => AsyncStorage),
-      version: 9,
+      version: 11,
       migrate: (persistedState: any, version: number) => {
         if (persistedState?.worlds) {
-          // Añade cualquier nivel faltante comparando con INITIAL_WORLDS
+          // 1. Agregar mundos completamente nuevos (que no existan en el estado guardado)
           INITIAL_WORLDS.forEach((templateWorld) => {
-            const world = persistedState.worlds.find((w: World) => w.id === templateWorld.id);
-            if (world) {
+            let world = persistedState.worlds.find((w: World) => w.id === templateWorld.id);
+            if (!world) {
+              // El mundo no existe en absoluto: lo creamos con todos sus niveles bloqueados
+              world = {
+                id: templateWorld.id,
+                name: templateWorld.name,
+                icon: templateWorld.icon,
+                description: templateWorld.description,
+                levels: templateWorld.levels.map((l) => ({
+                  id: l.id,
+                  name: l.name,
+                  icon: l.icon,
+                  status: 'locked' as LevelStatus,
+                  stars: 0,
+                })),
+              };
+              persistedState.worlds.push(world);
+            } else {
+              // 2. Si el mundo ya existe, agregar niveles faltantes
               templateWorld.levels.forEach((templateLevel) => {
                 const exists = world.levels.some((l: any) => l.id === templateLevel.id);
                 if (!exists) {
@@ -317,8 +379,11 @@ export const useGameStore = create<GameState>()(
               });
             }
           });
-
-          // Desbloqueo de primer nivel del mundo siguiente si el anterior está completo
+      
+          // 3. Reordenar los mundos por ID para que queden en el orden correcto
+          persistedState.worlds.sort((a: World, b: World) => a.id - b.id);
+      
+          // 4. Desbloqueo del primer nivel del mundo siguiente si el anterior está completo
           for (let i = 0; i < persistedState.worlds.length - 1; i++) {
             const currentWorld = persistedState.worlds[i];
             const allCompleted = currentWorld.levels.every((l: any) => l.status === 'completed');
@@ -328,7 +393,7 @@ export const useGameStore = create<GameState>()(
             }
           }
         }
-
+      
         return persistedState as GameState;
       },
     }

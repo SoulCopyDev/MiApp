@@ -28,6 +28,31 @@ import World3Level5 from './World3/Level5';
 import World3Level6 from './World3/Level6';
 import World3Level7 from './World3/Level7';
 
+import World4Level1 from './World4/Level1';
+import World4Level2 from './World4/Level2';
+import World4Level3 from './World4/Level3';
+import World4Level4 from './World4/Level4';
+import World4Level5 from './World4/Level5';
+import World4Level6 from './World4/Level6';
+import World4Level7 from './World4/Level7';
+
+import World5Level1 from './World5/Level1';
+import World5Level2 from './World5/Level2';
+import World5Level3 from './World5/Level3';
+import World5Level4 from './World5/Level4';
+import World5Level5 from './World5/Level5';
+import World5Level6 from './World5/Level6';
+import World5Level7 from './World5/Level7';
+
+import World6Level1 from './World6/Level1';
+import World6Level2 from './World6/Level2';
+import World6Level3 from './World6/Level3';
+import World6Level4 from './World6/Level4';
+import World6Level5 from './World6/Level5';
+import World6Level6 from './World6/Level6';
+import World6Level7 from './World6/Level7'; 
+import World6Level8 from './World6/Level8';
+
 type LevelScreenRouteProp = RouteProp<RootStackParamList, 'GameLevel'>;
 
 // Tipo para las props que pueden recibir los niveles
@@ -62,6 +87,34 @@ const levelComponents: Record<number, Record<number, React.ComponentType<LevelCo
     5: World3Level5,
     6: World3Level6,
     7: World3Level7,
+  },
+  4: {
+    1: World4Level1,
+    2: World4Level2,
+    3: World4Level3,
+    4: World4Level4,
+    5: World4Level5,
+    6: World4Level6,
+    7: World4Level7,
+  },
+  5: {
+    1: World5Level1,
+    2: World5Level2,
+    3: World5Level3,
+    4: World5Level4,
+    5: World5Level5,
+    6: World5Level6,
+    7: World5Level7,
+  },
+  6: {
+    1: World6Level1,
+    2: World6Level2,
+    3: World6Level3,
+    4: World6Level4,
+    5: World6Level5,
+    6: World6Level6,
+    7: World6Level7,
+    8: World6Level8,
   },
 };
 
