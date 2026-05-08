@@ -23,7 +23,7 @@ type EticaQuizItem = { q: string; opts: string[]; correct: number; explain: stri
 type EticaFillItem = { sentence: string; allOpts: string[]; correct: number; explain: string };
 type SprintEticaItem = { stmt: string; correct: boolean };
 
-const TOTAL_STEPS = 20; // 0:intro + 18 módulos + 1:complete
+const TOTAL_STEPS = 19; // 0:intro + 17 módulos + 1:complete
 const CONTENT_STEPS = 18;
 
 const pickN = <T,>(arr: T[], n: number): T[] => {
@@ -862,7 +862,7 @@ export default function World1Level5({ navigation: propsNavigation, setAllowBack
       case 15: return renderSprint();
       case 16: return renderTheory7();
       case 17: return renderManifiesto();
-      case 19: return renderCompletion();
+      case 18: return renderCompletion();
       default: return null;
     }
   };
@@ -886,7 +886,7 @@ export default function World1Level5({ navigation: propsNavigation, setAllowBack
     goToNextStep();
   };
 
-  const showNextBtn = step < TOTAL_STEPS - 1 && ![3, 5, 7, 9, 11, 13, 14, 15, 17, 19].includes(step);
+  const showNextBtn = step < TOTAL_STEPS - 1 && ![3, 5, 7, 9, 11, 13, 14, 15, 17, 18].includes(step);
   const showCheckBtn = [3, 5, 7, 9, 11, 13, 14, 15, 17].includes(step) && step < TOTAL_STEPS - 1;
 
   const getBtnLabel = () => {

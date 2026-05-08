@@ -1,6 +1,12 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  DailyMission,
+  generateDailyMission,
+  detectMissionStatus,
+} from '../utils/dailyMission';
+import { DEFAULT_AVATAR_EMOJI } from '../config/avatarEmojis';
 
 // ---------- Tipos ----------
 export type LevelStatus = 'locked' | 'current' | 'completed';
@@ -24,6 +30,7 @@ export interface World {
 export interface Badge {
   id: number;
   name: string;
+  description: string;
   icon: string;
   unlocked: boolean;
   color: string;
@@ -32,7 +39,7 @@ export interface Badge {
 
 export interface UserProfile {
   name: string;
-  avatar: 'robot' | 'kid' | 'pet';
+  avatarEmoji: string;
   soundEnabled: boolean;
 }
 
@@ -42,9 +49,11 @@ export interface GameState {
   currentXP: number;
   maxXP: number;
   streak: number;
+  lastPlayedDate: string | null;
   totalStars: number;
   worlds: World[];
   badges: Badge[];
+  dailyMission: DailyMission | null;
   devMode: boolean;
 
   setProfile: (profile: Partial<UserProfile>) => void;
@@ -54,6 +63,8 @@ export interface GameState {
   resetProgress: () => void;
   calculateMaxXP: (level: number) => number;
   setDevMode: (enabled: boolean) => void;
+  updateStreak: () => void;
+  refreshDailyMission: () => void;
   updateLevelName: (worldId: number, levelId: number, newName: string) => void;
   updateWorldName: (worldId: number, newName: string) => void;
 }
@@ -154,26 +165,26 @@ const INITIAL_WORLDS: World[] = [
 ];
 
 const INITIAL_BADGES: Badge[] = [
-  { id: 1, name: 'Explorador IA', icon: 'shield', unlocked: true, color: '#005ca8', bgColor: '#eef3ff' },
-  { id: 2, name: 'Aprendiz de ML', icon: 'forum', unlocked: true, color: '#8126cf', bgColor: '#f3e8ff' },
-  { id: 3, name: 'Amigo Robot', icon: 'smart-toy', unlocked: true, color: '#16a34a', bgColor: '#dcfce7' },
-  { id: 4, name: 'Detective de Datos', icon: 'manage-search', unlocked: false, color: '#747779', bgColor: '#e5e9eb' },
-  { id: 5, name: 'Maestro de Redes', icon: 'account-tree', unlocked: false, color: '#747779', bgColor: '#e5e9eb' },
-  { id: 6, name: 'Visionario', icon: 'image', unlocked: false, color: '#747779', bgColor: '#e5e9eb' },
-  { id: 7, name: 'Lingüista Digital', icon: 'record-voice-over', unlocked: false, color: '#747779', bgColor: '#e5e9eb' },
-  { id: 8, name: 'Ético Digital', icon: 'gavel', unlocked: false, color: '#747779', bgColor: '#e5e9eb' },
-  { id: 9, name: 'Constructor de Robots', icon: 'smart-toy', unlocked: false, color: '#747779', bgColor: '#e5e9eb' },
-  { id: 10, name: 'Analista de Datos', icon: 'analytics', unlocked: false, color: '#747779', bgColor: '#e5e9eb' },
-  { id: 11, name: 'Cloud Master', icon: 'cloud', unlocked: false, color: '#747779', bgColor: '#e5e9eb' },
-  { id: 12, name: 'Edge Innovator', icon: 'devices', unlocked: false, color: '#747779', bgColor: '#e5e9eb' },
-  { id: 13, name: 'Artista IA', icon: 'palette', unlocked: false, color: '#747779', bgColor: '#e5e9eb' },
-  { id: 14, name: 'Estratega de RL', icon: 'trending-up', unlocked: false, color: '#747779', bgColor: '#e5e9eb' },
-  { id: 15, name: 'Campeón IA', icon: 'workspace-premium', unlocked: false, color: '#747779', bgColor: '#e5e9eb' },
+  { id: 1,  name: 'Explorador IA',      description: 'Completa tu primer nivel del curso',               icon: 'shield',            unlocked: false, color: '#005ca8', bgColor: '#eef3ff' },
+  { id: 2,  name: 'Aprendiz de ML',     description: "Termina el mundo '¿Qué es la IA?'",               icon: 'forum',             unlocked: false, color: '#8126cf', bgColor: '#f3e8ff' },
+  { id: 3,  name: 'Amigo Robot',        description: 'Obtén 3 ⭐ en cualquier nivel',                    icon: 'smart-toy',         unlocked: false, color: '#16a34a', bgColor: '#dcfce7' },
+  { id: 4,  name: 'Detective de Datos', description: "Completa el mundo 'Domina el Prompting'",          icon: 'manage-search',     unlocked: false, color: '#747779', bgColor: '#e5e9eb' },
+  { id: 5,  name: 'Maestro de Redes',   description: 'Acumula 15 estrellas en total',                    icon: 'account-tree',      unlocked: false, color: '#747779', bgColor: '#e5e9eb' },
+  { id: 6,  name: 'Visionario',         description: "Completa el mundo 'IA Creativa'",                  icon: 'image',             unlocked: false, color: '#747779', bgColor: '#e5e9eb' },
+  { id: 7,  name: 'Lingüista Digital',  description: 'Completa el nivel de Prompts Creativos (M2·N3)',   icon: 'record-voice-over', unlocked: false, color: '#747779', bgColor: '#e5e9eb' },
+  { id: 8,  name: 'Ético Digital',      description: 'Completa el nivel de IA y Ética (M1·N5)',          icon: 'gavel',             unlocked: false, color: '#747779', bgColor: '#e5e9eb' },
+  { id: 9,  name: 'Constructor de IA',  description: "Completa el 'Gran Torneo de Herramientas' (M4)",   icon: 'smart-toy',         unlocked: false, color: '#747779', bgColor: '#e5e9eb' },
+  { id: 10, name: 'Analista de Datos',  description: 'Acumula 30 estrellas en total',                    icon: 'analytics',         unlocked: false, color: '#747779', bgColor: '#e5e9eb' },
+  { id: 11, name: 'Cloud Master',       description: "Completa el mundo 'Tu Proyecto de Impacto' (M5)",  icon: 'cloud',             unlocked: false, color: '#747779', bgColor: '#e5e9eb' },
+  { id: 12, name: 'Edge Innovator',     description: 'Acumula 50 estrellas en total',                    icon: 'devices',           unlocked: false, color: '#747779', bgColor: '#e5e9eb' },
+  { id: 13, name: 'Artista IA',         description: 'Completa el nivel de Generación de Imágenes (M3·N1)', icon: 'palette',        unlocked: false, color: '#747779', bgColor: '#e5e9eb' },
+  { id: 14, name: 'Estratega de RL',    description: 'Acumula 75 estrellas en total',                    icon: 'trending-up',       unlocked: false, color: '#747779', bgColor: '#e5e9eb' },
+  { id: 15, name: 'Campeón IA',         description: '¡Completa todos los mundos del curso!',            icon: 'workspace-premium', unlocked: false, color: '#747779', bgColor: '#e5e9eb' },
 ];
 
 const DEFAULT_PROFILE: UserProfile = {
   name: 'AI Explorer',
-  avatar: 'robot',
+  avatarEmoji: DEFAULT_AVATAR_EMOJI,
   soundEnabled: true,
 };
 
@@ -181,18 +192,28 @@ const calculateMaxXP = (level: number): number => {
   return Math.floor(1000 + (level - 1) * 500);
 };
 
+// Devuelve la fecha local del dispositivo como 'YYYY-MM-DD'.
+// Usa hora local para que la racha se calcule según el día del usuario, no UTC.
+const getLocalDate = (offsetDays = 0): string => {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
 // ---------- Store ----------
 export const useGameStore = create<GameState>()(
   persist(
     (set, get) => ({
       profile: DEFAULT_PROFILE,
-      playerLevel: 3,
-      currentXP: 750,
-      maxXP: calculateMaxXP(3),
-      streak: 5,
-      totalStars: 5,
+      playerLevel: 1,
+      currentXP: 0,
+      maxXP: calculateMaxXP(1),
+      streak: 0,
+      lastPlayedDate: null,
+      totalStars: 0,
       worlds: INITIAL_WORLDS,
       badges: INITIAL_BADGES,
+      dailyMission: null,
       devMode: false,
 
       setProfile: (newProfile) => set((state) => ({
@@ -264,9 +285,52 @@ export const useGameStore = create<GameState>()(
           maxXP: newMaxXP,
         });
       
-        if (starsEarned >= 3 && worldId === 1 && levelId === 3) get().unlockBadge(4);
-        if (newTotalStars >= 10) get().unlockBadge(5);
-        if (worldId === 1 && levelId === 5) get().unlockBadge(6);
+        const isWorldComplete = (wId: number) =>
+          updatedWorlds.find(w => w.id === wId)?.levels.every(l => l.status === 'completed') ?? false;
+
+        // 1 — Primer nivel completado
+        if (worldId === 1 && levelId === 1)  get().unlockBadge(1);
+        // 2 — World 1 completo
+        if (isWorldComplete(1))              get().unlockBadge(2);
+        // 3 — Primera vez con 3 estrellas en cualquier nivel
+        if (starsEarned >= 3)                get().unlockBadge(3);
+        // 4 — World 2 completo
+        if (isWorldComplete(2))              get().unlockBadge(4);
+        // 5 — 15 estrellas acumuladas
+        if (newTotalStars >= 15)             get().unlockBadge(5);
+        // 6 — World 3 completo
+        if (isWorldComplete(3))              get().unlockBadge(6);
+        // 7 — World 2 Nivel 3: Prompts Creativos
+        if (worldId === 2 && levelId === 3)  get().unlockBadge(7);
+        // 8 — World 1 Nivel 5: IA y Ética
+        if (worldId === 1 && levelId === 5)  get().unlockBadge(8);
+        // 9 — World 4 completo
+        if (isWorldComplete(4))              get().unlockBadge(9);
+        // 10 — 30 estrellas acumuladas
+        if (newTotalStars >= 30)             get().unlockBadge(10);
+        // 11 — World 5 completo
+        if (isWorldComplete(5))              get().unlockBadge(11);
+        // 12 — 50 estrellas acumuladas
+        if (newTotalStars >= 50)             get().unlockBadge(12);
+        // 13 — World 3 Nivel 1: Generación de Imágenes
+        if (worldId === 3 && levelId === 1)  get().unlockBadge(13);
+        // 14 — 75 estrellas acumuladas
+        if (newTotalStars >= 75)             get().unlockBadge(14);
+        // 15 — Todos los mundos completados
+        if (updatedWorlds.every(w => w.levels.every(l => l.status === 'completed'))) get().unlockBadge(15);
+
+        // Comprobar si el nivel recién completado es el objetivo de la misión diaria
+        const mission = get().dailyMission;
+        if (
+          mission &&
+          !mission.rewardClaimed &&
+          mission.status !== 'completed' &&
+          mission.targetWorldId === worldId &&
+          mission.targetLevelId === levelId
+        ) {
+          set({ dailyMission: { ...mission, status: 'completed', rewardClaimed: true } });
+          get().addXP(mission.reward.xp);
+        }
       },
 
       unlockBadge: (badgeId) => set((state) => ({
@@ -308,9 +372,11 @@ export const useGameStore = create<GameState>()(
           currentXP: 0,
           maxXP: calculateMaxXP(1),
           streak: 0,
+          lastPlayedDate: null,
           totalStars: 0,
           worlds: resetWorlds,
-          badges: INITIAL_BADGES.map(b => ({ ...b, unlocked: b.id === 1 })),
+          badges: INITIAL_BADGES.map(b => ({ ...b, unlocked: false })),
+          dailyMission: null,
           devMode: true,
         });
       },
@@ -318,6 +384,34 @@ export const useGameStore = create<GameState>()(
       calculateMaxXP,
 
       setDevMode: (enabled) => set({ devMode: enabled }),
+
+      updateStreak: () => {
+        const state = get();
+        const today = getLocalDate();
+        if (state.lastPlayedDate === today) return;
+        const isConsecutive = state.lastPlayedDate === getLocalDate(-1);
+        set({ streak: isConsecutive ? state.streak + 1 : 1, lastPlayedDate: today });
+      },
+
+      refreshDailyMission: () => {
+        const state = get();
+        const today = getLocalDate();
+
+        if (state.dailyMission?.date === today) {
+          // Reutilizar misión de hoy; solo sincronizar el status si cambió
+          const mission = state.dailyMission;
+          if (mission.status === 'completed') return;
+
+          const newStatus = detectMissionStatus(mission, state.worlds);
+          if (newStatus !== mission.status) {
+            set({ dailyMission: { ...mission, status: newStatus } });
+          }
+          return;
+        }
+
+        // Nuevo día → generar misión fresca
+        set({ dailyMission: generateDailyMission(state.worlds, today) });
+      },
 
       updateLevelName: (worldId, levelId, newName) =>
         set((state) => ({
@@ -343,15 +437,16 @@ export const useGameStore = create<GameState>()(
     {
       name: 'ai-explorer-storage-v2',
       storage: createJSONStorage(() => AsyncStorage),
-      version: 13,
+      version: 19,
       migrate: (persistedState: any, version: number) => {
         if (persistedState?.worlds) {
-          // 1. Agregar mundos completamente nuevos (que no existan en el estado guardado)
+          // Iterate over the template worlds to update/add
           INITIAL_WORLDS.forEach((templateWorld) => {
-            let world = persistedState.worlds.find((w: World) => w.id === templateWorld.id);
-            if (!world) {
-              // El mundo no existe en absoluto: lo creamos con todos sus niveles bloqueados
-              world = {
+            let existingWorld = persistedState.worlds.find((w: World) => w.id === templateWorld.id);
+            
+            if (!existingWorld) {
+              // Completely new world – add it with all levels locked
+              existingWorld = {
                 id: templateWorld.id,
                 name: templateWorld.name,
                 icon: templateWorld.icon,
@@ -364,28 +459,44 @@ export const useGameStore = create<GameState>()(
                   stars: 0,
                 })),
               };
-              persistedState.worlds.push(world);
+              persistedState.worlds.push(existingWorld);
             } else {
-              // 2. Si el mundo ya existe, agregar niveles faltantes
-              templateWorld.levels.forEach((templateLevel) => {
-                const exists = world.levels.some((l: any) => l.id === templateLevel.id);
-                if (!exists) {
-                  world.levels.push({
+              // World already exists – update its metadata with the template
+              existingWorld.name = templateWorld.name;
+              existingWorld.icon = templateWorld.icon;
+              existingWorld.description = templateWorld.description;
+              
+              // Rebuild levels in the order defined by the template,
+              // updating names/icons but keeping progress
+              const updatedLevels = templateWorld.levels.map((templateLevel) => {
+                const existingLevel = existingWorld.levels.find((l: any) => l.id === templateLevel.id);
+                if (existingLevel) {
+                  // Keep user progress, just sync name and icon
+                  return {
+                    ...existingLevel,
+                    name: templateLevel.name,
+                    icon: templateLevel.icon,
+                  };
+                } else {
+                  // New level introduced – add as locked
+                  return {
                     id: templateLevel.id,
                     name: templateLevel.name,
                     icon: templateLevel.icon,
-                    status: 'locked',
+                    status: 'locked' as LevelStatus,
                     stars: 0,
-                  });
+                  };
                 }
               });
+              
+              existingWorld.levels = updatedLevels;
             }
           });
-      
-          // 3. Reordenar los mundos por ID para que queden en el orden correcto
+          
+          // Ensure worlds are sorted by ID
           persistedState.worlds.sort((a: World, b: World) => a.id - b.id);
-      
-          // 4. Desbloqueo del primer nivel del mundo siguiente si el anterior está completo
+          
+          // Auto-unlock: if all levels of world N are completed, unlock first level of world N+1
           for (let i = 0; i < persistedState.worlds.length - 1; i++) {
             const currentWorld = persistedState.worlds[i];
             const allCompleted = currentWorld.levels.every((l: any) => l.status === 'completed');
@@ -396,6 +507,46 @@ export const useGameStore = create<GameState>()(
           }
         }
       
+        // Reconstruye insignias: preserva estado unlocked, actualiza nombre/descripción/icono/colores del template
+        if (Array.isArray(persistedState?.badges)) {
+          persistedState.badges = INITIAL_BADGES.map(template => {
+            const existing = persistedState.badges.find((b: Badge) => b.id === template.id);
+            return { ...template, unlocked: existing?.unlocked ?? false };
+          });
+        } else {
+          persistedState.badges = INITIAL_BADGES.map(b => ({ ...b, unlocked: false }));
+        }
+
+        if (persistedState.lastPlayedDate === undefined) {
+          persistedState.lastPlayedDate = null;
+        }
+        if (persistedState.dailyMission === undefined) {
+          persistedState.dailyMission = null;
+        }
+
+        // Migrar sistema de avatar antiguo → avatarEmoji
+        if (persistedState.profile) {
+          if (!persistedState.profile.avatarEmoji) {
+            const oldAvatar = persistedState.profile.avatar;
+            persistedState.profile.avatarEmoji =
+              oldAvatar === 'kid' ? '🧑‍💻'
+              : oldAvatar === 'pet' ? '🐶'
+              : DEFAULT_AVATAR_EMOJI;
+          }
+          // Limpiar campos obsoletos
+          delete persistedState.profile.avatar;
+          delete persistedState.profile.avatarUri;
+        }
+
+        // Recalcula totalStars desde worlds para garantizar consistencia
+        if (Array.isArray(persistedState?.worlds)) {
+          persistedState.totalStars = persistedState.worlds.reduce(
+            (sum: number, w: World) =>
+              sum + w.levels.reduce((s: number, l: any) => s + (l.stars ?? 0), 0),
+            0
+          );
+        }
+
         return persistedState as GameState;
       },
     }

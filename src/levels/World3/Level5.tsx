@@ -174,6 +174,7 @@ export default function World3Level5({ navigation: propsNavigation, setAllowBack
   // Drag & Drop
   const [ddPlaced, setDdPlaced] = useState<{ [key: number]: number }>({});
   const [ddSel, setDdSel] = useState<number | null>(null);
+  const [ddDone, setDdDone] = useState(false);
 
   const theorySteps = new Set([0, 1, 4, 8, 12, 15]);
   const canGoBack = theorySteps.has(current);
@@ -227,7 +228,7 @@ export default function World3Level5({ navigation: propsNavigation, setAllowBack
     setVfAnswers({}); setVfLocked(new Set());
     setSprintRunning(false); setSprintSec(0); setSprintText(''); setSprintDone(false);
     if (sprintTimer.current) clearInterval(sprintTimer.current);
-    setDdPlaced({}); setDdSel(null);
+    setDdPlaced({}); setDdSel(null); setDdDone(false);
   };
 
   // Quiz
@@ -320,6 +321,7 @@ export default function World3Level5({ navigation: propsNavigation, setAllowBack
     } else {
       Alert.alert('❌', 'Algunas clasificaciones no son correctas. Intenta de nuevo.');
     }
+    setDdDone(true);
   };
 
   // Finish
@@ -547,11 +549,12 @@ export default function World3Level5({ navigation: propsNavigation, setAllowBack
   const progressPercent = (current / (TOTAL_STEPS - 1)) * 100;
   const m = MODULES[current];
   const isCompletion = m.type === 'completion';
-  const showNext = !['chart', 'quiz', 'matching', 'vf', 'sprint', 'dragdrop'].includes(m.type) || 
+  const showNext = !['chart', 'quiz', 'matching', 'vf', 'sprint', 'dragdrop'].includes(m.type) ||
     (m.type === 'chart' && quizLocked) || (m.type === 'quiz' && quizLocked) ||
     (m.type === 'matching' && matchedLeft.size >= (m.pairs?.length || 4)) ||
     (m.type === 'vf' && vfLocked.size >= (m.items?.length || 3)) ||
-    (m.type === 'sprint' && sprintDone) || (m.type === 'builder' && builderDone);
+    (m.type === 'sprint' && sprintDone) || (m.type === 'builder' && builderDone) ||
+    (m.type === 'dragdrop' && ddDone);
 
   return (
     <View style={styles.screen}>

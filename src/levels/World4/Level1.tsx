@@ -698,7 +698,7 @@ export default function World4Level1({ navigation: propsNavigation, setAllowBack
       case 21: return (
         <View style={styles.completeContainer}>
           <View style={styles.completeIcon}><Text style={styles.iconEmoji}>💬</Text></View>
-          <Text style={styles.completeTitle}>¡Nivel 19 completado!</Text>
+          <Text style={styles.completeTitle}>¡Nivel 1 completado!</Text>
           <Text style={styles.completeSub}>Ahora eres un experto en ChatGPT y sabes usar todas sus herramientas secretas.</Text>
           <Text style={styles.xpBig}>⭐ {xp} XP ganados</Text>
           {btn('Volver al mapa', finish)}
