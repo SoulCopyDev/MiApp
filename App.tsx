@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, Platform, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -77,7 +77,7 @@ export default function App() {
     );
   }
 
-  return (
+  const app = (
     <SafeAreaProvider>
       <NavigationContainer>
         <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -88,4 +88,32 @@ export default function App() {
       </NavigationContainer>
     </SafeAreaProvider>
   );
+
+  if (Platform.OS !== 'web') return app;
+
+  // Web: center app in viewport with max-width — looks like a mobile app on desktop
+  return (
+    <View style={webStyles.outer}>
+      <View style={webStyles.inner}>{app}</View>
+    </View>
+  );
 }
+
+const webStyles = StyleSheet.create({
+  outer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    backgroundColor: '#d0d8e4',
+  },
+  inner: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 480,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+  },
+});

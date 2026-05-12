@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "MiApp",
+    "name": "AI Explorer",
     "slug": "MiApp",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -16,6 +16,7 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.miapp.aiexplorer",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -24,7 +25,15 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "name": "AI Explorer",
+      "shortName": "AI Explorer",
+      "description": "Aprende Inteligencia Artificial de forma interactiva y gamificada",
+      "themeColor": "#005ca8",
+      "backgroundColor": "#f5f7f9",
+      "display": "standalone",
+      "orientation": "portrait",
+      "lang": "es"
     },
     "plugins": [
       "expo-font"
