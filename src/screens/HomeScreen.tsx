@@ -7,30 +7,30 @@ import {
   ScrollView,
   Animated,
   Easing,
+  Platform,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useGameStore } from '../store/gameStore';
 import { colors, typography } from '../theme';
-import { HomeScreenProps } from '../types/navigation';
 import { getRankInfo } from '../utils/rankSystem';
 import { getMissionProgress } from '../utils/dailyMission';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
-import { RootStackParamList } from '../types/navigation';
+import { router, useFocusEffect } from 'expo-router';
+import { useBreakpoint } from '../hooks/useBreakpoint';
+import { Linking } from 'react-native';
+import { DOWNLOAD_CONFIG } from '../config/downloadConfig';
 
-export default function HomeScreen({ navigation }: HomeScreenProps) {
+export default function HomeScreen() {
   const { profile, playerLevel, currentXP, maxXP, streak, totalStars, worlds } = useGameStore();
-  const dailyMission  = useGameStore(s => s.dailyMission);
+  const dailyMission        = useGameStore(s => s.dailyMission);
   const updateStreak        = useGameStore(s => s.updateStreak);
   const refreshDailyMission = useGameStore(s => s.refreshDailyMission);
 
-  const porcentajeXP = maxXP > 0 ? (currentXP / maxXP) * 100 : 0;
-  const stackNavigation = useNavigation<StackNavigationProp<RootStackParamList>>();
+  const breakpoint = useBreakpoint();
+  const isWebDesktop = Platform.OS === 'web' && breakpoint !== 'mobile';
 
-  // Rango calculado dinámicamente desde totalStars. Se recalcula si totalStars sube o baja.
+  const porcentajeXP = maxXP > 0 ? (currentXP / maxXP) * 100 : 0;
   const rankInfo = useMemo(() => getRankInfo(totalStars), [totalStars]);
 
-  // Anima la barra de rango suavemente cada vez que el progreso cambia
   const animRankProgress = useRef(new Animated.Value(rankInfo.progress)).current;
   useEffect(() => {
     Animated.timing(animRankProgress, {
@@ -41,7 +41,6 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     }).start();
   }, [rankInfo.progress]);
 
-  // Actualiza racha y misión diaria cada vez que el usuario vuelve a esta pantalla
   useFocusEffect(
     useCallback(() => {
       updateStreak();
@@ -49,22 +48,16 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     }, [updateStreak, refreshDailyMission])
   );
 
-  // Detecta el nivel al que debe ir el botón JUGAR según el progreso del jugador.
-  // Busca el primer nivel con status 'current' (ya sea en progreso o desbloqueado).
-  // Si todos los niveles están completados, apunta al último nivel del último mundo.
   const resumeTarget = useMemo(() => {
     for (const world of worlds) {
       const level = world.levels.find(l => l.status === 'current');
-      if (level) {
-        return { worldId: world.id, levelId: level.id, worldName: world.name, levelName: level.name };
-      }
+      if (level) return { worldId: world.id, levelId: level.id, worldName: world.name, levelName: level.name };
     }
     const lastWorld = worlds[worlds.length - 1];
     const lastLevel = lastWorld.levels[lastWorld.levels.length - 1];
     return { worldId: lastWorld.id, levelId: lastLevel.id, worldName: lastWorld.name, levelName: lastLevel.name };
   }, [worlds]);
 
-  // Valores derivados de la misión diaria
   const missionProgress = useMemo(
     () => (dailyMission ? getMissionProgress(dailyMission, worlds) : 0),
     [dailyMission, worlds]
@@ -77,32 +70,178 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     return { bg: '#eef3ff', accent: colors.primary, border: '#57a3ff25', icon: 'track-changes' as const, label: 'PENDIENTE' };
   }, [dailyMission?.status]);
 
-  const handlePlay = () => {
-    stackNavigation.navigate('GameLevel', {
-      worldId: resumeTarget.worldId,
-      levelId: resumeTarget.levelId,
-    });
-  };
+  const handlePlay = () => router.push(`/level/${resumeTarget.worldId}/${resumeTarget.levelId}`);
+
+  const apkUrl = DOWNLOAD_CONFIG.apkUrl ?? DOWNLOAD_CONFIG.playStoreUrl;
+  const DownloadButton = Platform.OS === 'web' && apkUrl ? (
+    <TouchableOpacity
+      style={styles.downloadBtn}
+      activeOpacity={0.8}
+      onPress={() => Linking.openURL(apkUrl)}
+    >
+      <MaterialIcons name="android" size={20} color="white" />
+      <Text style={styles.downloadBtnText}>Descargar app Android</Text>
+      <MaterialIcons name="file-download" size={18} color="rgba(255,255,255,0.8)" />
+    </TouchableOpacity>
+  ) : null;
 
   const handlePlayMission = () => {
     if (!dailyMission) return;
-    // Si el nivel objetivo está desbloqueado o es el actual, ir directo; si no, ir al nivel actual
     const targetWorld = worlds.find(w => w.id === dailyMission.targetWorldId);
     const targetLevel = targetWorld?.levels.find(l => l.id === dailyMission.targetLevelId);
     const canGoDirectly = targetLevel?.status === 'current' || targetLevel?.status === 'completed';
-    stackNavigation.navigate('GameLevel', {
-      worldId: canGoDirectly ? dailyMission.targetWorldId : resumeTarget.worldId,
-      levelId: canGoDirectly ? dailyMission.targetLevelId : resumeTarget.levelId,
-    });
+    const wId = canGoDirectly ? dailyMission.targetWorldId : resumeTarget.worldId;
+    const lId = canGoDirectly ? dailyMission.targetLevelId : resumeTarget.levelId;
+    router.push(`/level/${wId}/${lId}`);
   };
 
+  /* ─── Bloques reutilizables ─── */
+
+  const ProfileCard = (
+    <View style={[styles.profileCard, { borderColor: rankInfo.tier.color + '55' }]}>
+      <View style={styles.robotContainer}>
+        <View style={styles.robotImage}>
+          <Text style={styles.robotEmoji}>{profile.avatarEmoji}</Text>
+        </View>
+        <View style={[styles.levelBadge, { backgroundColor: rankInfo.tier.color }]}>
+          <Text style={styles.levelText}>LVL {playerLevel}</Text>
+        </View>
+      </View>
+      <Text style={styles.userName}>{profile.name}</Text>
+      <View style={[styles.rankPill, { backgroundColor: rankInfo.tier.bgColor }]}>
+        <MaterialIcons name={rankInfo.tier.icon as any} size={15} color={rankInfo.tier.color} />
+        <Text style={[styles.rankPillLabel, { color: rankInfo.tier.color }]}>
+          Rango {rankInfo.tier.level} — {rankInfo.tier.name}
+        </Text>
+      </View>
+      <View style={styles.rankBarBg}>
+        <Animated.View
+          style={[
+            styles.rankBarFill,
+            {
+              width: animRankProgress.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }),
+              backgroundColor: rankInfo.tier.color,
+            },
+          ]}
+        />
+      </View>
+      <Text style={styles.rankSubtext}>
+        {rankInfo.isMax
+          ? `⭐ ${totalStars} estrellas · ¡Rango máximo!`
+          : `⭐ ${totalStars} · Faltan ${rankInfo.starsNeeded} para ${rankInfo.nextTierName}`}
+      </Text>
+      <View style={styles.progressBarContainer}>
+        <View style={[styles.progressFill, { width: `${porcentajeXP}%` as any }]} />
+      </View>
+      <Text style={styles.xpText}>{currentXP} / {maxXP} XP · NIVEL {playerLevel + 1}</Text>
+    </View>
+  );
+
+  const MissionCard = dailyMission ? (
+    <View style={[styles.missionCard, { backgroundColor: missionConfig.bg, borderColor: missionConfig.border }]}>
+      <View style={styles.missionHeader}>
+        <View style={[styles.missionIconBg, { backgroundColor: missionConfig.accent + '20' }]}>
+          <MaterialIcons name={missionConfig.icon} size={24} color={missionConfig.accent} />
+        </View>
+        <Text style={[styles.missionTitle, { color: missionConfig.accent }]}>Misión del día</Text>
+        <View style={[styles.missionStatusPill, { backgroundColor: missionConfig.accent + '20' }]}>
+          <Text style={[styles.missionStatusText, { color: missionConfig.accent }]}>{missionConfig.label}</Text>
+        </View>
+      </View>
+      <Text style={styles.missionObjectiveLabel}>Objetivo: completa este nivel</Text>
+      <Text style={styles.missionLevelName} numberOfLines={2}>{dailyMission.targetLevelName}</Text>
+      <Text style={styles.missionWorldName}>{dailyMission.targetWorldName}</Text>
+      <View style={styles.missionProgressBg}>
+        <View style={[styles.missionProgressFill, { width: `${Math.round(missionProgress * 100)}%` as any, backgroundColor: missionConfig.accent }]} />
+      </View>
+      <View style={styles.missionProgressRow}>
+        <Text style={[styles.missionProgressPct, { color: missionConfig.accent }]}>
+          {Math.round(missionProgress * 100)}% completado
+        </Text>
+        <Text style={styles.missionRewardText}>{dailyMission.reward.label}</Text>
+      </View>
+      {dailyMission.status === 'completed' ? (
+        <View style={[styles.missionCompletedBanner, { backgroundColor: missionConfig.accent + '18' }]}>
+          <MaterialIcons name="workspace-premium" size={18} color={missionConfig.accent} />
+          <Text style={[styles.missionCompletedText, { color: missionConfig.accent }]}>
+            ¡Recompensa obtenida! {dailyMission.reward.label}
+          </Text>
+        </View>
+      ) : (
+        <TouchableOpacity
+          style={[styles.missionCTA, { backgroundColor: missionConfig.accent }]}
+          activeOpacity={0.8}
+          onPress={handlePlayMission}
+        >
+          <Text style={styles.missionCTAText}>IR AL NIVEL</Text>
+          <MaterialIcons name="arrow-forward" size={18} color="white" />
+        </TouchableOpacity>
+      )}
+    </View>
+  ) : null;
+
+  const PlaySection = (
+    <View style={[styles.playSection, isWebDesktop && styles.playSectionDesktop]}>
+      <TouchableOpacity style={styles.playButton} activeOpacity={0.7} onPress={handlePlay}>
+        <MaterialIcons name="play-arrow" size={isWebDesktop ? 64 : 80} color={colors.accentDark} />
+        <Text style={[styles.playText, isWebDesktop && styles.playTextDesktop]}>JUGAR</Text>
+      </TouchableOpacity>
+      <Text style={styles.resumeWorld}>{resumeTarget.worldName}</Text>
+      <Text style={styles.resumeLevel} numberOfLines={1}>{resumeTarget.levelName}</Text>
+    </View>
+  );
+
+  /* ─── Layout desktop (tablet+) ─── */
+  if (isWebDesktop) {
+    return (
+      <ScrollView
+        style={styles.container}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.desktopScroll}
+      >
+        {/* Header web */}
+        <View style={styles.desktopHeader}>
+          <View>
+            <Text style={styles.desktopGreeting}>Bienvenido, {profile.name} 👋</Text>
+            <Text style={styles.desktopSubtitle}>Continúa tu viaje por la Inteligencia Artificial</Text>
+          </View>
+          <View style={styles.statsRowDesktop}>
+            <View style={styles.statChipDesktop}>
+              <Text style={styles.statChipValue}>{streak}</Text>
+              <Text style={styles.statChipLabel}>Racha 🔥</Text>
+            </View>
+            <View style={styles.statChipDesktop}>
+              <Text style={styles.statChipValue}>{totalStars}</Text>
+              <Text style={styles.statChipLabel}>Estrellas ⭐</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Contenido en 2 columnas */}
+        <View style={styles.desktopColumns}>
+          {/* Columna izquierda: perfil */}
+          <View style={styles.desktopColLeft}>
+            {ProfileCard}
+          </View>
+
+          {/* Columna derecha: misión + play */}
+          <View style={styles.desktopColRight}>
+            {MissionCard}
+            {PlaySection}
+            {DownloadButton}
+          </View>
+        </View>
+      </ScrollView>
+    );
+  }
+
+  /* ─── Layout móvil (sin cambios) ─── */
   return (
     <ScrollView
       style={styles.container}
       showsVerticalScrollIndicator={false}
       contentContainerStyle={styles.scrollContent}
     >
-      {/* Barra superior */}
       <View style={styles.topBar}>
         <View style={styles.profileRow}>
           <View style={styles.avatar}>
@@ -122,123 +261,10 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
         </View>
       </View>
 
-      {/* Tarjeta de perfil */}
-      <View style={[styles.profileCard, { borderColor: rankInfo.tier.color + '55' }]}>
-        <View style={styles.robotContainer}>
-          <View style={styles.robotImage}>
-            <Text style={styles.robotEmoji}>{profile.avatarEmoji}</Text>
-          </View>
-          <View style={[styles.levelBadge, { backgroundColor: rankInfo.tier.color }]}>
-            <Text style={styles.levelText}>LVL {playerLevel}</Text>
-          </View>
-        </View>
-
-        <Text style={styles.userName}>{profile.name}</Text>
-
-        {/* Píldora de rango */}
-        <View style={[styles.rankPill, { backgroundColor: rankInfo.tier.bgColor }]}>
-          <MaterialIcons name={rankInfo.tier.icon as any} size={15} color={rankInfo.tier.color} />
-          <Text style={[styles.rankPillLabel, { color: rankInfo.tier.color }]}>
-            Rango {rankInfo.tier.level} — {rankInfo.tier.name}
-          </Text>
-        </View>
-
-        {/* Barra de progreso de rango (animada) */}
-        <View style={styles.rankBarBg}>
-          <Animated.View
-            style={[
-              styles.rankBarFill,
-              {
-                width: animRankProgress.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: ['0%', '100%'],
-                }),
-                backgroundColor: rankInfo.tier.color,
-              },
-            ]}
-          />
-        </View>
-
-        {/* Info de estrellas y siguiente rango */}
-        <Text style={styles.rankSubtext}>
-          {rankInfo.isMax
-            ? `⭐ ${totalStars} estrellas · ¡Rango máximo!`
-            : `⭐ ${totalStars} · Faltan ${rankInfo.starsNeeded} para ${rankInfo.nextTierName}`}
-        </Text>
-
-        {/* Barra de XP (indicador secundario) */}
-        <View style={styles.progressBarContainer}>
-          <View style={[styles.progressFill, { width: `${porcentajeXP}%` }]} />
-        </View>
-        <Text style={styles.xpText}>
-          {currentXP} / {maxXP} XP · NIVEL {playerLevel + 1}
-        </Text>
-      </View>
-
-      {/* Misión diaria */}
-      {dailyMission ? (
-        <View style={[styles.missionCard, { backgroundColor: missionConfig.bg, borderColor: missionConfig.border }]}>
-          {/* Cabecera */}
-          <View style={styles.missionHeader}>
-            <View style={[styles.missionIconBg, { backgroundColor: missionConfig.accent + '20' }]}>
-              <MaterialIcons name={missionConfig.icon} size={24} color={missionConfig.accent} />
-            </View>
-            <Text style={[styles.missionTitle, { color: missionConfig.accent }]}>Misión del día</Text>
-            <View style={[styles.missionStatusPill, { backgroundColor: missionConfig.accent + '20' }]}>
-              <Text style={[styles.missionStatusText, { color: missionConfig.accent }]}>{missionConfig.label}</Text>
-            </View>
-          </View>
-
-          {/* Objetivo */}
-          <Text style={styles.missionObjectiveLabel}>Objetivo: completa este nivel</Text>
-          <Text style={styles.missionLevelName} numberOfLines={2}>{dailyMission.targetLevelName}</Text>
-          <Text style={styles.missionWorldName}>{dailyMission.targetWorldName}</Text>
-
-          {/* Barra de progreso */}
-          <View style={styles.missionProgressBg}>
-            <View style={[styles.missionProgressFill, { width: `${Math.round(missionProgress * 100)}%`, backgroundColor: missionConfig.accent }]} />
-          </View>
-          <View style={styles.missionProgressRow}>
-            <Text style={[styles.missionProgressPct, { color: missionConfig.accent }]}>
-              {Math.round(missionProgress * 100)}% completado
-            </Text>
-            <Text style={styles.missionRewardText}>{dailyMission.reward.label}</Text>
-          </View>
-
-          {/* CTA */}
-          {dailyMission.status === 'completed' ? (
-            <View style={[styles.missionCompletedBanner, { backgroundColor: missionConfig.accent + '18' }]}>
-              <MaterialIcons name="workspace-premium" size={18} color={missionConfig.accent} />
-              <Text style={[styles.missionCompletedText, { color: missionConfig.accent }]}>
-                ¡Recompensa obtenida! {dailyMission.reward.label}
-              </Text>
-            </View>
-          ) : (
-            <TouchableOpacity
-              style={[styles.missionCTA, { backgroundColor: missionConfig.accent }]}
-              activeOpacity={0.8}
-              onPress={handlePlayMission}
-            >
-              <Text style={styles.missionCTAText}>IR AL NIVEL</Text>
-              <MaterialIcons name="arrow-forward" size={18} color="white" />
-            </TouchableOpacity>
-          )}
-        </View>
-      ) : null}
-
-      {/* Botón PLAY */}
-      <View style={styles.playSection}>
-        <TouchableOpacity
-          style={styles.playButton}
-          activeOpacity={0.7}
-          onPress={handlePlay}
-        >
-          <MaterialIcons name="play-arrow" size={80} color={colors.accentDark} />
-          <Text style={styles.playText}>JUGAR</Text>
-        </TouchableOpacity>
-        <Text style={styles.resumeWorld}>{resumeTarget.worldName}</Text>
-        <Text style={styles.resumeLevel} numberOfLines={1}>{resumeTarget.levelName}</Text>
-      </View>
+      {ProfileCard}
+      {MissionCard}
+      {PlaySection}
+      {DownloadButton}
     </ScrollView>
   );
 }
@@ -246,6 +272,76 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   scrollContent: { paddingBottom: 100 },
+
+  /* ── Desktop layout ── */
+  desktopScroll: { paddingBottom: 60 },
+  desktopHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+    paddingTop: 36,
+    paddingBottom: 28,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  desktopGreeting: { ...typography.extraBold, fontSize: 26, color: colors.textPrimary },
+  desktopSubtitle: { ...typography.regular, fontSize: 14, color: colors.textSecondary, marginTop: 4 },
+  statsRowDesktop: { flexDirection: 'row', gap: 12 },
+  statChipDesktop: {
+    backgroundColor: colors.surface,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+    minWidth: 80,
+  },
+  statChipValue: { ...typography.extraBold, fontSize: 22, color: colors.textPrimary },
+  statChipLabel: { ...typography.bold, fontSize: 11, color: colors.textSecondary, marginTop: 2 },
+
+  desktopColumns: {
+    flexDirection: 'row',
+    paddingHorizontal: 32,
+    paddingTop: 28,
+    gap: 24,
+    alignItems: 'flex-start',
+  },
+  desktopColLeft: { flex: 4, maxWidth: 400 },
+  desktopColRight: { flex: 6 },
+
+  /* ── Play section ── */
+  playSection: { alignItems: 'center', marginTop: 20, marginBottom: 40 },
+  playSectionDesktop: {
+    marginTop: 24,
+    padding: 32,
+    backgroundColor: colors.surface,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  playButton: {
+    backgroundColor: colors.accent,
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#b29100',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 0,
+    elevation: 8,
+    borderWidth: 6,
+    borderColor: 'white',
+  },
+  playText: { ...typography.extraBold, fontSize: 28, color: colors.accentDark, letterSpacing: 2 },
+  playTextDesktop: { fontSize: 22 },
+  resumeWorld: { ...typography.bold, fontSize: 13, color: colors.textSecondary, marginTop: 12, textTransform: 'uppercase', letterSpacing: 1 },
+  resumeLevel: { ...typography.bold, fontSize: 15, color: colors.textPrimary, marginTop: 4, maxWidth: 260, textAlign: 'center' },
+
+  /* ── Mobile top bar ── */
   topBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -277,6 +373,8 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   statText: { ...typography.bold, fontSize: 14, color: colors.primary },
+
+  /* ── Profile card (shared) ── */
   profileCard: {
     backgroundColor: colors.surface,
     margin: 20,
@@ -297,16 +395,16 @@ const styles = StyleSheet.create({
   levelBadge: { position: 'absolute', bottom: -8, right: -8, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 30, borderWidth: 2, borderColor: 'white' },
   levelText: { ...typography.bold, color: 'white', fontSize: 12 },
   userName: { ...typography.extraBold, fontSize: 22, color: colors.textPrimary, marginTop: 8 },
-  // -- Rango --
   rankPill: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 30, marginTop: 10, marginBottom: 14 },
   rankPillLabel: { ...typography.bold, fontSize: 13 },
   rankBarBg: { width: '100%', height: 18, backgroundColor: colors.borderLight, borderRadius: 30, overflow: 'hidden' },
   rankBarFill: { height: '100%', borderRadius: 30 },
   rankSubtext: { ...typography.bold, fontSize: 12, color: colors.textSecondary, marginTop: 6, marginBottom: 14 },
-  // -- XP (indicador secundario) --
   progressBarContainer: { width: '100%', height: 12, backgroundColor: colors.borderLight, borderRadius: 30, overflow: 'hidden' },
   progressFill: { height: '100%', backgroundColor: colors.primary, borderRadius: 30 },
   xpText: { ...typography.bold, fontSize: 11, color: colors.textSecondary, marginTop: 6 },
+
+  /* ── Mission card (shared) ── */
   missionCard: {
     marginHorizontal: 20,
     marginBottom: 24,
@@ -332,23 +430,24 @@ const styles = StyleSheet.create({
   missionCTAText: { ...typography.extraBold, fontSize: 14, color: 'white', letterSpacing: 1 },
   missionCompletedBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, borderRadius: 16, marginTop: 4 },
   missionCompletedText: { ...typography.bold, fontSize: 13 },
-  playButton: {
-    backgroundColor: colors.accent,
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    justifyContent: 'center',
+
+  /* ── Download button (web only) ── */
+  downloadBtn: {
+    flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#b29100',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 0,
-    elevation: 8,
-    borderWidth: 6,
-    borderColor: 'white',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#3ddc84',
+    marginHorizontal: 20,
+    marginTop: 12,
+    marginBottom: 24,
+    paddingVertical: 14,
+    borderRadius: 30,
+    shadowColor: '#1a7a3a',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  playText: { ...typography.extraBold, fontSize: 28, color: colors.accentDark, letterSpacing: 2 },
-  playSection: { alignItems: 'center', marginTop: 20, marginBottom: 40 },
-  resumeWorld: { ...typography.bold, fontSize: 13, color: colors.textSecondary, marginTop: 12, textTransform: 'uppercase', letterSpacing: 1 },
-  resumeLevel: { ...typography.bold, fontSize: 15, color: colors.textPrimary, marginTop: 4, maxWidth: 260, textAlign: 'center' },
+  downloadBtnText: { ...typography.bold, fontSize: 15, color: 'white' },
 });

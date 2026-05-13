@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
@@ -196,7 +197,7 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
       if (!canGoBack) {
         Alert.alert('Actividad en curso', 'No puedes salir mientras realizas esta actividad.', [
           { text: 'Cancelar', style: 'cancel' },
-          { text: 'Salir', style: 'destructive', onPress: () => navigation.goBack() },
+          { text: 'Salir', style: 'destructive', onPress: () => router.back() },
         ]);
         return true;
       }
@@ -229,7 +230,7 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
     else if (xp >= 130) stars = 2;
     else if (xp >= 60) stars = 1;
     completeLevel(1, 6, stars, xp);
-    navigation.goBack();
+    router.back();
   };
 
   const handleClose = () => {
@@ -239,7 +240,7 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
     }
     Alert.alert('Salir', '¿Seguro que quieres salir del nivel?', [
       { text: 'Cancelar', style: 'cancel' },
-      { text: 'Salir', onPress: () => navigation.goBack() },
+      { text: 'Salir', onPress: () => router.back() },
     ]);
   };
 
@@ -984,7 +985,7 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
     <View style={styles.screen}>
       {/* Barra de progreso */}
       <View style={styles.progressBar}>
-        <TouchableOpacity onPress={handleClose} style={styles.closeBtn}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.closeBtn}>
           <MaterialIcons name="close" size={24} color={colors.textSecondary} />
         </TouchableOpacity>
         <View style={styles.progressTrack}>

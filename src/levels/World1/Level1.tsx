@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -197,8 +198,8 @@ export default function GameLevel1({ navigation: propsNavigation, setAllowBack }
   const [fillChecked, setFillChecked] = useState(false);
 
   const [reflectText, setReflectText] = useState('');
-
   const [exampleExpanded, setExampleExpanded] = useState<number | null>(null);
+  const [stepResult, setStepResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
   const isExamMode = step >= 4 && step <= 11;
 
@@ -216,7 +217,7 @@ export default function GameLevel1({ navigation: propsNavigation, setAllowBack }
           'No puedes regresar mientras realizas el examen. Si sales, perderás el progreso no guardado.',
           [
             { text: 'Cancelar', style: 'cancel' },
-            { text: 'Salir', style: 'destructive', onPress: () => navigation.goBack() }
+            { text: 'Salir', style: 'destructive', onPress: () => router.back() }
           ]
         );
         return true;
@@ -251,7 +252,13 @@ export default function GameLevel1({ navigation: propsNavigation, setAllowBack }
   const addXP = (amount: number) => setXp(prev => prev + amount);
 
   const goToNextStep = () => {
+    setStepResult(null);
     if (step < TOTAL_STEPS - 1) setStep(step + 1);
+  };
+
+  const showResult = (ok: boolean, msg: string, andAdvance = false) => {
+    setStepResult({ ok, msg });
+    if (andAdvance) setTimeout(() => goToNextStep(), 1800);
   };
 
   const handleClose = () => {
@@ -261,13 +268,13 @@ export default function GameLevel1({ navigation: propsNavigation, setAllowBack }
         'Estás en medio del examen. Si sales, perderás todo el progreso de este nivel. ¿Seguro que quieres salir?',
         [
           { text: 'Cancelar', style: 'cancel' },
-          { text: 'Salir', style: 'destructive', onPress: () => navigation.goBack() },
+          { text: 'Salir', style: 'destructive', onPress: () => router.back() },
         ]
       );
     } else {
       Alert.alert('Salir', '¿Seguro que quieres salir del juego? Perderás el progreso no guardado.', [
         { text: 'Cancelar', style: 'cancel' },
-        { text: 'Salir', onPress: () => navigation.goBack() },
+        { text: 'Salir', onPress: () => router.back() },
       ]);
     }
   };
@@ -278,7 +285,7 @@ export default function GameLevel1({ navigation: propsNavigation, setAllowBack }
     else if (xp >= 50) stars = 2;
     else if (xp >= 20) stars = 1;
     completeLevel(1, 1, stars, xp);
-    navigation.goBack();
+    router.back();
   };
 
   // ---------- Drag & Drop ----------
@@ -326,7 +333,7 @@ export default function GameLevel1({ navigation: propsNavigation, setAllowBack }
       setDragOk(true);
       const earned = dragAttempts === 0 ? 20 : 10;
       addXP(earned);
-      Alert.alert('¡Genial!', `Clasificaste las ${dragItems.length} habilidades correctamente. +${earned} XP`, [{ text: 'OK', onPress: goToNextStep }]);
+      showResult(true, `¡Genial! Clasificaste las ${dragItems.length} habilidades correctamente. +${earned} XP`, true);
       return false;
     } else {
       Alert.alert('Algunas incorrectas', `${correct} de ${dragItems.length} correctas. Las incorrectas vuelven al banco.`);
@@ -356,7 +363,7 @@ export default function GameLevel1({ navigation: propsNavigation, setAllowBack }
       setMatchDone(newCount);
       if (newCount === matchPairs.length) {
         addXP(15);
-        Alert.alert('¡Excelente!', 'Conectaste todos los pares correctamente. +15 XP', [{ text: 'OK', onPress: goToNextStep }]);
+        showResult(true, '¡Excelente! Conectaste todos los pares correctamente. +15 XP', true);
       } else {
         Alert.alert('¡Correcto!', `Llevas ${newCount} de ${matchPairs.length} pares.`);
       }
@@ -381,7 +388,7 @@ export default function GameLevel1({ navigation: propsNavigation, setAllowBack }
     if (isOk) {
       setSortOk(true);
       addXP(15);
-      Alert.alert('¡Perfecto!', 'Ese es exactamente el orden en que una IA aprende. +15 XP', [{ text: 'OK', onPress: goToNextStep }]);
+      showResult(true, '¡Perfecto! Ese es exactamente el orden en que una IA aprende. +15 XP', true);
       return false;
     } else {
       Alert.alert('Incorrecto', 'Algunos pasos están fuera de lugar. ¡Piensa en el orden lógico!');
@@ -408,7 +415,7 @@ export default function GameLevel1({ navigation: propsNavigation, setAllowBack }
     });
     const earned = correct * 8;
     if (earned > 0) addXP(earned);
-    Alert.alert('Resultado', `${correct} de ${quizQuestions.length} correctas. +${earned} XP`, [{ text: 'OK', onPress: goToNextStep }]);
+    showResult(true, `Resultado: ${correct} de ${quizQuestions.length} correctas. +${earned} XP`, true);
     return false;
   };
 
@@ -431,7 +438,7 @@ export default function GameLevel1({ navigation: propsNavigation, setAllowBack }
     });
     const earned = correct * 5;
     if (earned > 0) addXP(earned);
-    Alert.alert('Resultado', `${correct} de ${tfItems.length} correctas. +${earned} XP`, [{ text: 'OK', onPress: goToNextStep }]);
+    showResult(true, `Resultado: ${correct} de ${tfItems.length} correctas. +${earned} XP`, true);
     return false;
   };
 
@@ -451,9 +458,9 @@ export default function GameLevel1({ navigation: propsNavigation, setAllowBack }
     const isOk = fillSel === fillItem.correct.fb0;
     if (isOk) {
       addXP(10);
-      Alert.alert('¡Correcto!', `+10 XP. ${fillItem.explain}`, [{ text: 'OK', onPress: goToNextStep }]);
+      showResult(true, `¡Correcto! +10 XP. ${fillItem.explain}`, true);
     } else {
-      Alert.alert('Incorrecto', `La respuesta correcta es "${fillItem.allOpts[fillItem.correct.fb0]}". ${fillItem.explain}`, [{ text: 'OK', onPress: goToNextStep }]);
+      showResult(false, `Incorrecto. La respuesta correcta es "${fillItem.allOpts[fillItem.correct.fb0]}". ${fillItem.explain}`, true);
     }
     return false;
   };
@@ -791,7 +798,7 @@ export default function GameLevel1({ navigation: propsNavigation, setAllowBack }
   return (
     <View style={styles.screen}>
       <View style={styles.progressBar}>
-        <TouchableOpacity onPress={handleClose} style={styles.closeBtn}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.closeBtn}>
           <MaterialIcons name="close" size={24} color={colors.textSecondary} />
         </TouchableOpacity>
         <View style={styles.progressTrack}>
@@ -801,6 +808,11 @@ export default function GameLevel1({ navigation: propsNavigation, setAllowBack }
       </View>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {renderContent()}
+        {stepResult && (
+          <View style={[styles.resultBanner, stepResult.ok ? styles.resultBannerOk : styles.resultBannerErr]}>
+            <Text style={styles.resultBannerText}>{stepResult.ok ? '✅ ' : '❌ '}{stepResult.msg}</Text>
+          </View>
+        )}
       </ScrollView>
       {showNextButton && (
         <TouchableOpacity style={styles.nextButton} onPress={goToNextStep}>
@@ -921,4 +933,8 @@ const styles = StyleSheet.create({
   exampleDetail: { marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#bfdbfe' },
   exampleDetailText: { ...typography.regular, fontSize: 12, color: colors.textPrimary, lineHeight: 18 },
   exampleFact: { marginTop: 8, ...typography.regular, fontSize: 12, backgroundColor: '#fef9c3', padding: 7, borderRadius: 8, color: colors.accentDark },
+  resultBanner: { margin: 16, padding: 14, borderRadius: 14, borderWidth: 1 },
+  resultBannerOk: { backgroundColor: '#dcfce7', borderColor: colors.success },
+  resultBannerErr: { backgroundColor: '#fee2e2', borderColor: colors.error },
+  resultBannerText: { ...typography.bold, fontSize: 13, color: colors.textPrimary, lineHeight: 20 },
 });

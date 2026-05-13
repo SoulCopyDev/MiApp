@@ -10,13 +10,8 @@ import {
   Vibration,
   Platform,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
 import { useGameStore } from '../../store/gameStore';
 import { colors, typography } from '../../theme';
-import { RootStackParamList } from '../../types/navigation';
-
-type Nav = StackNavigationProp<RootStackParamList, 'GameLevel'>;
 
 // ─── TIPOS DE MÓDULO ──────────────────────────────────────
 interface BaseModule {
@@ -392,7 +387,6 @@ const CodeBlock = ({ children }: { children: string }) => (
 
 // ─── COMPONENTE PRINCIPAL ──────────────────────────────────
 export default function World3Level4() {
-  const navigation = useNavigation<Nav>();
   const completeLevel = useGameStore((s) => s.completeLevel);
   const addXPToStore = useGameStore((s) => s.addXP);
 

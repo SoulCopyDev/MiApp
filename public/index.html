@@ -1,40 +1,83 @@
 <!DOCTYPE html>
-<html lang="%LANG_ISO_CODE%">
+<html lang="es">
   <head>
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-    <title>%WEB_TITLE%</title>
+    <!-- viewport-fit=cover: safe areas en iOS notch/home indicator -->
+    <!-- maximum-scale=1: deshabilita pinch-zoom para UX app-like -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover, maximum-scale=1" />
+    <title>AI Explorer</title>
 
     <!-- PWA manifest -->
     <link rel="manifest" href="/manifest.json" />
 
-    <!-- PWA meta -->
+    <!-- PWA / browser meta -->
+    <meta name="theme-color" content="#005ca8" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="AI Explorer" />
     <meta name="application-name" content="AI Explorer" />
+    <meta name="description" content="Aprende Inteligencia Artificial de forma interactiva y gamificada" />
 
-    <!-- Apple touch icon -->
+    <!-- Icons -->
     <link rel="apple-touch-icon" href="/icons/icon-512.png" />
     <link rel="icon" type="image/png" sizes="48x48" href="/icons/favicon.png" />
 
-    <!-- Expo/react-native-web style reset -->
     <style id="expo-reset">
       html,
       body {
         height: 100%;
+        /* dvh = dynamic viewport height: descuenta la barra del browser en móvil */
+        height: 100dvh;
       }
       body {
         overflow: hidden;
         margin: 0;
         padding: 0;
+        /* Mejora rendering de fuentes */
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        text-rendering: optimizeLegibility;
+        /* Elimina highlight azul al tocar en móvil */
+        -webkit-tap-highlight-color: transparent;
+        /* Previene que iOS agrande texto automáticamente */
+        -webkit-text-size-adjust: 100%;
+        /* Respuesta táctil más rápida (elimina delay 300ms en algunos browsers) */
+        touch-action: manipulation;
+        /* Sin selección de texto en la app */
+        user-select: none;
+        -webkit-user-select: none;
       }
       #root {
         display: flex;
         height: 100%;
+        height: 100dvh;
         flex: 1;
+        overflow: hidden;
+      }
+      /* Ocultar scrollbars en todos los navegadores */
+      ::-webkit-scrollbar {
+        display: none;
+      }
+      * {
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        box-sizing: border-box;
+      }
+      /* Restaurar selección en inputs */
+      input,
+      textarea {
+        user-select: text;
+        -webkit-user-select: text;
+      }
+      /* Focus accesible para navegación por teclado */
+      *:focus-visible {
+        outline: 2px solid #005ca8;
+        outline-offset: 2px;
+      }
+      *:focus:not(:focus-visible) {
+        outline: none;
       }
     </style>
   </head>

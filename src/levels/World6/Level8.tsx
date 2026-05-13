@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import React from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
@@ -110,14 +111,14 @@ export default function World6Level8({ navigation: propsNavigation, setAllowBack
   }, []);
 
   const handleClose = () => {
-    navigation.goBack();
+    router.back();
   };
 
   return (
     <View style={styles.screen}>
       {/* Barra de progreso */}
       <View style={styles.bar}>
-        <TouchableOpacity onPress={handleClose} style={styles.closeBtn}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.closeBtn}>
           <MaterialIcons name="close" size={24} color={colors.textSecondary} />
         </TouchableOpacity>
         <View style={styles.track}>

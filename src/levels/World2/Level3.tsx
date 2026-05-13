@@ -251,6 +251,7 @@ export default function World2Level3({ navigation: propsNavigation, setAllowBack
 
   const [step, setStep] = useState(0);
   const [xp, setXp] = useState(0);
+  const [stepResult, setStepResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
   // Pools aleatorios
   const [genreItem] = useState(() => pickN(GENRE_POOL, 1)[0]);
@@ -360,7 +361,12 @@ export default function World2Level3({ navigation: propsNavigation, setAllowBack
   }, [step]);
 
   const addXP = (n: number) => setXp((prev) => prev + n);
-  const goToNextStep = () => { if (step < TOTAL_STEPS - 1) setStep(step + 1); };
+  const goToNextStep = () => { setStepResult(null); if (step < TOTAL_STEPS - 1) setStep(step + 1); };
+
+  const showResult = (ok: boolean, msg: string, andAdvance = false) => {
+    setStepResult({ ok, msg });
+    if (andAdvance) setTimeout(() => goToNextStep(), 1800);
+  };
 
   const handleClose = () => {
     if (isExamMode) {
@@ -403,11 +409,7 @@ export default function World2Level3({ navigation: propsNavigation, setAllowBack
     });
     const earned = correct * 8;
     if (earned > 0) addXP(earned);
-    Alert.alert(
-      correct >= 3 ? '✅ ¡Bien!' : '⚠️ Revisa',
-      `${correct}/${shuffledGenres.length} correctas. +${earned} XP\nCada género transforma el mismo tema en una historia completamente diferente.`,
-      [{ text: 'OK', onPress: goToNextStep }]
-    );
+    showResult(correct >= 3, `${correct >= 3 ? '✅ ¡Bien!' : '⚠️ Revisa'} ${correct}/${shuffledGenres.length} correctas. +${earned} XP. Cada género transforma el mismo tema en una historia completamente diferente.`, true);
     return false;
   };
 
@@ -1060,4 +1062,8 @@ const styles = StyleSheet.create({
   nextButton: { backgroundColor: '#10b981', padding: 14, margin: 16, borderRadius: 11, alignItems: 'center' },
   nextButtonText: { ...typography.bold, color: '#fff', fontSize: 15 },
   finishButton: { backgroundColor: '#10b981', padding: 14, borderRadius: 11, width: '100%', alignItems: 'center', marginTop: 14 },
+  resultBanner: { margin: 16, padding: 14, borderRadius: 14, borderWidth: 1 },
+  resultBannerOk: { backgroundColor: '#dcfce7', borderColor: colors.success },
+  resultBannerErr: { backgroundColor: '#fee2e2', borderColor: colors.error },
+  resultBannerText: { ...typography.bold, fontSize: 13, color: colors.textPrimary, lineHeight: 20 },
 });

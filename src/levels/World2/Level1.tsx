@@ -142,6 +142,7 @@ export default function World2Level1({ navigation: propsNavigation, setAllowBack
 
   const [step, setStep] = useState(0);
   const [xp, setXp] = useState(0);
+  const [stepResult, setStepResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
   const [compareItems] = useState(() => pickN(COMPARE_POOL, 3));
   const [matchPairs] = useState(() => pickN(MATCH_POOL, 4));
@@ -212,7 +213,12 @@ export default function World2Level1({ navigation: propsNavigation, setAllowBack
   }, [step]);
 
   const addXP = (n: number) => setXp(prev => prev + n);
-  const goToNextStep = () => { if (step < TOTAL_STEPS - 1) setStep(step + 1); };
+  const goToNextStep = () => { setStepResult(null); if (step < TOTAL_STEPS - 1) setStep(step + 1); };
+
+  const showResult = (ok: boolean, msg: string, andAdvance = false) => {
+    setStepResult({ ok, msg });
+    if (andAdvance) setTimeout(() => goToNextStep(), 1800);
+  };
 
   const handleClose = () => {
     if (isExamMode) Alert.alert('Actividad en curso', 'Si sales perderás el progreso. ¿Seguro?', [{ text: 'Cancelar', style: 'cancel' }, { text: 'Salir', style: 'destructive', onPress: () => navigation.goBack() }]);
@@ -256,7 +262,7 @@ export default function World2Level1({ navigation: propsNavigation, setAllowBack
   const checkSort = () => {
     if (sortOk) return true;
     const isOk = sortOrder.every((v, i) => v === i);
-    if (isOk) { setSortOk(true); addXP(15); Alert.alert('¡Exacto!', 'Así fluye el Chain of Thought. +15 XP', [{ text: 'OK', onPress: goToNextStep }]); return false; }
+    if (isOk) { setSortOk(true); addXP(15); showResult(true, '¡Exacto! Así fluye el Chain of Thought. +15 XP', true); return false; }
     Alert.alert('Incorrecto', 'Algunos pasos fuera de lugar.');
     return false;
   };
@@ -270,7 +276,7 @@ export default function World2Level1({ navigation: propsNavigation, setAllowBack
     let correct = 0;
     tfItems.forEach((item, idx) => { if (tfAnswers[idx] === item.correct) correct++; });
     addXP(correct * 5);
-    Alert.alert('Resultado', `${correct}/${tfItems.length} correctas. +${correct * 5} XP`, [{ text: 'OK', onPress: goToNextStep }]);
+    showResult(true, `Resultado: ${correct}/${tfItems.length} correctas. +${correct * 5} XP`, true);
     return false;
   };
 
@@ -293,7 +299,7 @@ export default function World2Level1({ navigation: propsNavigation, setAllowBack
     const correct = rankerOrder.every((pi, pos) => rankerSet.prompts[pi].level === pos);
     if (correct) { addXP(20); Alert.alert('🏆 ¡Orden perfecto!', 'Del peor al mejor. +20 XP'); }
     else addXP(8);
-    Alert.alert(correct ? '¡Perfecto!' : 'No del todo', rankerSet.explain, [{ text: 'OK', onPress: goToNextStep }]);
+    showResult(correct, correct ? `¡Perfecto! ${rankerSet.explain}` : `No del todo. ${rankerSet.explain}`, true);
     return false;
   };
 
@@ -328,7 +334,7 @@ export default function World2Level1({ navigation: propsNavigation, setAllowBack
     let correct = 0;
     quizItems.forEach((q, idx) => { if (quizAnswers[idx] === q.correct) correct++; });
     addXP(correct * 8);
-    Alert.alert('Resultado', `${correct}/${quizItems.length} correctas. +${correct * 8} XP`, [{ text: 'OK', onPress: goToNextStep }]);
+    showResult(true, `Resultado: ${correct}/${quizItems.length} correctas. +${correct * 8} XP`, true);
     return false;
   };
 
@@ -817,7 +823,14 @@ export default function World2Level1({ navigation: propsNavigation, setAllowBack
         <View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${progressPercent}%` }]} /></View>
         <Text style={styles.xpText}>{xp} XP</Text>
       </View>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>{renderStepContent()}</ScrollView>
+            <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        {renderStepContent()}
+        {stepResult && (
+          <View style={[styles.resultBanner, stepResult.ok ? styles.resultBannerOk : styles.resultBannerErr]}>
+            <Text style={styles.resultBannerText}>{stepResult.ok ? '\u2705 ' : '\u274c '}{stepResult.msg}</Text>
+          </View>
+        )}
+      </ScrollView>
       {showNextBtn && <TouchableOpacity style={styles.nextButton} onPress={goToNextStep}><Text style={styles.nextButtonText}>Continuar →</Text></TouchableOpacity>}
       {showCheckBtn && <TouchableOpacity style={styles.nextButton} onPress={step === 18 && !sprintStarted ? startSprint : handleMainBtn}><Text style={styles.nextButtonText}>{getBtnLabel()}</Text></TouchableOpacity>}
     </View>
@@ -864,4 +877,8 @@ const styles = StyleSheet.create({
   nextButton: { backgroundColor: '#e11d48', padding: 14, margin: 16, borderRadius: 11, alignItems: 'center' },
   nextButtonText: { ...typography.bold, color: '#fff', fontSize: 15 },
   finishButton: { backgroundColor: '#e11d48', padding: 14, borderRadius: 11, width: '100%', alignItems: 'center', marginTop: 14 },
+  resultBanner: { margin: 16, padding: 14, borderRadius: 14, borderWidth: 1 },
+  resultBannerOk: { backgroundColor: '#dcfce7', borderColor: colors.success },
+  resultBannerErr: { backgroundColor: '#fee2e2', borderColor: colors.error },
+  resultBannerText: { ...typography.bold, fontSize: 13, color: colors.textPrimary, lineHeight: 20 },
 });

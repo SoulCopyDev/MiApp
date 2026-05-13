@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
@@ -147,7 +148,7 @@ export default function World4Level7({ navigation: propsNavigation, setAllowBack
   useEffect(() => { setAllowBack?.(true); }, []);
   useEffect(() => {
     const h = BackHandler.addEventListener('hardwareBackPress', () => {
-      Alert.alert('Salir', '¿Abandonar la evaluación?', [{ text: 'Cancelar', style: 'cancel' }, { text: 'Salir', onPress: () => navigation.goBack() }]);
+      Alert.alert('Salir', '¿Abandonar la evaluación?', [{ text: 'Cancelar', style: 'cancel' }, { text: 'Salir', onPress: () => router.back() }]);
       return true;
     });
     return () => h.remove();
@@ -230,7 +231,7 @@ export default function World4Level7({ navigation: propsNavigation, setAllowBack
     const pct = Math.round((totalCorrect / total) * 100);
     let stars = pct >= 85 ? 3 : pct >= 70 ? 2 : 1;
     completeLevel(4, 7, stars, xp);
-    navigation.goBack();
+    router.back();
   };
 
   const canAdvance = currentPart === 1 ? quizChecked : currentPart === 2 ? tourChecked : currentPart === 3 ? pcChecked : currentPart === 4 ? toolkitDone : currentPart === 5 ? reflectionDone : false;
@@ -403,7 +404,7 @@ export default function World4Level7({ navigation: propsNavigation, setAllowBack
   return (
     <View style={styles.screen}>
       <View style={styles.bar}>
-        <TouchableOpacity onPress={() => Alert.alert('Salir', '¿Abandonar la evaluación?', [{ text: 'Cancelar', style: 'cancel' }, { text: 'Salir', onPress: () => navigation.goBack() }])}>
+        <TouchableOpacity onPress={() => router.back()}>
           <MaterialIcons name="close" size={24} color={colors.textSecondary} />
         </TouchableOpacity>
         <View style={styles.track}><View style={[styles.fill, { width: `${(currentPart/5)*100}%` }]} /></View>

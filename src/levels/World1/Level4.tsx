@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -201,7 +202,7 @@ export default function World1Level4({ navigation: propsNavigation, setAllowBack
           'No puedes regresar mientras realizas esta actividad. Si sales, perderás el progreso.',
           [
             { text: 'Cancelar', style: 'cancel' },
-            { text: 'Salir', style: 'destructive', onPress: () => navigation.goBack() }
+            { text: 'Salir', style: 'destructive', onPress: () => router.back() }
           ]
         );
         return true;
@@ -259,13 +260,13 @@ export default function World1Level4({ navigation: propsNavigation, setAllowBack
         'Estás en medio de una actividad. Si sales, perderás el progreso. ¿Seguro?',
         [
           { text: 'Cancelar', style: 'cancel' },
-          { text: 'Salir', style: 'destructive', onPress: () => navigation.goBack() },
+          { text: 'Salir', style: 'destructive', onPress: () => router.back() },
         ]
       );
     } else {
       Alert.alert('Salir', '¿Seguro que quieres salir del nivel?', [
         { text: 'Cancelar', style: 'cancel' },
-        { text: 'Salir', onPress: () => navigation.goBack() },
+        { text: 'Salir', onPress: () => router.back() },
       ]);
     }
   };
@@ -276,7 +277,7 @@ export default function World1Level4({ navigation: propsNavigation, setAllowBack
     else if (xp >= 80) stars = 2;
     else if (xp >= 40) stars = 1;
     completeLevel(1, 4, stars, xp);
-    navigation.goBack();
+    router.back();
   };
 
   // Helpers para builders
@@ -1045,7 +1046,7 @@ export default function World1Level4({ navigation: propsNavigation, setAllowBack
   return (
     <View style={styles.screen}>
       <View style={styles.progressBar}>
-        <TouchableOpacity onPress={handleClose} style={styles.closeBtn}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.closeBtn}>
           <MaterialIcons name="close" size={24} color={colors.textSecondary} />
         </TouchableOpacity>
         <View style={styles.progressTrack}>

@@ -9,13 +9,8 @@ import {
   StyleSheet,
   Platform,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
 import { useGameStore } from '../../store/gameStore';
 import { colors, typography } from '../../theme';
-import { RootStackParamList } from '../../types/navigation';
-
-type Nav = StackNavigationProp<RootStackParamList, 'GameLevel'>;
 
 // ─── Tipos de módulo ──────────────────────────────────────
 interface TheoryStep {
@@ -628,7 +623,6 @@ const PromptExampleCard = ({ title, bad, good }: { title: string; bad: string; g
 
 // ─── Componente principal del nivel ───────────────────────
 export default function World4Level2() {
-  const navigation = useNavigation<Nav>();
   const completeLevel = useGameStore(s => s.completeLevel);
   const addXPToStore = useGameStore(s => s.addXP);
 

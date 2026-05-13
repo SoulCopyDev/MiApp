@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
@@ -251,7 +252,7 @@ export default function World4Level1({ navigation: propsNavigation, setAllowBack
   const finish = () => {
     let stars = xp >= 220 ? 3 : xp >= 150 ? 2 : 1;
     completeLevel(4, 1, stars, xp);
-    navigation.goBack();
+    router.back();
   };
 
   // Detective
@@ -713,7 +714,7 @@ export default function World4Level1({ navigation: propsNavigation, setAllowBack
   return (
     <View style={styles.screen}>
       <View style={styles.bar}>
-        <TouchableOpacity onPress={() => Alert.alert('Salir', '¿Salir del nivel?', [{ text: 'Cancelar', style: 'cancel' }, { text: 'Salir', onPress: () => navigation.goBack() }])}>
+        <TouchableOpacity onPress={() => router.back()}>
           <MaterialIcons name="close" size={24} color={colors.textSecondary} />
         </TouchableOpacity>
         <View style={styles.track}><View style={[styles.fill, { width: `${progressPercent}%` }]} /></View>

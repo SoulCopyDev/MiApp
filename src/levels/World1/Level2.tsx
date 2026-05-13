@@ -241,6 +241,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
   const [promptsChecked, setPromptsChecked] = useState(false);
 
   const [reflectText, setReflectText] = useState('');
+  const [stepResult, setStepResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
   const [llmItems] = useState(() => pickN(LLM_DRAG_POOL, 6));
   const [llmPlaced, setLlmPlaced] = useState<{ [key: number]: string }>({});
@@ -309,7 +310,13 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
   const addXP = (amount: number) => setXp(prev => prev + amount);
 
   const goToNextStep = () => {
+    setStepResult(null);
     if (step < TOTAL_STEPS - 1) setStep(step + 1);
+  };
+
+  const showResult = (ok: boolean, msg: string, andAdvance = false) => {
+    setStepResult({ ok, msg });
+    if (andAdvance) setTimeout(() => goToNextStep(), 1800);
   };
 
   const handleClose = () => {
@@ -384,7 +391,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
       setDrag3Ok(true);
       const earned = drag3Attempts === 0 ? 20 : 12;
       addXP(earned);
-      Alert.alert('¡Perfecto!', `Clasificaste todos correctamente. +${earned} XP`, [{ text: 'OK', onPress: goToNextStep }]);
+      showResult(true, `¡Perfecto! Clasificaste todos correctamente. +${earned} XP`, true);
       return false;
     } else {
       Alert.alert('Algunas incorrectas', `${correct} de ${drag3Items.length} correctas. Las incorrectas vuelven al banco.`);
@@ -440,7 +447,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
       setLlmOk(true);
       const earned = llmAttempts === 0 ? 20 : 12;
       addXP(earned);
-      Alert.alert('¡Perfecto!', `Asignaste todas las tareas correctamente. +${earned} XP`, [{ text: 'OK', onPress: goToNextStep }]);
+      showResult(true, `¡Perfecto! Asignaste todas las tareas correctamente. +${earned} XP`, true);
       return false;
     } else {
       Alert.alert('Algunas incorrectas', `${correct} de ${llmItems.length} correctas. Las incorrectas vuelven al banco.`);
@@ -470,7 +477,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
       setMatchDone(newCount);
       if (newCount === matchPairs.length) {
         addXP(15);
-        Alert.alert('¡Completado!', 'Conectaste todos los pares. +15 XP', [{ text: 'OK', onPress: goToNextStep }]);
+        showResult(true, '¡Completado! Conectaste todos los pares. +15 XP', true);
       } else {
         Alert.alert('¡Correcto!', `Llevas ${newCount} de ${matchPairs.length} pares.`);
       }
@@ -495,7 +502,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
     if (isOk) {
       setSortOk(true);
       addXP(15);
-      Alert.alert('¡Exacto!', 'Ese es el orden real de procesamiento de un LLM. +15 XP', [{ text: 'OK', onPress: goToNextStep }]);
+      showResult(true, '¡Exacto! Ese es el orden real de procesamiento de un LLM. +15 XP', true);
       return false;
     } else {
       Alert.alert('Incorrecto', 'Algunos pasos están fuera de lugar. ¡Piensa en el orden lógico!');
@@ -522,9 +529,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
     });
     const earned = correct * 8;
     if (earned > 0) addXP(earned);
-    Alert.alert('Resultado', `${correct} de ${quizQuestions.length} correctas. +${earned} XP`, [
-      { text: 'OK', onPress: goToNextStep },
-    ]);
+    showResult(true, `Resultado: ${correct} de ${quizQuestions.length} correctas. +${earned} XP`, true);
     return false;
   };
 
@@ -547,9 +552,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
     });
     const earned = correct * 5;
     if (earned > 0) addXP(earned);
-    Alert.alert('Resultado', `${correct} de ${tfItems.length} correctas. +${earned} XP`, [
-      { text: 'OK', onPress: goToNextStep },
-    ]);
+    showResult(true, `Resultado: ${correct} de ${tfItems.length} correctas. +${earned} XP`, true);
     return false;
   };
 
@@ -569,11 +572,9 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
     const isOk = fillSel === fillItem.correct;
     if (isOk) {
       addXP(10);
-      Alert.alert('¡Correcto!', `+10 XP. ${fillItem.explain}`, [{ text: 'OK', onPress: goToNextStep }]);
+      showResult(true, `¡Correcto! +10 XP. ${fillItem.explain}`, true);
     } else {
-      Alert.alert('Incorrecto', `La respuesta correcta es "${fillItem.allOpts[fillItem.correct]}". ${fillItem.explain}`, [
-        { text: 'OK', onPress: goToNextStep },
-      ]);
+      showResult(false, `Incorrecto. La respuesta correcta es "${fillItem.allOpts[fillItem.correct]}". ${fillItem.explain}`, true);
     }
     return false;
   };
@@ -597,9 +598,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
     });
     const earned = correct * 8;
     if (earned > 0) addXP(earned);
-    Alert.alert('Resultado', `${correct} de ${promptItems.length} correctas. +${earned} XP`, [
-      { text: 'OK', onPress: goToNextStep },
-    ]);
+    showResult(true, `Resultado: ${correct} de ${promptItems.length} correctas. +${earned} XP`, true);
     return false;
   };
 
@@ -1164,6 +1163,11 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
       </View>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {renderContent()}
+        {stepResult && (
+          <View style={[styles.resultBanner, stepResult.ok ? styles.resultBannerOk : styles.resultBannerErr]}>
+            <Text style={styles.resultBannerText}>{stepResult.ok ? '✅ ' : '❌ '}{stepResult.msg}</Text>
+          </View>
+        )}
       </ScrollView>
       {showNextButton && (
         <TouchableOpacity style={styles.nextButton} onPress={goToNextStep}>
@@ -1261,4 +1265,8 @@ const styles = StyleSheet.create({
   xpEarnedText: { ...typography.bold, fontSize: 15, color: colors.accentDark, marginBottom: 14 },
   nextLevelButton: { backgroundColor: colors.primary, padding: 14, borderRadius: 11, width: '100%', alignItems: 'center' },
   nextLevelText: { ...typography.bold, color: '#fff' },
+  resultBanner: { margin: 16, padding: 14, borderRadius: 14, borderWidth: 1 },
+  resultBannerOk: { backgroundColor: '#dcfce7', borderColor: colors.success },
+  resultBannerErr: { backgroundColor: '#fee2e2', borderColor: colors.error },
+  resultBannerText: { ...typography.bold, fontSize: 13, color: colors.textPrimary, lineHeight: 20 },
 });

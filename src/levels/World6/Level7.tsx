@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, BackHandler,
@@ -134,11 +135,11 @@ export default function World6Level7({ navigation: propsNavigation, setAllowBack
 
   const addXP = (n: number) => setXp((p) => p + n);
   const goNext = () => { if (step < TOTAL_STEPS - 1) setStep(step + 1); };
-  const handleClose = () => Alert.alert('Salir', '¿Seguro? Es la evaluación final.', [{ text: 'Cancelar' }, { text: 'Salir', onPress: () => navigation.goBack() }]);
+  const handleClose = () => Alert.alert('Salir', '¿Seguro? Es la evaluación final.', [{ text: 'Cancelar' }, { text: 'Salir', onPress: () => router.back() }]);
   const handleFinish = () => {
     let stars = 3;
     completeLevel(6, 7, stars, xp);
-    navigation.goBack();
+    router.back();
   };
 
   // Quiz
@@ -311,7 +312,7 @@ export default function World6Level7({ navigation: propsNavigation, setAllowBack
   return (
     <View style={styles.screen}>
       <View style={styles.progressBar}>
-        <TouchableOpacity onPress={handleClose}><MaterialIcons name="close" size={24} color={colors.textSecondary} /></TouchableOpacity>
+        <TouchableOpacity onPress={() => router.back()}><MaterialIcons name="close" size={24} color={colors.textSecondary} /></TouchableOpacity>
         <View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${progress}%` }]} /></View>
         <Text style={styles.xpText}>{xp} XP</Text>
       </View>

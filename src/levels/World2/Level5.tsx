@@ -171,6 +171,7 @@ export default function World2Level5({ navigation: propsNavigation, setAllowBack
 
   const [step, setStep] = useState(0);
   const [xp, setXp] = useState(0);
+  const [stepResult, setStepResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
   // Pools aleatorios
   const [fillCotItem] = useState(() => pickN(FILL_COT, 1)[0]);
@@ -269,7 +270,12 @@ export default function World2Level5({ navigation: propsNavigation, setAllowBack
   }, [step]);
 
   const addXP = (n: number) => setXp((prev) => prev + n);
-  const goToNextStep = () => { if (step < TOTAL_STEPS - 1) setStep(step + 1); };
+  const goToNextStep = () => { setStepResult(null); if (step < TOTAL_STEPS - 1) setStep(step + 1); };
+
+  const showResult = (ok: boolean, msg: string, andAdvance = false) => {
+    setStepResult({ ok, msg });
+    if (andAdvance) setTimeout(() => goToNextStep(), 1800);
+  };
 
   const handleClose = () => {
     Alert.alert('Salir', '¿Seguro que quieres salir?', [
@@ -342,7 +348,7 @@ export default function World2Level5({ navigation: propsNavigation, setAllowBack
     let correct = 0;
     ARBOL_ITEMS.forEach((_, i) => { if (arbolAnswers[i] === 0) correct++; });
     addXP(correct * 8);
-    Alert.alert(correct >= 3 ? '✅ ¡Bien!' : '⚠️ Revisa', `${correct}/4 correctas. +${correct * 8} XP`, [{ text: 'OK', onPress: goToNextStep }]);
+    showResult(correct >= 3, `${correct >= 3 ? '✅ ¡Bien!' : '⚠️ Revisa'} ${correct}/4 correctas. +${correct * 8} XP`, true);
     return false;
   };
 
@@ -912,7 +918,14 @@ export default function World2Level5({ navigation: propsNavigation, setAllowBack
         <View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${progressPercent}%` }]} /></View>
         <Text style={styles.xpText}>{xp} XP</Text>
       </View>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>{renderStepContent()}</ScrollView>
+            <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        {renderStepContent()}
+        {stepResult && (
+          <View style={[styles.resultBanner, stepResult.ok ? styles.resultBannerOk : styles.resultBannerErr]}>
+            <Text style={styles.resultBannerText}>{stepResult.ok ? '\u2705 ' : '\u274c '}{stepResult.msg}</Text>
+          </View>
+        )}
+      </ScrollView>
       {showNextBtn && <TouchableOpacity style={styles.nextButton} onPress={goToNextStep}><Text style={styles.nextButtonText}>Continuar →</Text></TouchableOpacity>}
       {showCheckBtn && <TouchableOpacity style={styles.nextButton} onPress={handleMainBtn}><Text style={styles.nextButtonText}>{getBtnLabel()}</Text></TouchableOpacity>}
     </View>
@@ -946,4 +959,8 @@ const styles = StyleSheet.create({
   nextButton: { backgroundColor: '#10b981', padding: 14, margin: 16, borderRadius: 11, alignItems: 'center' },
   nextButtonText: { ...typography.bold, color: '#fff', fontSize: 15 },
   finishButton: { backgroundColor: '#10b981', padding: 14, borderRadius: 11, width: '100%', alignItems: 'center', marginTop: 14 },
+  resultBanner: { margin: 16, padding: 14, borderRadius: 14, borderWidth: 1 },
+  resultBannerOk: { backgroundColor: '#dcfce7', borderColor: colors.success },
+  resultBannerErr: { backgroundColor: '#fee2e2', borderColor: colors.error },
+  resultBannerText: { ...typography.bold, fontSize: 13, color: colors.textPrimary, lineHeight: 20 },
 });

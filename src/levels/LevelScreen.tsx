@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text } from 'react-native';
-import { RouteProp, useRoute } from '@react-navigation/native';
-import { RootStackParamList } from '../types/navigation';
+import { useLocalSearchParams } from 'expo-router';
 import { colors } from '../theme';
 
 // Importación de niveles
@@ -52,8 +51,6 @@ import World6Level5 from './World6/Level5';
 import World6Level6 from './World6/Level6';
 import World6Level7 from './World6/Level7'; 
 import World6Level8 from './World6/Level8';
-
-type LevelScreenRouteProp = RouteProp<RootStackParamList, 'GameLevel'>;
 
 // Tipo para las props que pueden recibir los niveles
 interface LevelComponentProps {
@@ -119,10 +116,11 @@ const levelComponents: Record<number, Record<number, React.ComponentType<LevelCo
 };
 
 export default function LevelScreen() {
-  const route = useRoute<LevelScreenRouteProp>();
-  const { worldId, levelId } = route.params;
+  const { worldId: wParam, levelId: lParam } = useLocalSearchParams<{ worldId: string; levelId: string }>();
+  const worldId = Number(wParam);
+  const levelId = Number(lParam);
 
-  const [allowBack, setAllowBack] = useState(true);
+  const [, setAllowBack] = useState(true);
 
   const LevelComponent = levelComponents[worldId]?.[levelId];
 

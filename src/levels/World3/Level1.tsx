@@ -11,13 +11,8 @@ import {
   Vibration,
   Platform,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
 import { useGameStore } from '../../store/gameStore';
 import { colors, typography } from '../../theme';
-import { RootStackParamList } from '../../types/navigation';
-
-type Nav = StackNavigationProp<RootStackParamList, 'GameLevel'>;
 
 // ─── TIPOS ──────────────────────────────────────────────
 type ModuleType = 'theory' | 'quiz' | 'matching' | 'builder' | 'dragdrop' |
@@ -373,7 +368,6 @@ const MODULES = [
 const MAX_XP = 230;
 
 export default function World3Level1() {
-  const navigation = useNavigation<Nav>();
   const completeLevel = useGameStore((s) => s.completeLevel);
   const addXPToStore = useGameStore((s) => s.addXP);
 

@@ -140,6 +140,7 @@ export default function World1Level5({ navigation: propsNavigation, setAllowBack
 
   const [step, setStep] = useState(0);
   const [xp, setXp] = useState(0);
+  const [stepResult, setStepResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
   // Pools aleatorios
   const [ethicsItems] = useState(() => pickN(ETHICS_POOL, 5));
@@ -228,7 +229,12 @@ export default function World1Level5({ navigation: propsNavigation, setAllowBack
   }, [step]);
 
   const addXP = (amount: number) => setXp((prev) => prev + amount);
-  const goToNextStep = () => { if (step < TOTAL_STEPS - 1) setStep(step + 1); };
+  const goToNextStep = () => { setStepResult(null); if (step < TOTAL_STEPS - 1) setStep(step + 1); };
+
+  const showResult = (ok: boolean, msg: string, andAdvance = false) => {
+    setStepResult({ ok, msg });
+    if (andAdvance) setTimeout(() => goToNextStep(), 1800);
+  };
 
   const handleClose = () => {
     if (isExamMode) {
@@ -306,7 +312,7 @@ export default function World1Level5({ navigation: propsNavigation, setAllowBack
       setTrabajoOk(true);
       const earned = trabajoAttempts === 0 ? 20 : 12;
       addXP(earned);
-      Alert.alert('¡Perfecto!', `+${earned} XP`, [{ text: 'OK', onPress: goToNextStep }]);
+      showResult(true, `¡Perfecto! +${earned} XP`, true);
       return false;
     }
     Alert.alert('Revisa', `${correct} de ${trabajoItems.length} correctas. Las incorrectas vuelven.`);
@@ -332,7 +338,7 @@ export default function World1Level5({ navigation: propsNavigation, setAllowBack
     let correct = 0;
     privTfItems.forEach((item, idx) => { if (tfAnswers[idx] === item.correct) correct++; });
     addXP(correct * 5);
-    Alert.alert('Resultado', `${correct}/${privTfItems.length} correctas. +${correct * 5} XP`, [{ text: 'OK', onPress: goToNextStep }]);
+    showResult(true, `Resultado: ${correct}/${privTfItems.length} correctas. +${correct * 5} XP`, true);
     return false;
   };
 
@@ -373,7 +379,7 @@ export default function World1Level5({ navigation: propsNavigation, setAllowBack
     if (isOk) {
       setSortOk(true);
       addXP(15);
-      Alert.alert('¡Exacto!', 'Así es como el sesgo se convierte en daño real. +15 XP', [{ text: 'OK', onPress: goToNextStep }]);
+      showResult(true, '¡Exacto! Así es como el sesgo se convierte en daño real. +15 XP', true);
       return false;
     }
     Alert.alert('Incorrecto', 'Algunos pasos fuera de lugar.');
@@ -396,7 +402,7 @@ export default function World1Level5({ navigation: propsNavigation, setAllowBack
     let correct = 0;
     quizItems.forEach((q, idx) => { if (quizAnswers[idx] === q.correct) correct++; });
     addXP(correct * 8);
-    Alert.alert('Resultado', `${correct}/${quizItems.length} correctas. +${correct * 8} XP`, [{ text: 'OK', onPress: goToNextStep }]);
+    showResult(true, `Resultado: ${correct}/${quizItems.length} correctas. +${correct * 8} XP`, true);
     return false;
   };
 
@@ -977,4 +983,8 @@ const styles = StyleSheet.create({
   nextButton: { backgroundColor: '#7c3aed', padding: 14, margin: 16, borderRadius: 11, alignItems: 'center' },
   nextButtonText: { ...typography.bold, color: '#fff', fontSize: 15 },
   finishButton: { backgroundColor: '#7c3aed', padding: 14, borderRadius: 11, width: '100%', alignItems: 'center', marginTop: 14 },
+  resultBanner: { margin: 16, padding: 14, borderRadius: 14, borderWidth: 1 },
+  resultBannerOk: { backgroundColor: '#dcfce7', borderColor: colors.success },
+  resultBannerErr: { backgroundColor: '#fee2e2', borderColor: colors.error },
+  resultBannerText: { ...typography.bold, fontSize: 13, color: colors.textPrimary, lineHeight: 20 },
 });

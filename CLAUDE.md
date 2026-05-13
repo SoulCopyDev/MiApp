@@ -13,9 +13,11 @@ Memoria técnica viva del proyecto. Actualizar cuando cambien arquitectura, enti
 | React | 19.1.0 |
 | TypeScript | ~5.9.2 |
 | Zustand | ^5.0.12 |
-| React Navigation (stack + bottom-tabs) | ^7.x |
+| Expo Router | ~6.0.23 |
+| React Navigation (stack + bottom-tabs) | ^7.x (peer dep de Expo Router) |
 | AsyncStorage | 2.2.0 |
 | expo-font | ~14.0.11 |
+| babel-preset-expo | ~54.0.10 |
 | @expo/vector-icons (MaterialIcons) | ^15.0.3 |
 | @expo-google-fonts/plus-jakarta-sans | ^0.4.2 |
 | react-native-web | ^0.21.0 |
@@ -32,21 +34,40 @@ Monolito React Native. Una sola app. Sin microservicios, sin servidor.
 
 ```
 MiApp/
-├── App.tsx                  # Raíz: NavigationContainer + Stack + Tab navigators
-├── index.ts                 # Entry point Expo
-├── app.json                 # Config Expo (package: com.miapp.aiexplorer, newArch: true)
+├── app/                     # Expo Router — file-based routing
+│   ├── _layout.tsx          # Raíz: fonts, web wrapper, Stack + DownloadBanner (web)
+│   ├── (tabs)/
+│   │   ├── _layout.tsx      # Tab bar config (Inicio/Mapa/Trofeos/Configuración)
+│   │   ├── index.tsx        # → HomeScreen
+│   │   ├── map.tsx          # → MapScreen
+│   │   ├── badges.tsx       # → BadgesScreen
+│   │   └── settings.tsx     # → SettingsScreen
+│   ├── world/
+│   │   └── [worldId].tsx    # → WorldScreen (URL: /world/1)
+│   └── level/
+│       └── [worldId]/
+│           └── [levelId].tsx # → LevelScreen (URL: /level/1/3)
+├── app.json                 # Config Expo (scheme: aiexplorer, web.output: spa)
+├── babel.config.js          # babel-preset-expo
+├── metro.config.js          # getDefaultConfig(__)
 ├── eas.json                 # EAS Build profiles (dev/preview/production)
 ├── assets/
 │   ├── fonts/useFonts.ts    # Registro de fuentes
 │   └── *.png                # Íconos y splash
 └── src/
     ├── config/
-    │   └── avatarEmojis.ts  # Lista de emojis de avatar disponibles
+    │   ├── avatarEmojis.ts  # Lista de emojis de avatar disponibles
+    │   └── downloadConfig.ts # URLs de descarga de la app (APK, Play Store, App Store)
+    ├── components/
+    │   ├── WebSidebar.tsx   # Sidebar de navegación para desktop (solo web)
+    │   └── DownloadBanner.tsx # Banner/card de descarga de app móvil (solo web)
     ├── hooks/
-    │   └── useCustomFonts.ts # Carga Plus Jakarta Sans
+    │   ├── useCustomFonts.ts # Carga Plus Jakarta Sans
+    │   ├── useBreakpoint.ts # Retorna 'mobile'|'tablet'|'desktop' según ancho
+    │   └── useMobileDetect.ts # Detección UA (android/ios/desktop), PWA, localStorage dismiss
     ├── levels/
     │   ├── BaseLevel.tsx    # Componente base reutilizable (quiz de opción múltiple)
-    │   ├── LevelScreen.tsx  # Router: worldId+levelId → componente estático
+    │   ├── LevelScreen.tsx  # Dispatcher: worldId+levelId → componente estático
     │   ├── World1/Level{1-6}.tsx
     │   ├── World2/Level{1-7}.tsx
     │   ├── World3/Level{1-7}.tsx
@@ -54,7 +75,7 @@ MiApp/
     │   ├── World5/Level{1-7}.tsx
     │   └── World6/Level{1-8}.tsx  # 42 niveles totales
     ├── screens/
-    │   ├── HomeScreen.tsx   # Tab Inicio: perfil, rango, misión diaria, botón JUGAR
+    │   ├── HomeScreen.tsx   # Tab Inicio: perfil, rango, misión diaria, botón JUGAR, botón descarga APK (web)
     │   ├── MapScreen.tsx    # Tab Mapa: lista de mundos con progreso
     │   ├── WorldScreen.tsx  # Stack: niveles de un mundo específico
     │   ├── BadgesScreen.tsx # Tab Trofeos: insignias y trofeos por nivel/mundo
@@ -66,7 +87,7 @@ MiApp/
     │   ├── typography.ts    # Design tokens tipográficos
     │   └── index.ts         # Re-exporta colors + typography
     ├── types/
-    │   └── navigation.ts    # RootStackParamList + MainTabParamList + tipos de props
+    │   └── navigation.ts    # Tipos legacy (usado solo como referencia)
     └── utils/
         ├── dailyMission.ts  # Generación/detección de misiones diarias (sin dependencia circular)
         ├── rankSystem.ts    # Sistema de rangos por estrellas (8 tiers)
@@ -75,15 +96,30 @@ MiApp/
 
 ---
 
-## Navegación
+## Navegación (Expo Router)
 
-**Stack raíz (`RootStackParamList`):**
-- `MainTabs` — sin params
-- `World` — `{ worldId: number }`
-- `GameLevel` — `{ worldId: number; levelId: number }`
+Navegación basada en archivos en `app/`. Entry point: `expo-router/entry`.
 
-**Bottom Tabs (`MainTabParamList`):**
-- `Inicio` | `Mapa` | `Trofeos` | `Configuración`
+**URLs web / deep links (`aiexplorer://`):**
+- `/` → Inicio (HomeScreen)
+- `/map` → Mapa (MapScreen)
+- `/badges` → Trofeos (BadgesScreen)
+- `/settings` → Configuración (SettingsScreen)
+- `/world/[worldId]` → WorldScreen
+- `/level/[worldId]/[levelId]` → LevelScreen
+
+**Navegación programática:**
+```ts
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+
+router.push('/world/1');
+router.push(`/level/${worldId}/${levelId}`);
+router.back();
+
+// Leer params de ruta (devuelven string — convertir a número)
+const { worldId } = useLocalSearchParams<{ worldId: string }>();
+const id = Number(worldId);
+```
 
 ---
 
@@ -159,7 +195,7 @@ interface Question {
 }
 ```
 
-Flujo: pregunta → selección → feedback 1500ms → siguiente pregunta → resultado con estrellas → `completeLevel()` → `navigation.goBack()`.
+Flujo: pregunta → selección → feedback 1500ms → siguiente pregunta → resultado con estrellas → `completeLevel()` → `router.back()`.
 
 **Estrellas:** `floor((correctas / total) * 3)`
 
@@ -252,7 +288,7 @@ npm run preview:web  # sirve dist/ localmente con npx serve
 
 La app usa Expo SDK 54 + Metro bundler para web. `npm run web` funciona. Compatibilidad:
 - Zustand + AsyncStorage → localStorage en web ✅
-- React Navigation v7 ✅
+- Expo Router + React Navigation v7 ✅
 - MaterialIcons (SVG) ✅
 - expo-font / Plus Jakarta Sans ✅
 - `Alert.prompt` → `window.prompt` vía Platform.OS check ✅
@@ -265,12 +301,17 @@ public/                        # Expo copia este dir a dist/ en build:web
 ├── index.html                 # Template HTML con meta PWA + registro SW
 ├── manifest.json              # PWA manifest (name, icons, display:standalone)
 ├── service-worker.js          # SW: cache-first assets, network-first nav
-└── icons/
-    ├── favicon.png            # 48x48
-    └── icon-512.png           # 1024x1024 (sirve como 512 también)
+├── icons/
+│   ├── favicon.png            # 48x48
+│   ├── icon-512.png           # 1024x1024 (sirve como 512 también)
+│   └── qr-app.png             # QR code estático → https://mi-app-kappa-navy.vercel.app
+└── downloads/
+    └── ai-explorer.apk        # APK Android (72MB) — servido como asset estático
 ```
 
 **Por qué `public/icons/`:** Metro hashea los nombres de assets en dist/. Los iconos en `public/` tienen rutas estables (`/icons/icon-512.png`), necesarias para el manifest.
+
+**APK en `public/downloads/`:** se sirve directamente desde Vercel como `/downloads/ai-explorer.apk`. Al generar un nuevo APK, reemplazar el archivo y re-deployar.
 
 ### Service Worker
 
@@ -283,7 +324,18 @@ Versión de caché: `ai-explorer-v1` — **incrementar al hacer deploy con cambi
 
 ### Responsive web
 
-`App.tsx` envuelve la app en un contenedor con `maxWidth: 480` solo en `Platform.OS === 'web'`. El hook `src/hooks/useBreakpoint.ts` retorna `'mobile' | 'tablet' | 'desktop'` según `useWindowDimensions`. Breakpoints: mobile < 600px, tablet < 1024px, desktop ≥ 1024px.
+`app/_layout.tsx` envuelve la app en `<View style={webRoot}>` solo en `Platform.OS === 'web'` (sin phone-frame — layouts responsivos manejados por cada pantalla).
+
+El hook `src/hooks/useBreakpoint.ts` retorna `'mobile' | 'tablet' | 'desktop'` según `useWindowDimensions`. Breakpoints: mobile < 600px, tablet < 1024px, desktop ≥ 1024px.
+
+Patrón estándar en pantallas:
+```ts
+const breakpoint = useBreakpoint();
+const isWebDesktop = Platform.OS === 'web' && breakpoint !== 'mobile';
+```
+
+**Desktop:** sidebar lateral (`WebSidebar.tsx`) + tab bar oculto. Layouts en 2 columnas/grid. Activado en `app/(tabs)/_layout.tsx`.
+**Mobile web:** tab bar visible, layouts idénticos a la app nativa.
 
 ### Deploy
 
@@ -299,9 +351,30 @@ npm run build:web   # output → dist/
 **Node requerido en CI:** `.nvmrc` apunta a `20`. Vercel/Netlify leen `.nvmrc` automáticamente.
 
 ### Tamaño de bundle (referencia)
-- JS bundle: ~2.8MB uncompressed / ~700KB gzip (esperado para RN web)
-- Total dist: ~8.3MB (incluye todas las fuentes de `@expo/vector-icons` y todas las variantes de Plus Jakarta Sans)
-- Optimización futura (no urgente): tree-shake icon fonts para incluir solo MaterialIcons.
+- JS bundle: ~3.1MB uncompressed / ~700KB gzip (esperado para RN web)
+- Total dist: ~80MB (incluye APK de 72MB en `downloads/` + fuentes + bundle)
+- Optimización futura (no urgente): alojar APK en GitHub Releases o CDN externo para reducir tamaño de deploy.
+
+### Descarga de la app móvil
+
+**Config:** `src/config/downloadConfig.ts`
+```ts
+export const DOWNLOAD_CONFIG = {
+  apkUrl: '/downloads/ai-explorer.apk', // null si no hay APK
+  playStoreUrl: null,   // reemplazar cuando se publique en Play Store
+  appStoreUrl: null,    // reemplazar cuando se publique en App Store
+  pwaDemoUrl: 'https://mi-app-kappa-navy.vercel.app',
+};
+```
+
+**Componentes:**
+- `DownloadBanner` (en `_layout.tsx`): aparece 2s después de cargar, se descarta via localStorage (`ai-explorer-download-dismissed`). No aparece en PWA standalone ni si ya fue descartado.
+  - Android → botón "Descargar" / Play Store
+  - iOS → App Store o "Próximamente"
+  - Desktop → tarjeta flotante con QR + botones de tienda
+- Botón en `HomeScreen`: botón verde fijo en pantalla Inicio, visible en toda la web (móvil y desktop). Solo aparece si hay `apkUrl` o `playStoreUrl` configurado.
+
+**Para actualizar el APK:** reemplazar `public/downloads/ai-explorer.apk` y ejecutar `npm run build:web` + `vercel --prod`.
 
 ---
 

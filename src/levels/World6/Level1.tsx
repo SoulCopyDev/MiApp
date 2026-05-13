@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, BackHandler,
@@ -176,12 +177,12 @@ export default function World6Level1({ navigation: propsNavigation, setAllowBack
 
   const addXP = (n: number) => setXp((p) => p + n);
   const goNext = () => { if (step < TOTAL_STEPS - 1) setStep(step + 1); };
-  const handleClose = () => Alert.alert('Salir', '¿Seguro?', [{ text: 'Cancelar' }, { text: 'Salir', onPress: () => navigation.goBack() }]);
+  const handleClose = () => Alert.alert('Salir', '¿Seguro?', [{ text: 'Cancelar' }, { text: 'Salir', onPress: () => router.back() }]);
   const handleFinish = () => {
     let stars = 0;
     if (xp >= 180) stars = 3; else if (xp >= 120) stars = 2; else if (xp >= 60) stars = 1;
     completeLevel(6, 1, stars, xp);
-    navigation.goBack();
+    router.back();
   };
 
   // Matching
@@ -544,7 +545,7 @@ export default function World6Level1({ navigation: propsNavigation, setAllowBack
   return (
     <View style={styles.screen}>
       <View style={styles.progressBar}>
-        <TouchableOpacity onPress={handleClose}><MaterialIcons name="close" size={24} color={colors.textSecondary} /></TouchableOpacity>
+        <TouchableOpacity onPress={() => router.back()}><MaterialIcons name="close" size={24} color={colors.textSecondary} /></TouchableOpacity>
         <View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${progress}%` }]} /></View>
         <Text style={styles.xpText}>{xp} XP</Text>
       </View>

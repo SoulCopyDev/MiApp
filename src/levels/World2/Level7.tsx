@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
@@ -244,7 +245,7 @@ export default function World2Level7({ navigation: propsNavigation, setAllowBack
     const overall = Math.round(((p1ScoreRef.current/15)+(p2ScoreRef.current/3)+(p3ScoreRef.current/10))/3*100);
     let stars = overall >= 85 ? 3 : overall >= 70 ? 2 : 1;
     completeLevel(2, 7, stars, xp);
-    navigation.goBack();
+    router.back();
   };
 
   // ----- RENDER -----
@@ -471,7 +472,7 @@ export default function World2Level7({ navigation: propsNavigation, setAllowBack
   return (
     <View style={styles.screen}>
       <View style={styles.bar}>
-        <TouchableOpacity onPress={() => Alert.alert('Salir', '¿Abandonar la evaluación?', [{ text: 'Cancelar', style: 'cancel' }, { text: 'Salir', onPress: () => navigation.goBack() }])}>
+        <TouchableOpacity onPress={() => router.back()}>
           <MaterialIcons name="close" size={24} color={colors.textSecondary} />
         </TouchableOpacity>
         <View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${(step/(TOTAL_STEPS-1))*100}%` }]} /></View>

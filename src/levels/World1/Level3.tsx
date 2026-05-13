@@ -323,6 +323,7 @@ export default function World1Level3({ navigation: propsNavigation, setAllowBack
 
   const [step, setStep] = useState(0);
   const [xp, setXp] = useState(0);
+  const [stepResult, setStepResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
   // Pools aleatorios
   const [diagItems] = useState(() => pickN(DIAG_POOL, 4));
@@ -463,7 +464,13 @@ export default function World1Level3({ navigation: propsNavigation, setAllowBack
   const addXP = (amount: number) => setXp((prev) => prev + amount);
 
   const goToNextStep = () => {
+    setStepResult(null);
     if (step < TOTAL_STEPS - 1) setStep(step + 1);
+  };
+
+  const showResult = (ok: boolean, msg: string, andAdvance = false) => {
+    setStepResult({ ok, msg });
+    if (andAdvance) setTimeout(() => goToNextStep(), 1800);
   };
 
   const handleClose = () => {
@@ -561,7 +568,7 @@ export default function World1Level3({ navigation: propsNavigation, setAllowBack
     });
     const earned = correct * 5;
     if (earned > 0) addXP(earned);
-    Alert.alert('Resultado', `${correct}/${roleItems.length} correctas. +${earned} XP`, [{ text: 'OK', onPress: goToNextStep }]);
+    showResult(true, `Resultado: ${correct}/${roleItems.length} correctas. +${earned} XP`, true);
     return false;
   };
 
@@ -584,7 +591,7 @@ export default function World1Level3({ navigation: propsNavigation, setAllowBack
     });
     const earned = correct * 6;
     if (earned > 0) addXP(earned);
-    Alert.alert('Resultado', `${correct}/${ethicsItems.length} correctas. +${earned} XP`, [{ text: 'OK', onPress: goToNextStep }]);
+    showResult(true, `Resultado: ${correct}/${ethicsItems.length} correctas. +${earned} XP`, true);
     return false;
   };
 
@@ -630,7 +637,7 @@ export default function World1Level3({ navigation: propsNavigation, setAllowBack
     });
     const earned = correct * 8;
     if (earned > 0) addXP(earned);
-    Alert.alert('Resultado', `${correct}/${detectItems.length} correctas. +${earned} XP`, [{ text: 'OK', onPress: goToNextStep }]);
+    showResult(true, `Resultado: ${correct}/${detectItems.length} correctas. +${earned} XP`, true);
     return false;
   };
 
@@ -692,7 +699,7 @@ export default function World1Level3({ navigation: propsNavigation, setAllowBack
     if (isOk) {
       setSortOk(true);
       addXP(12);
-      Alert.alert('¡Exacto!', 'Ese es el ciclo completo: prompt vago → IA sin contexto → respuesta genérica → frustración. +12 XP', [{ text: 'OK', onPress: goToNextStep }]);
+      showResult(true, '¡Exacto! Ese es el ciclo completo: prompt vago → IA sin contexto → respuesta genérica → frustración. +12 XP', true);
       return false;
     }
     Alert.alert('Incorrecto', 'Algunos pasos están fuera de lugar. Piensa en causa y efecto.');
@@ -718,7 +725,7 @@ export default function World1Level3({ navigation: propsNavigation, setAllowBack
     });
     const earned = correct * 6;
     if (earned > 0) addXP(earned);
-    Alert.alert('Resultado', `${correct}/${tfItems.length} correctas. +${earned} XP`, [{ text: 'OK', onPress: goToNextStep }]);
+    showResult(true, `Resultado: ${correct}/${tfItems.length} correctas. +${earned} XP`, true);
     return false;
   };
 
@@ -1316,4 +1323,8 @@ const styles = StyleSheet.create({
   tfBtnFalse: { borderColor: colors.error, backgroundColor: '#fff1f2' },
   textArea: { borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 10, padding: 12, fontSize: 13, color: '#334155', textAlignVertical: 'top', minHeight: 100, backgroundColor: '#fafafa' },
   finishButton: { backgroundColor: colors.primary, padding: 14, borderRadius: 11, width: '100%', alignItems: 'center', marginTop: 14 },
+  resultBanner: { margin: 16, padding: 14, borderRadius: 14, borderWidth: 1 },
+  resultBannerOk: { backgroundColor: '#dcfce7', borderColor: colors.success },
+  resultBannerErr: { backgroundColor: '#fee2e2', borderColor: colors.error },
+  resultBannerText: { ...typography.bold, fontSize: 13, color: colors.textPrimary, lineHeight: 20 },
 });
