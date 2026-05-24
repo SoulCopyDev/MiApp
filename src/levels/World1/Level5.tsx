@@ -8,9 +8,11 @@ import {
   TextInput,
   Alert,
   BackHandler,
+  Platform,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { router } from 'expo-router';
 import { useGameStore } from '../../store/gameStore';
 import { colors, typography } from '../../theme';
 
@@ -231,12 +233,19 @@ export default function World1Level5({ navigation: propsNavigation, setAllowBack
   const addXP = (amount: number) => setXp((prev) => prev + amount);
   const goToNextStep = () => { setStepResult(null); if (step < TOTAL_STEPS - 1) setStep(step + 1); };
 
-  const showResult = (ok: boolean, msg: string, andAdvance = false) => {
+  const showResult = (ok: boolean, msg: string) => {
     setStepResult({ ok, msg });
-    if (andAdvance) setTimeout(() => goToNextStep(), 1800);
   };
 
   const handleClose = () => {
+    // Web: Alert.alert no renderiza modal en React Native Web → usar window.confirm
+    if (Platform.OS === 'web') {
+      const msg = isExamMode
+        ? 'Si sales perderás el progreso. ¿Seguro?'
+        : '¿Seguro que quieres salir?';
+      if (window.confirm(msg)) router.back();
+      return;
+    }
     if (isExamMode) {
       Alert.alert('Actividad en curso', 'Si sales perderás el progreso. ¿Seguro?', [
         { text: 'Cancelar', style: 'cancel' },
@@ -256,7 +265,7 @@ export default function World1Level5({ navigation: propsNavigation, setAllowBack
     else if (xp >= 120) stars = 2;
     else if (xp >= 60) stars = 1;
     completeLevel(1, 5, stars, xp);
-    navigation.goBack();
+    router.replace('/level/1/6');
   };
 
   // ============ MECÁNICAS ============
@@ -312,7 +321,7 @@ export default function World1Level5({ navigation: propsNavigation, setAllowBack
       setTrabajoOk(true);
       const earned = trabajoAttempts === 0 ? 20 : 12;
       addXP(earned);
-      showResult(true, `¡Perfecto! +${earned} XP`, true);
+      showResult(true, `¡Perfecto! +${earned} XP`);
       return false;
     }
     Alert.alert('Revisa', `${correct} de ${trabajoItems.length} correctas. Las incorrectas vuelven.`);
@@ -338,7 +347,7 @@ export default function World1Level5({ navigation: propsNavigation, setAllowBack
     let correct = 0;
     privTfItems.forEach((item, idx) => { if (tfAnswers[idx] === item.correct) correct++; });
     addXP(correct * 5);
-    showResult(true, `Resultado: ${correct}/${privTfItems.length} correctas. +${correct * 5} XP`, true);
+    showResult(true, `Resultado: ${correct}/${privTfItems.length} correctas. +${correct * 5} XP`);
     return false;
   };
 
@@ -379,7 +388,7 @@ export default function World1Level5({ navigation: propsNavigation, setAllowBack
     if (isOk) {
       setSortOk(true);
       addXP(15);
-      showResult(true, '¡Exacto! Así es como el sesgo se convierte en daño real. +15 XP', true);
+      showResult(true, '¡Exacto! Así es como el sesgo se convierte en daño real. +15 XP');
       return false;
     }
     Alert.alert('Incorrecto', 'Algunos pasos fuera de lugar.');
@@ -402,7 +411,7 @@ export default function World1Level5({ navigation: propsNavigation, setAllowBack
     let correct = 0;
     quizItems.forEach((q, idx) => { if (quizAnswers[idx] === q.correct) correct++; });
     addXP(correct * 8);
-    showResult(true, `Resultado: ${correct}/${quizItems.length} correctas. +${correct * 8} XP`, true);
+    showResult(true, `Resultado: ${correct}/${quizItems.length} correctas. +${correct * 8} XP`);
     return false;
   };
 
@@ -842,7 +851,7 @@ export default function World1Level5({ navigation: propsNavigation, setAllowBack
       </View>
       <Text style={{ fontWeight: 'bold', fontSize: 15, color: '#92400e', marginBottom: 14 }}>⭐ {xp} XP ganados</Text>
       <TouchableOpacity style={styles.finishButton} onPress={handleFinish}>
-        <Text style={{ fontWeight: 'bold', color: '#fff' }}>Volver al mapa</Text>
+        <Text style={{ fontWeight: 'bold', color: '#fff' }}>Siguiente nivel →</Text>
       </TouchableOpacity>
     </View>
   );
@@ -896,6 +905,8 @@ export default function World1Level5({ navigation: propsNavigation, setAllowBack
   const showCheckBtn = [3, 5, 7, 9, 11, 13, 14, 15, 17].includes(step) && step < TOTAL_STEPS - 1;
 
   const getBtnLabel = () => {
+    // Si ya fue verificado, cambiar a "Continuar →" para que el usuario avance manualmente
+    if ((step === 5 && trabajoOk) || (step === 7 && tfChecked) || (step === 11 && sortOk) || (step === 13 && quizChecked)) return 'Continuar →';
     switch (step) {
       case 3: return 'Continuar →';
       case 5: return 'Verificar clasificación';
@@ -924,6 +935,11 @@ export default function World1Level5({ navigation: propsNavigation, setAllowBack
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {renderStepContent()}
       </ScrollView>
+      {stepResult && (
+        <View style={[styles.resultBanner, stepResult.ok ? styles.resultBannerOk : styles.resultBannerErr]}>
+          <Text style={styles.resultBannerText}>{stepResult.ok ? '✓ ' : '✗ '}{stepResult.msg}</Text>
+        </View>
+      )}
       {showNextBtn && (
         <TouchableOpacity style={styles.nextButton} onPress={goToNextStep}>
           <Text style={styles.nextButtonText}>Continuar →</Text>

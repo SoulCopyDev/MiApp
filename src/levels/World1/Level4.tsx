@@ -9,6 +9,7 @@ import {
   TextInput,
   Alert,
   BackHandler,
+  Platform,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -254,6 +255,14 @@ export default function World1Level4({ navigation: propsNavigation, setAllowBack
   };
 
   const handleClose = () => {
+    // Web: Alert.alert no renderiza modal en React Native Web → usar window.confirm
+    if (Platform.OS === 'web') {
+      const msg = isExamMode
+        ? 'Estás en medio de una actividad. Si sales, perderás el progreso. ¿Seguro?'
+        : '¿Seguro que quieres salir del nivel?';
+      if (window.confirm(msg)) router.back();
+      return;
+    }
     if (isExamMode) {
       Alert.alert(
         'Actividad en curso',
@@ -277,7 +286,7 @@ export default function World1Level4({ navigation: propsNavigation, setAllowBack
     else if (xp >= 80) stars = 2;
     else if (xp >= 40) stars = 1;
     completeLevel(1, 4, stars, xp);
-    router.back();
+    router.replace('/level/1/5');
   };
 
   // Helpers para builders
@@ -1009,7 +1018,7 @@ export default function World1Level4({ navigation: propsNavigation, setAllowBack
       </View>
       <Text style={styles.xpEarnedText}>⭐ {xp} XP ganados en este nivel</Text>
       <TouchableOpacity style={styles.finishButton} onPress={handleFinish}>
-        <Text style={styles.finishButtonText}>Volver al mapa</Text>
+        <Text style={styles.finishButtonText}>Siguiente nivel →</Text>
       </TouchableOpacity>
     </View>
   );

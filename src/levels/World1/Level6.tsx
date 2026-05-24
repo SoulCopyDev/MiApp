@@ -9,6 +9,7 @@ import {
   TextInput,
   Alert,
   BackHandler,
+  Platform,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -234,6 +235,15 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
   };
 
   const handleClose = () => {
+    // Web: Alert.alert no renderiza modal en React Native Web → usar window.confirm/alert
+    if (Platform.OS === 'web') {
+      if (!canGoBack) {
+        window.alert('Actividad en curso. Completa la actividad antes de salir.');
+        return;
+      }
+      if (window.confirm('¿Seguro que quieres salir del nivel?')) router.back();
+      return;
+    }
     if (!canGoBack) {
       Alert.alert('Actividad en curso', 'Completa la actividad antes de salir.', [{ text: 'OK' }]);
       return;

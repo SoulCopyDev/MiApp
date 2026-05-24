@@ -9,6 +9,7 @@ import {
   TextInput,
   Alert,
   BackHandler,
+  Platform,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -262,6 +263,14 @@ export default function GameLevel1({ navigation: propsNavigation, setAllowBack }
   };
 
   const handleClose = () => {
+    // Web: Alert.alert no renderiza modal en React Native Web → usar window.confirm
+    if (Platform.OS === 'web') {
+      const msg = isExamMode
+        ? 'Estás en medio del examen. Si sales, perderás el progreso. ¿Seguro?'
+        : '¿Seguro que quieres salir del nivel? Perderás el progreso no guardado.';
+      if (window.confirm(msg)) router.back();
+      return;
+    }
     if (isExamMode) {
       Alert.alert(
         'Examen en curso',
@@ -285,7 +294,7 @@ export default function GameLevel1({ navigation: propsNavigation, setAllowBack }
     else if (xp >= 50) stars = 2;
     else if (xp >= 20) stars = 1;
     completeLevel(1, 1, stars, xp);
-    router.back();
+    router.replace('/level/1/2');
   };
 
   // ---------- Drag & Drop ----------
@@ -768,7 +777,7 @@ export default function GameLevel1({ navigation: propsNavigation, setAllowBack }
       <Text style={styles.completeSub}>Terminaste "Robots vs. Humanos". Ahora entiendes algo que mucha gente confunde: qué puede la IA, por qué puede hacerlo, cómo aprende paso a paso, y en qué los humanos seguimos siendo únicos.</Text>
       <Text style={styles.xpEarnedText}>⭐ {xp} XP ganados en este nivel</Text>
       <TouchableOpacity style={styles.nextLevelButton} onPress={handleFinish}>
-        <Text style={styles.nextLevelText}>Volver al mapa</Text>
+        <Text style={styles.nextLevelText}>Siguiente nivel →</Text>
       </TouchableOpacity>
     </View>
   );
