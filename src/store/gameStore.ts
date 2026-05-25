@@ -437,7 +437,7 @@ export const useGameStore = create<GameState>()(
     {
       name: 'ai-explorer-storage-v2',
       storage: createJSONStorage(() => AsyncStorage),
-      version: 19,
+      version: 20,
       migrate: (persistedState: any, version: number) => {
         if (persistedState?.worlds) {
           // Iterate over the template worlds to update/add

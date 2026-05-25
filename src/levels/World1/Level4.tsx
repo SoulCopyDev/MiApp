@@ -124,6 +124,7 @@ export default function World1Level4({ navigation: propsNavigation, setAllowBack
   const [step, setStep] = useState(0);
   const [xp, setXp] = useState(0);
   const completeLevel = useGameStore((state) => state.completeLevel);
+  const devMode = useGameStore((state) => state.devMode);
 
   // Pools aleatorios
   const [vfItems] = useState(() => pickN(VF_POOL, 6));
@@ -190,6 +191,8 @@ export default function World1Level4({ navigation: propsNavigation, setAllowBack
 
   // Modo examen (bloquear retroceso)
   const isExamMode = ![0, 2, 6, 11, 16, 19].includes(step);
+  const THEORY_STEPS = new Set([1, 2, 6, 11, 16]);
+  const goToPrevStep = () => { setStep(s => s - 1); };
 
   useEffect(() => {
     setAllowBack?.(!isExamMode);
@@ -367,9 +370,9 @@ export default function World1Level4({ navigation: propsNavigation, setAllowBack
         </View>
       )}
       <TouchableOpacity
-        style={[styles.checkButton, creationSel.length === 0 && styles.disabledButton]}
-        onPress={() => { if (creationSel.length > 0) { addXP(5); goToNextStep(); } }}
-        disabled={creationSel.length === 0}
+        style={[styles.checkButton, (creationSel.length === 0 && !devMode) && styles.disabledButton]}
+        onPress={() => { if (devMode || creationSel.length > 0) { addXP(5); goToNextStep(); } }}
+        disabled={creationSel.length === 0 && !devMode}
       >
         <Text style={styles.checkButtonText}>Continuar →</Text>
       </TouchableOpacity>
@@ -440,9 +443,9 @@ export default function World1Level4({ navigation: propsNavigation, setAllowBack
         </View>
       )}
       <TouchableOpacity
-        style={[styles.checkButton, (builderAreaIdx === null || builderText.trim().length < 15) && styles.disabledButton]}
+        style={[styles.checkButton, !devMode && (builderAreaIdx === null || builderText.trim().length < 15) && styles.disabledButton]}
         onPress={() => { addXP(10); goToNextStep(); }}
-        disabled={builderAreaIdx === null || builderText.trim().length < 15}
+        disabled={!devMode && (builderAreaIdx === null || builderText.trim().length < 15)}
       >
         <Text style={styles.checkButtonText}>Continuar →</Text>
       </TouchableOpacity>
@@ -516,9 +519,9 @@ export default function World1Level4({ navigation: propsNavigation, setAllowBack
         </Text>
       </View>
       <TouchableOpacity
-        style={[styles.checkButton, imgText.trim().length < 20 && styles.disabledButton]}
+        style={[styles.checkButton, (imgText.trim().length < 20 && !devMode) && styles.disabledButton]}
         onPress={() => { addXP(10); goToNextStep(); }}
-        disabled={imgText.trim().length < 20}
+        disabled={imgText.trim().length < 20 && !devMode}
       >
         <Text style={styles.checkButtonText}>Continuar →</Text>
       </TouchableOpacity>
@@ -715,9 +718,9 @@ export default function World1Level4({ navigation: propsNavigation, setAllowBack
       />
       <Text style={styles.charCount}>{reflect1.trim().length} / mínimo 50 caracteres</Text>
       <TouchableOpacity
-        style={[styles.checkButton, reflect1.trim().length < 50 && styles.disabledButton]}
+        style={[styles.checkButton, (reflect1.trim().length < 50 && !devMode) && styles.disabledButton]}
         onPress={() => { addXP(10); goToNextStep(); }}
-        disabled={reflect1.trim().length < 50}
+        disabled={reflect1.trim().length < 50 && !devMode}
       >
         <Text style={styles.checkButtonText}>Continuar →</Text>
       </TouchableOpacity>
@@ -779,15 +782,16 @@ export default function World1Level4({ navigation: propsNavigation, setAllowBack
       ))}
       {!tfChecked ? (
         <TouchableOpacity
-          style={[styles.checkButton, Object.keys(tfAnswers).length < vfItems.length && styles.disabledButton]}
+          style={[styles.checkButton, (Object.keys(tfAnswers).length < vfItems.length && !devMode) && styles.disabledButton]}
           onPress={() => {
+            if (devMode) { setTfChecked(true); addXP(20); return; }
             setTfChecked(true);
             let correct = 0;
             vfItems.forEach((item, idx) => { if (tfAnswers[idx] === item.correct) correct++; });
             const earned = correct * 5;
             if (earned > 0) addXP(earned);
           }}
-          disabled={Object.keys(tfAnswers).length < vfItems.length}
+          disabled={Object.keys(tfAnswers).length < vfItems.length && !devMode}
         >
           <Text style={styles.checkButtonText}>Comprobar</Text>
         </TouchableOpacity>
@@ -919,9 +923,9 @@ export default function World1Level4({ navigation: propsNavigation, setAllowBack
         </View>
       ))}
       <TouchableOpacity
-        style={[styles.checkButton, galleryTexts.filter(t => t.trim().length >= 10).length < 2 && styles.disabledButton]}
+        style={[styles.checkButton, (galleryTexts.filter(t => t.trim().length >= 10).length < 2 && !devMode) ? styles.disabledButton : {}]}
         onPress={() => { addXP(20); goToNextStep(); }}
-        disabled={galleryTexts.filter(t => t.trim().length >= 10).length < 2}
+        disabled={galleryTexts.filter(t => t.trim().length >= 10).length < 2 && !devMode}
       >
         <Text style={styles.checkButtonText}>Guardar galería →</Text>
       </TouchableOpacity>
@@ -969,9 +973,9 @@ export default function World1Level4({ navigation: propsNavigation, setAllowBack
       />
       <Text style={styles.charCount}>{reflect2.trim().length} / mínimo 50 caracteres</Text>
       <TouchableOpacity
-        style={[styles.checkButton, reflect2.trim().length < 50 && styles.disabledButton]}
+        style={[styles.checkButton, (reflect2.trim().length < 50 && !devMode) && styles.disabledButton]}
         onPress={() => { addXP(10); goToNextStep(); }}
-        disabled={reflect2.trim().length < 50}
+        disabled={reflect2.trim().length < 50 && !devMode}
       >
         <Text style={styles.checkButtonText}>Continuar →</Text>
       </TouchableOpacity>
@@ -991,9 +995,9 @@ export default function World1Level4({ navigation: propsNavigation, setAllowBack
       />
       <Text style={styles.charCount}>{reflect3.trim().length} / mínimo 50 caracteres</Text>
       <TouchableOpacity
-        style={[styles.checkButton, reflect3.trim().length < 50 && styles.disabledButton]}
+        style={[styles.checkButton, (reflect3.trim().length < 50 && !devMode) && styles.disabledButton]}
         onPress={() => { addXP(10); goToNextStep(); }}
-        disabled={reflect3.trim().length < 50}
+        disabled={reflect3.trim().length < 50 && !devMode}
       >
         <Text style={styles.checkButtonText}>Completar nivel →</Text>
       </TouchableOpacity>
@@ -1051,11 +1055,12 @@ export default function World1Level4({ navigation: propsNavigation, setAllowBack
 
   const progressPercent = (step / (TOTAL_STEPS - 1)) * 100;
   const showNextButton = step !== 19 && [0, 2, 6, 11, 16].includes(step);
+  const showBackButton = step > 0 && THEORY_STEPS.has(step) && showNextButton;
 
   return (
     <View style={styles.screen}>
       <View style={styles.progressBar}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.closeBtn}>
+        <TouchableOpacity onPress={handleClose} style={styles.closeBtn}>
           <MaterialIcons name="close" size={24} color={colors.textSecondary} />
         </TouchableOpacity>
         <View style={styles.progressTrack}>
@@ -1066,11 +1071,18 @@ export default function World1Level4({ navigation: propsNavigation, setAllowBack
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {renderContent()}
       </ScrollView>
-      {showNextButton && (
-        <TouchableOpacity style={styles.nextButton} onPress={goToNextStep}>
-          <Text style={styles.nextButtonText}>Continuar →</Text>
-        </TouchableOpacity>
-      )}
+      <View style={styles.footerRow}>
+        {showBackButton && (
+          <TouchableOpacity style={styles.backButton} onPress={goToPrevStep}>
+            <Text style={styles.backButtonText}>← Volver</Text>
+          </TouchableOpacity>
+        )}
+        {showNextButton && (
+          <TouchableOpacity style={[styles.nextButton, showBackButton && styles.nextButtonFlex]} onPress={goToNextStep}>
+            <Text style={styles.nextButtonText}>Continuar →</Text>
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 }
@@ -1178,4 +1190,8 @@ const styles = StyleSheet.create({
   xpEarnedText: { ...typography.bold, fontSize: 15, color: colors.accentDark, marginBottom: 14 },
   finishButton: { backgroundColor: colors.primary, padding: 14, borderRadius: 11, width: '100%', alignItems: 'center' },
   finishButtonText: { ...typography.bold, color: '#fff' },
+  footerRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 16, gap: 8 },
+  backButton: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, padding: 14, borderRadius: 11, alignItems: 'center', paddingHorizontal: 20 },
+  backButtonText: { ...typography.bold, color: colors.textSecondary, fontSize: 15 },
+  nextButtonFlex: { flex: 1, margin: 0 },
 });
