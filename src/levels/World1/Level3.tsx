@@ -8,9 +8,11 @@ import {
   TextInput,
   Alert,
   BackHandler,
+  Platform,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { router } from 'expo-router';
 import { useGameStore } from '../../store/gameStore';
 import { colors, typography } from '../../theme';
 
@@ -468,12 +470,19 @@ export default function World1Level3({ navigation: propsNavigation, setAllowBack
     if (step < TOTAL_STEPS - 1) setStep(step + 1);
   };
 
-  const showResult = (ok: boolean, msg: string, andAdvance = false) => {
+  const showResult = (ok: boolean, msg: string) => {
     setStepResult({ ok, msg });
-    if (andAdvance) setTimeout(() => goToNextStep(), 1800);
   };
 
   const handleClose = () => {
+    // Web: Alert.alert no renderiza modal en React Native Web → usar window.confirm
+    if (Platform.OS === 'web') {
+      const msg = isExamMode
+        ? 'Si sales, perderás el progreso. ¿Seguro?'
+        : '¿Seguro que quieres salir? Perderás el progreso.';
+      if (window.confirm(msg)) router.back();
+      return;
+    }
     if (isExamMode) {
       Alert.alert('Actividad en curso', 'Si sales, perderás el progreso. ¿Seguro?', [
         { text: 'Cancelar', style: 'cancel' },
@@ -493,7 +502,7 @@ export default function World1Level3({ navigation: propsNavigation, setAllowBack
     else if (xp >= 100) stars = 2;
     else if (xp >= 50) stars = 1;
     completeLevel(1, 3, stars, xp);
-    navigation.goBack();
+    router.replace('/level/1/4');
   };
 
   // ============ MECÁNICAS DE MÓDULOS ============
@@ -568,7 +577,7 @@ export default function World1Level3({ navigation: propsNavigation, setAllowBack
     });
     const earned = correct * 5;
     if (earned > 0) addXP(earned);
-    showResult(true, `Resultado: ${correct}/${roleItems.length} correctas. +${earned} XP`, true);
+    showResult(true, `Resultado: ${correct}/${roleItems.length} correctas. +${earned} XP`);
     return false;
   };
 
@@ -591,7 +600,7 @@ export default function World1Level3({ navigation: propsNavigation, setAllowBack
     });
     const earned = correct * 6;
     if (earned > 0) addXP(earned);
-    showResult(true, `Resultado: ${correct}/${ethicsItems.length} correctas. +${earned} XP`, true);
+    showResult(true, `Resultado: ${correct}/${ethicsItems.length} correctas. +${earned} XP`);
     return false;
   };
 
@@ -637,7 +646,7 @@ export default function World1Level3({ navigation: propsNavigation, setAllowBack
     });
     const earned = correct * 8;
     if (earned > 0) addXP(earned);
-    showResult(true, `Resultado: ${correct}/${detectItems.length} correctas. +${earned} XP`, true);
+    showResult(true, `Resultado: ${correct}/${detectItems.length} correctas. +${earned} XP`);
     return false;
   };
 
@@ -699,7 +708,7 @@ export default function World1Level3({ navigation: propsNavigation, setAllowBack
     if (isOk) {
       setSortOk(true);
       addXP(12);
-      showResult(true, '¡Exacto! Ese es el ciclo completo: prompt vago → IA sin contexto → respuesta genérica → frustración. +12 XP', true);
+      showResult(true, `¡Exacto! Ese es el ciclo completo: prompt vago → IA sin contexto → respuesta genérica → frustración. +12 XP`);
       return false;
     }
     Alert.alert('Incorrecto', 'Algunos pasos están fuera de lugar. Piensa en causa y efecto.');
@@ -725,7 +734,7 @@ export default function World1Level3({ navigation: propsNavigation, setAllowBack
     });
     const earned = correct * 6;
     if (earned > 0) addXP(earned);
-    showResult(true, `Resultado: ${correct}/${tfItems.length} correctas. +${earned} XP`, true);
+    showResult(true, `Resultado: ${correct}/${tfItems.length} correctas. +${earned} XP`);
     return false;
   };
 
@@ -1152,7 +1161,7 @@ export default function World1Level3({ navigation: propsNavigation, setAllowBack
         <Text style={{ fontSize: 11, color: '#9a3412' }}>✓ Evalúo si un prompt es ético</Text>
       </View>
       <TouchableOpacity style={styles.finishButton} onPress={handleFinish}>
-        <Text style={{ fontWeight: 'bold', color: '#fff' }}>Volver al mapa</Text>
+        <Text style={{ fontWeight: 'bold', color: '#fff' }}>Siguiente nivel →</Text>
       </TouchableOpacity>
     </View>
   );
@@ -1224,6 +1233,11 @@ export default function World1Level3({ navigation: propsNavigation, setAllowBack
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {renderStepContent()}
       </ScrollView>
+      {stepResult && (
+        <View style={[styles.resultBanner, stepResult.ok ? styles.resultBannerOk : styles.resultBannerErr]}>
+          <Text style={styles.resultBannerText}>{stepResult.ok ? '✓ ' : '✗ '}{stepResult.msg}</Text>
+        </View>
+      )}
       {showNextBtn && (
         <TouchableOpacity style={styles.nextButton} onPress={goToNextStep}>
           <Text style={styles.nextButtonText}>Continuar →</Text>
@@ -1232,7 +1246,14 @@ export default function World1Level3({ navigation: propsNavigation, setAllowBack
       {showCheckBtn && (
         <TouchableOpacity style={styles.nextButton} onPress={handleMainBtn}>
           <Text style={styles.nextButtonText}>
-            {[5, 7, 9, 10, 13, 17].includes(step) ? 'Verificar' : [14].includes(step) ? 'Siguiente →' : [18].includes(step) ? 'Enviar reflexión →' : 'Continuar →'}
+            {(() => {
+              // Si el módulo ya fue verificado, mostrar "Continuar →" para que el usuario avance manualmente
+              if ((step === 9 && roleChecked) || (step === 10 && ethicsChecked) || (step === 13 && detectChecked) || (step === 15 && sortOk) || (step === 17 && tfChecked)) return 'Continuar →';
+              if ([5, 7, 9, 10, 13, 17].includes(step)) return 'Verificar';
+              if (step === 14) return 'Siguiente →';
+              if (step === 18) return 'Enviar reflexión →';
+              return 'Continuar →';
+            })()}
           </Text>
         </TouchableOpacity>
       )}

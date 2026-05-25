@@ -8,9 +8,11 @@ import {
   TextInput,
   Alert,
   BackHandler,
+  Platform,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { router } from 'expo-router';
 import { useGameStore } from '../../store/gameStore';
 import { colors, typography } from '../../theme';
 
@@ -320,6 +322,14 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
   };
 
   const handleClose = () => {
+    // Web: Alert.alert no renderiza modal en React Native Web → usar window.confirm
+    if (Platform.OS === 'web') {
+      const msg = isExamMode
+        ? 'Estás en medio del examen. Si sales, perderás el progreso. ¿Seguro?'
+        : '¿Seguro que quieres salir del nivel? Perderás el progreso no guardado.';
+      if (window.confirm(msg)) router.back();
+      return;
+    }
     if (isExamMode) {
       Alert.alert(
         'Examen en curso',
@@ -343,7 +353,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
     else if (xp >= 70) stars = 2;
     else if (xp >= 40) stars = 1;
     completeLevel(1, 2, stars, xp); // Mundo 1, Nivel 2
-    navigation.goBack();
+    router.replace('/level/1/3');
   };
 
   // Drag & Drop (módulo 3)
@@ -1119,7 +1129,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
       <Text style={styles.completeSub}>Terminaste "La IA que vive en tus apps". Ahora ves las apps de otra manera — y tienes tu primera brújula para usar los LLMs correctamente.</Text>
       <Text style={styles.xpEarnedText}>⭐ {xp} XP ganados en este nivel</Text>
       <TouchableOpacity style={styles.nextLevelButton} onPress={handleFinish}>
-        <Text style={styles.nextLevelText}>Volver al mapa</Text>
+        <Text style={styles.nextLevelText}>Siguiente nivel →</Text>
       </TouchableOpacity>
     </View>
   );
