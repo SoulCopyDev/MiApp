@@ -1,6 +1,17 @@
 # CLAUDE.md — AI Explorer
 
-Memoria técnica viva del proyecto. Actualizar cuando cambien arquitectura, entidades, dependencias o convenciones.
+Referencia técnica completa del proyecto. Actualizar cuando cambien arquitectura, entidades, dependencias o convenciones.
+
+## Contexto adicional (leer según tarea)
+
+| Archivo | Cuándo leerlo |
+|---|---|
+| `.claude/description.md` | Onboarding, entender qué es el proyecto, decisiones de arquitectura |
+| `.claude/standards.md` | Antes de escribir código — convenciones, patrones, compatibilidad web |
+| `.claude/workflow.md` | Deploy, ramas, estado de auditoría, onboarding de colaboradores |
+| `.claude/commands/new-level.md` | Scaffolding de niveles nuevos (`/project:new-level`) |
+
+> Estos archivos son parte de la documentación viva. Actualizarlos proactivamente igual que este CLAUDE.md.
 
 ---
 
@@ -407,7 +418,7 @@ Antes de tocar `INITIAL_WORLDS` o `INITIAL_BADGES`, leer la función `migrate` e
 
 | ID | Nombre | Niveles |
 |---|---|---|
-| 1 | ¿Qué es la IA? | 6 |
+| 1 | ¿Qué es la IA? | 7 |
 | 2 | Domina el Prompting | 7 |
 | 3 | IA Creativa | 7 |
 | 4 | El Gran Torneo de Herramientas | 7 |
@@ -418,21 +429,32 @@ Antes de tocar `INITIAL_WORLDS` o `INITIAL_BADGES`, leer la función `migrate` e
 
 ---
 
-## ⚙️ Meta-regla para Claude Code
+## ⚙️ Meta-regla para Claude Code (TODOS los colaboradores)
 
-Eres responsable de mantener este archivo como la fuente de verdad del proyecto.
-Después de cualquier cambio que:
-- Añada/elimine dependencias
-- Modifique la estructura de carpetas
-- Cree/elimine APIs, rutas o modelos de datos
-- Cambie patrones de arquitectura
-- Introduzca nuevas convenciones
+Esta sección aplica a **cualquier instancia de Claude** que trabaje en este proyecto.
 
-...debes revisar CLAUDE.md y actualizarlo sin que el usuario tenga que pedírtelo.
-Si la actualización es menor, hazla silenciosamente.
-Si es significativa, menciónala brevemente al usuario.
+### Documentación viva — actualización automática
 
----
+Los siguientes archivos deben mantenerse sincronizados con el estado real del código. Actualizarlos **sin que el usuario tenga que pedirlo**, inmediatamente después de cualquier cambio relevante:
 
-> **INSTRUCCIÓN META PARA CLAUDE CODE:**
-> Cada vez que realices cambios significativos en el proyecto (nuevos archivos, refactorizaciones, cambios de arquitectura, nuevas dependencias, nuevas entidades o APIs), evalúa si la información en CLAUDE.md sigue siendo precisa. Si no lo es, actualiza el archivo proactivamente añadiendo, modificando o eliminando la información necesaria. Anuncia brevemente al usuario los cambios realizados en CLAUDE.md.
+| Archivo | Actualizar cuando... |
+|---|---|
+| `CLAUDE.md` (este archivo) | Cambie stack, arquitectura, store, navegación, entidades |
+| `.claude/description.md` | Cambie número de mundos/niveles, URLs, decisiones de arquitectura |
+| `.claude/standards.md` | Se establezca un nuevo patrón o se invalide uno existente |
+| `.claude/workflow.md` | Cambie deploy, ramas, estado de auditoría, scripts |
+
+### Reglas de actualización
+
+- **Cambio menor** (fix de typo, actualizar versión): hacerlo silenciosamente.
+- **Cambio significativo** (nueva entidad, nuevo patrón, nueva convención): mencionarlo brevemente al usuario.
+- **Nunca** dejar información desactualizada — un colaborador nuevo leerá estos archivos y necesita que sean precisos.
+
+### Qué dispara actualización obligatoria
+
+- Añadir / eliminar dependencias → actualizar tabla de stack en `CLAUDE.md`
+- Crear / eliminar niveles o mundos → actualizar conteo en `CLAUDE.md` y `.claude/description.md`
+- Nuevo patrón de código establecido → agregar a `.claude/standards.md`
+- Cambio en proceso de deploy o ramas → actualizar `.claude/workflow.md`
+- Issue de auditoría resuelto → marcar ✅ en `.claude/workflow.md`
+- Cambio en estructura de carpetas → actualizar árbol en `CLAUDE.md`
