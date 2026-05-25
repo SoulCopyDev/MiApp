@@ -322,6 +322,7 @@ export default function World1Level3({ navigation: propsNavigation, setAllowBack
   const navigationFromHook = useNavigation();
   const navigation = propsNavigation || navigationFromHook;
   const completeLevel = useGameStore((state) => state.completeLevel);
+  const devMode = useGameStore((state) => state.devMode);
 
   const [step, setStep] = useState(0);
   const [xp, setXp] = useState(0);
@@ -378,6 +379,10 @@ export default function World1Level3({ navigation: propsNavigation, setAllowBack
   // Modo "examen" para bloquear retroceso
   const examSteps = new Set([4, 5, 7, 9, 10, 12, 13, 14, 15, 17, 18]);
   const isExamMode = examSteps.has(step);
+
+  const THEORY_STEPS = new Set([1, 3, 6, 8, 11, 16]);
+  const showBackButton = step > 0 && THEORY_STEPS.has(step);
+  const goToPrevStep = () => { setStepResult(null); setStep(s => s - 1); };
 
   useEffect(() => {
     setAllowBack?.(!isExamMode);
@@ -509,6 +514,7 @@ export default function World1Level3({ navigation: propsNavigation, setAllowBack
 
   // Builder (4)
   const checkBuilder = () => {
+    if (devMode) return true;
     const filled = [builderRol, builderCtx, builderInst, builderFmt].filter(Boolean).length;
     if (filled < 4) {
       Alert.alert('Incompleto', `Faltan ${4 - filled} secciones. Elige una opción en cada bloque.`);
@@ -524,6 +530,8 @@ export default function World1Level3({ navigation: propsNavigation, setAllowBack
   };
 
   const checkDiag = () => {
+    if (devMode && !diagChecked) { addXP(8); setDiagChecked(true); showResult(true, '+8 XP [dev]'); return false; }
+    if (devMode && diagChecked) { if (diagCurrent + 1 < diagItems.length) { setDiagCurrent(c => c + 1); setDiagAnswers({}); setDiagChecked(false); return false; } return true; }
     if (diagChecked) {
       if (diagCurrent + 1 >= diagItems.length) return true;
       setDiagCurrent((prev) => prev + 1);
@@ -566,6 +574,7 @@ export default function World1Level3({ navigation: propsNavigation, setAllowBack
 
   const checkRole = () => {
     if (roleChecked) return true;
+    if (devMode) { setRoleChecked(true); addXP(20); showResult(true, '+20 XP [dev]'); return false; }
     if (Object.keys(roleAnswers).length < roleItems.length) {
       Alert.alert('Incompleto', 'Responde todas las situaciones.');
       return false;
@@ -589,6 +598,7 @@ export default function World1Level3({ navigation: propsNavigation, setAllowBack
 
   const checkEthics = () => {
     if (ethicsChecked) return true;
+    if (devMode) { setEthicsChecked(true); addXP(20); showResult(true, '+20 XP [dev]'); return false; }
     if (Object.keys(ethicsAnswers).length < ethicsItems.length) {
       Alert.alert('Incompleto', 'Clasifica todos los prompts.');
       return false;
@@ -615,6 +625,7 @@ export default function World1Level3({ navigation: propsNavigation, setAllowBack
   };
 
   const checkMission = () => {
+    if (devMode) { addXP(15); return true; }
     const allFull = MISSION_SUBJECTS.every((_, i) => {
       const d = missionData[i] || {};
       return Object.values(d).filter((v) => v && v.length > 2).length >= 2;
@@ -635,6 +646,7 @@ export default function World1Level3({ navigation: propsNavigation, setAllowBack
 
   const checkDetect = () => {
     if (detectChecked) return true;
+    if (devMode) { setDetectChecked(true); addXP(20); showResult(true, '+20 XP [dev]'); return false; }
     if (Object.keys(detectAnswers).length < detectItems.length) {
       Alert.alert('Incompleto', 'Responde todos los casos.');
       return false;
@@ -704,6 +716,7 @@ export default function World1Level3({ navigation: propsNavigation, setAllowBack
 
   const checkSort = () => {
     if (sortOk) return true;
+    if (devMode) { setSortOk(true); addXP(12); showResult(true, '+12 XP [dev]'); return false; }
     const isOk = sortOrder.every((v, i) => v === i);
     if (isOk) {
       setSortOk(true);
@@ -723,6 +736,7 @@ export default function World1Level3({ navigation: propsNavigation, setAllowBack
 
   const checkTF = () => {
     if (tfChecked) return true;
+    if (devMode) { setTfChecked(true); addXP(20); showResult(true, '+20 XP [dev]'); return false; }
     if (Object.keys(tfAnswers).length < tfItems.length) {
       Alert.alert('Incompleto', 'Responde todas las afirmaciones.');
       return false;
@@ -1238,11 +1252,18 @@ export default function World1Level3({ navigation: propsNavigation, setAllowBack
           <Text style={styles.resultBannerText}>{stepResult.ok ? '✓ ' : '✗ '}{stepResult.msg}</Text>
         </View>
       )}
-      {showNextBtn && (
-        <TouchableOpacity style={styles.nextButton} onPress={goToNextStep}>
-          <Text style={styles.nextButtonText}>Continuar →</Text>
-        </TouchableOpacity>
-      )}
+      <View style={styles.footerRow}>
+        {showBackButton && showNextBtn && (
+          <TouchableOpacity style={styles.backButton} onPress={goToPrevStep}>
+            <Text style={styles.backButtonText}>← Volver</Text>
+          </TouchableOpacity>
+        )}
+        {showNextBtn && (
+          <TouchableOpacity style={[styles.nextButton, showBackButton && styles.nextButtonFlex]} onPress={goToNextStep}>
+            <Text style={styles.nextButtonText}>Continuar →</Text>
+          </TouchableOpacity>
+        )}
+      </View>
       {showCheckBtn && (
         <TouchableOpacity style={styles.nextButton} onPress={handleMainBtn}>
           <Text style={styles.nextButtonText}>
@@ -1317,6 +1338,10 @@ const styles = StyleSheet.create({
   highlightText: { fontSize: 13, color: '#c2410c', lineHeight: 20 },
   nextButton: { backgroundColor: colors.success, padding: 14, margin: 16, borderRadius: 11, alignItems: 'center' },
   nextButtonText: { ...typography.bold, color: '#fff', fontSize: 15 },
+  footerRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 16, gap: 8 },
+  backButton: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, padding: 14, borderRadius: 11, alignItems: 'center', paddingHorizontal: 20 },
+  backButtonText: { ...typography.bold, color: colors.textSecondary, fontSize: 15 },
+  nextButtonFlex: { flex: 1, margin: 0 },
   builderSelect: { borderWidth: 1.5, borderColor: '#e2e8f0', borderRadius: 10, padding: 10, backgroundColor: '#fff' },
   ingrBtn: { padding: 8, borderRadius: 10, borderWidth: 2, borderColor: '#e2e8f0', width: '48%', marginBottom: 6 },
   ingrBtnSel: { borderColor: '#f97316', backgroundColor: '#fff7ed' },

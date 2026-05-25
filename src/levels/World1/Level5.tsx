@@ -139,6 +139,7 @@ export default function World1Level5({ navigation: propsNavigation, setAllowBack
   const navigationFromHook = useNavigation();
   const navigation = propsNavigation || navigationFromHook;
   const completeLevel = useGameStore((state) => state.completeLevel);
+  const devMode = useGameStore((state) => state.devMode);
 
   const [step, setStep] = useState(0);
   const [xp, setXp] = useState(0);
@@ -303,6 +304,7 @@ export default function World1Level5({ navigation: propsNavigation, setAllowBack
   };
 
   const checkTrabajoDrag = () => {
+    if (devMode) { setTrabajoOk(true); addXP(20); return true; }
     if (trabajoOk) return true;
     const placed = Object.keys(trabajoPlaced).length;
     if (placed < trabajoItems.length) {
@@ -338,6 +340,7 @@ export default function World1Level5({ navigation: propsNavigation, setAllowBack
   };
 
   const checkTF = () => {
+    if (devMode) { setTfChecked(true); addXP(20); return true; }
     if (tfChecked) return true;
     if (Object.keys(tfAnswers).length < privTfItems.length) {
       Alert.alert('Incompleto', 'Responde todas las afirmaciones.');
@@ -383,6 +386,7 @@ export default function World1Level5({ navigation: propsNavigation, setAllowBack
   };
 
   const checkSort = () => {
+    if (devMode) { setSortOk(true); addXP(15); return true; }
     if (sortOk) return true;
     const isOk = sortOrder.every((v, i) => v === i);
     if (isOk) {
@@ -402,6 +406,7 @@ export default function World1Level5({ navigation: propsNavigation, setAllowBack
   };
 
   const checkQuiz = () => {
+    if (devMode) { setQuizChecked(true); addXP(20); return true; }
     if (quizChecked) return true;
     if (Object.keys(quizAnswers).length < quizItems.length) {
       Alert.alert('Incompleto', 'Responde todas las preguntas.');
@@ -475,6 +480,7 @@ export default function World1Level5({ navigation: propsNavigation, setAllowBack
   };
 
   const checkManifiesto = () => {
+    if (devMode) { addXP(20); return true; }
     const ok = manifiesto.a.trim().length >= 15 && manifiesto.b.trim().length >= 15 && manifiesto.c.trim().length >= 15;
     if (ok) { addXP(20); return true; }
     Alert.alert('Incompleto', 'Completa las 3 frases (mín. 15 caracteres cada una).');
@@ -885,6 +891,7 @@ export default function World1Level5({ navigation: propsNavigation, setAllowBack
   const progressPercent = (step / (TOTAL_STEPS - 1)) * 100;
 
   const handleMainBtn = () => {
+    if (devMode) { goToNextStep(); return; }
     const handlers: Record<number, (() => boolean) | undefined> = {
       3: () => ethicsDone,
       5: checkTrabajoDrag,
@@ -903,6 +910,9 @@ export default function World1Level5({ navigation: propsNavigation, setAllowBack
 
   const showNextBtn = step < TOTAL_STEPS - 1 && ![3, 5, 7, 9, 11, 13, 14, 15, 17, 18].includes(step);
   const showCheckBtn = [3, 5, 7, 9, 11, 13, 14, 15, 17].includes(step) && step < TOTAL_STEPS - 1;
+  const THEORY_STEPS_L5 = new Set([1, 2, 4, 6, 8, 10, 12, 16]);
+  const showBackButtonL5 = step > 0 && THEORY_STEPS_L5.has(step) && showNextBtn;
+  const goToPrevStep = () => { setStepResult(null); setStep(s => s - 1); };
 
   const getBtnLabel = () => {
     // Si ya fue verificado, cambiar a "Continuar →" para que el usuario avance manualmente
@@ -940,11 +950,18 @@ export default function World1Level5({ navigation: propsNavigation, setAllowBack
           <Text style={styles.resultBannerText}>{stepResult.ok ? '✓ ' : '✗ '}{stepResult.msg}</Text>
         </View>
       )}
-      {showNextBtn && (
-        <TouchableOpacity style={styles.nextButton} onPress={goToNextStep}>
-          <Text style={styles.nextButtonText}>Continuar →</Text>
-        </TouchableOpacity>
-      )}
+      <View style={styles.footerRow}>
+        {showBackButtonL5 && showNextBtn && (
+          <TouchableOpacity style={styles.backButton} onPress={goToPrevStep}>
+            <Text style={styles.backButtonText}>← Volver</Text>
+          </TouchableOpacity>
+        )}
+        {showNextBtn && (
+          <TouchableOpacity style={[styles.nextButton, (showBackButtonL5 && showNextBtn) && styles.nextButtonFlex]} onPress={goToNextStep}>
+            <Text style={styles.nextButtonText}>Continuar →</Text>
+          </TouchableOpacity>
+        )}
+      </View>
       {showCheckBtn && (
         <TouchableOpacity style={styles.nextButton} onPress={step === 15 && !sprintStarted ? startSprint : handleMainBtn}>
           <Text style={styles.nextButtonText}>{getBtnLabel()}</Text>
@@ -1003,4 +1020,8 @@ const styles = StyleSheet.create({
   resultBannerOk: { backgroundColor: '#dcfce7', borderColor: colors.success },
   resultBannerErr: { backgroundColor: '#fee2e2', borderColor: colors.error },
   resultBannerText: { ...typography.bold, fontSize: 13, color: colors.textPrimary, lineHeight: 20 },
+  footerRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 16, gap: 8 },
+  backButton: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, padding: 14, borderRadius: 11, alignItems: 'center', paddingHorizontal: 20 },
+  backButtonText: { ...typography.bold, color: colors.textSecondary, fontSize: 15 },
+  nextButtonFlex: { flex: 1, margin: 0 },
 });

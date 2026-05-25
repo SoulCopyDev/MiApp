@@ -206,6 +206,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
   const [step, setStep] = useState(0);
   const [xp, setXp] = useState(0);
   const completeLevel = useGameStore((state) => state.completeLevel);
+  const devMode = useGameStore((state) => state.devMode);
 
   // Pools aleatorios (se inicializan una vez)
   const [drag3Items] = useState(() => pickN(AI_TYPE_POOL, 12));
@@ -316,9 +317,8 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
     if (step < TOTAL_STEPS - 1) setStep(step + 1);
   };
 
-  const showResult = (ok: boolean, msg: string, andAdvance = false) => {
+  const showResult = (ok: boolean, msg: string) => {
     setStepResult({ ok, msg });
-    if (andAdvance) setTimeout(() => goToNextStep(), 1800);
   };
 
   const handleClose = () => {
@@ -383,6 +383,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
   };
 
   const checkDrag3 = () => {
+    if (devMode) { setDrag3Ok(true); addXP(20); return true; }
     if (drag3Ok) return true;
     const placedCount = Object.keys(drag3Placed).length;
     if (placedCount < drag3Items.length) {
@@ -401,7 +402,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
       setDrag3Ok(true);
       const earned = drag3Attempts === 0 ? 20 : 12;
       addXP(earned);
-      showResult(true, `¡Perfecto! Clasificaste todos correctamente. +${earned} XP`, true);
+      showResult(true, `¡Perfecto! Clasificaste todos correctamente. +${earned} XP`);
       return false;
     } else {
       Alert.alert('Algunas incorrectas', `${correct} de ${drag3Items.length} correctas. Las incorrectas vuelven al banco.`);
@@ -439,6 +440,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
   };
   
   const checkLLMDrag = () => {
+    if (devMode) { setLlmOk(true); addXP(20); return true; }
     if (llmOk) return true;
     const placedCount = Object.keys(llmPlaced).length;
     if (placedCount < llmItems.length) {
@@ -457,7 +459,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
       setLlmOk(true);
       const earned = llmAttempts === 0 ? 20 : 12;
       addXP(earned);
-      showResult(true, `¡Perfecto! Asignaste todas las tareas correctamente. +${earned} XP`, true);
+      showResult(true, `¡Perfecto! Asignaste todas las tareas correctamente. +${earned} XP`);
       return false;
     } else {
       Alert.alert('Algunas incorrectas', `${correct} de ${llmItems.length} correctas. Las incorrectas vuelven al banco.`);
@@ -487,7 +489,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
       setMatchDone(newCount);
       if (newCount === matchPairs.length) {
         addXP(15);
-        showResult(true, '¡Completado! Conectaste todos los pares. +15 XP', true);
+        showResult(true, '¡Completado! Conectaste todos los pares. +15 XP');
       } else {
         Alert.alert('¡Correcto!', `Llevas ${newCount} de ${matchPairs.length} pares.`);
       }
@@ -507,12 +509,13 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
   };
 
   const checkSort = () => {
+    if (devMode) { setSortOk(true); addXP(15); return true; }
     if (sortOk) return true;
     const isOk = sortOrder.every((v, i) => v === i);
     if (isOk) {
       setSortOk(true);
       addXP(15);
-      showResult(true, '¡Exacto! Ese es el orden real de procesamiento de un LLM. +15 XP', true);
+      showResult(true, '¡Exacto! Ese es el orden real de procesamiento de un LLM. +15 XP');
       return false;
     } else {
       Alert.alert('Incorrecto', 'Algunos pasos están fuera de lugar. ¡Piensa en el orden lógico!');
@@ -527,6 +530,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
   };
 
   const checkQuiz = () => {
+    if (devMode) { setQuizChecked(true); addXP(32); return true; }
     if (quizChecked) return true;
     if (Object.keys(quizAnswers).length < quizQuestions.length) {
       Alert.alert('Incompleto', 'Responde todas las preguntas primero.');
@@ -539,7 +543,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
     });
     const earned = correct * 8;
     if (earned > 0) addXP(earned);
-    showResult(true, `Resultado: ${correct} de ${quizQuestions.length} correctas. +${earned} XP`, true);
+    showResult(true, `Resultado: ${correct} de ${quizQuestions.length} correctas. +${earned} XP`);
     return false;
   };
 
@@ -550,6 +554,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
   };
 
   const checkTF = () => {
+    if (devMode) { setTfChecked(true); addXP(25); return true; }
     if (tfChecked) return true;
     if (Object.keys(tfAnswers).length < tfItems.length) {
       Alert.alert('Incompleto', 'Responde todas las afirmaciones.');
@@ -562,7 +567,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
     });
     const earned = correct * 5;
     if (earned > 0) addXP(earned);
-    showResult(true, `Resultado: ${correct} de ${tfItems.length} correctas. +${earned} XP`, true);
+    showResult(true, `Resultado: ${correct} de ${tfItems.length} correctas. +${earned} XP`);
     return false;
   };
 
@@ -573,6 +578,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
   };
 
   const checkFill = () => {
+    if (devMode) { setFillChecked(true); addXP(15); return true; }
     if (fillChecked) return true;
     if (fillSel === null) {
       Alert.alert('Elige una opción', 'Selecciona la palabra correcta.');
@@ -582,9 +588,9 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
     const isOk = fillSel === fillItem.correct;
     if (isOk) {
       addXP(10);
-      showResult(true, `¡Correcto! +10 XP. ${fillItem.explain}`, true);
+      showResult(true, `¡Correcto! +10 XP. ${fillItem.explain}`);
     } else {
-      showResult(false, `Incorrecto. La respuesta correcta es "${fillItem.allOpts[fillItem.correct]}". ${fillItem.explain}`, true);
+      showResult(false, `Incorrecto. La respuesta correcta es "${fillItem.allOpts[fillItem.correct]}". ${fillItem.explain}`);
     }
     return false;
   };
@@ -596,6 +602,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
   };
 
   const checkPrompts = () => {
+    if (devMode) { setPromptsChecked(true); addXP(20); return true; }
     if (promptsChecked) return true;
     if (Object.keys(promptSels).length < promptItems.length) {
       Alert.alert('Incompleto', 'Elige un prompt en cada situación.');
@@ -608,12 +615,13 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
     });
     const earned = correct * 8;
     if (earned > 0) addXP(earned);
-    showResult(true, `Resultado: ${correct} de ${promptItems.length} correctas. +${earned} XP`, true);
+    showResult(true, `Resultado: ${correct} de ${promptItems.length} correctas. +${earned} XP`);
     return false;
   };
 
   // Reflexión (módulo 15)
   const checkReflect = () => {
+    if (devMode) { addXP(15); goToNextStep(); return; }
     if (reflectText.trim().length >= 70) {
       addXP(15);
       goToNextStep();
@@ -1159,6 +1167,9 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
 
   const progressPercent = (step / (TOTAL_STEPS - 1)) * 100;
   const showNextButton = step < TOTAL_STEPS - 1 && ![3,5,8,9,10,12,13,14,15].includes(step);
+  const THEORY_STEPS_L2 = new Set([1, 2, 4, 6, 7, 11]);
+  const showBackButton = step > 0 && THEORY_STEPS_L2.has(step) && showNextButton;
+  const goToPrevStep = () => { setStepResult(null); setStep(s => s - 1); };
 
   return (
     <View style={styles.screen}>
@@ -1173,17 +1184,24 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
       </View>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {renderContent()}
-        {stepResult && (
-          <View style={[styles.resultBanner, stepResult.ok ? styles.resultBannerOk : styles.resultBannerErr]}>
-            <Text style={styles.resultBannerText}>{stepResult.ok ? '✅ ' : '❌ '}{stepResult.msg}</Text>
-          </View>
-        )}
       </ScrollView>
-      {showNextButton && (
-        <TouchableOpacity style={styles.nextButton} onPress={goToNextStep}>
-          <Text style={styles.nextButtonText}>Continuar →</Text>
-        </TouchableOpacity>
+      {stepResult && (
+        <View style={[styles.resultBanner, stepResult.ok ? styles.resultBannerOk : styles.resultBannerErr]}>
+          <Text style={styles.resultBannerText}>{stepResult.ok ? '✅ ' : '❌ '}{stepResult.msg}</Text>
+        </View>
       )}
+      <View style={styles.footerRow}>
+        {showBackButton && (
+          <TouchableOpacity style={styles.backButton} onPress={goToPrevStep}>
+            <Text style={styles.backButtonText}>← Volver</Text>
+          </TouchableOpacity>
+        )}
+        {showNextButton && (
+          <TouchableOpacity style={[styles.nextButton, showBackButton && styles.nextButtonFlex]} onPress={goToNextStep}>
+            <Text style={styles.nextButtonText}>Continuar →</Text>
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 }
@@ -1227,6 +1245,10 @@ const styles = StyleSheet.create({
   checkButtonText: { ...typography.bold, color: '#fff' },
   nextButton: { backgroundColor: colors.success, padding: 14, margin: 16, borderRadius: 11, alignItems: 'center' },
   nextButtonText: { ...typography.bold, color: '#fff', fontSize: 15 },
+  footerRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 16, gap: 8 },
+  backButton: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, padding: 14, borderRadius: 11, alignItems: 'center', paddingHorizontal: 20 },
+  backButtonText: { ...typography.bold, color: colors.textSecondary, fontSize: 15 },
+  nextButtonFlex: { flex: 1, margin: 0 },
   matchColumns: { flexDirection: 'row', gap: 12, marginTop: 12 },
   matchLeftColumn: { flex: 1, gap: 8 },
   matchRightColumn: { flex: 1, gap: 8 },

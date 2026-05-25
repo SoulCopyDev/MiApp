@@ -10,6 +10,7 @@ import World1Level3 from './World1/Level3';
 import World1Level4 from './World1/Level4';
 import World1Level5 from './World1/Level5';
 import World1Level6 from './World1/Level6';
+import World1Level7 from './World1/Level7';
 
 import World2Level1 from './World2/Level1';
 import World2Level2 from './World2/Level2';
@@ -66,6 +67,7 @@ const levelComponents: Record<number, Record<number, React.ComponentType<LevelCo
     4: World1Level4,
     5: World1Level5,
     6: World1Level6,
+    7: World1Level7,
   },
   2: {
     1: World2Level1,
@@ -120,7 +122,7 @@ export default function LevelScreen() {
   const worldId = Number(wParam);
   const levelId = Number(lParam);
 
-  const [, setAllowBack] = useState(true);
+  const [allowBack, setAllowBack] = useState(true);
 
   const LevelComponent = levelComponents[worldId]?.[levelId];
 

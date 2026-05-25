@@ -137,6 +137,7 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
   const navigation = propsNavigation || hookNavigation;
 
   const completeLevel = useGameStore((state) => state.completeLevel);
+  const devMode = useGameStore((state) => state.devMode);
 
   // Estados globales del nivel
   const [step, setStep] = useState(0);
@@ -256,6 +257,7 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
 
   // ----- Módulo 2: V/F Viable -----
   const checkTF = () => {
+    if (devMode) { setTfChecked(true); addXP(20); return; }
     setTfChecked(true);
     let correct = 0;
     viableTF.forEach((item, i) => {
@@ -285,6 +287,7 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
   };
 
   const checkTipo = () => {
+    if (devMode) { addXP(15); nextStep(); return; }
     if (Object.keys(tipoPlaced).length < tipoItems.length) {
       Alert.alert('Faltan tarjetas', `Coloca todas las tarjetas (${tipoItems.length - Object.keys(tipoPlaced).length} restantes).`);
       return;
@@ -303,6 +306,7 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
   };
 
   const checkSort = () => {
+    if (devMode) { addXP(15); nextStep(); return; }
     const correct = sortOrder.every((v, i) => v === i);
     if (correct) {
       addXP(15);
@@ -319,6 +323,7 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
     : '';
 
   const handleBuilderNext = () => {
+    if (devMode) { addXP(15); nextStep(); return; }
     if (!builderComplete) return;
     addXP(15);
     nextStep();
@@ -326,6 +331,7 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
 
   // ----- Módulo 9: Quiz iteración -----
   const checkIterQuiz = () => {
+    if (devMode) { setIterChecked(true); addXP(20); return; }
     setIterChecked(true);
     let correct = 0;
     iterQuiz.forEach((q, i) => {
@@ -367,6 +373,7 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
 
   // ----- Módulo 13: Quiz construcción -----
   const checkBuildQuiz = () => {
+    if (devMode) { setBuildChecked(true); addXP(20); return; }
     setBuildChecked(true);
     let correct = 0;
     buildQuiz.forEach((q, i) => {
@@ -379,6 +386,7 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
   const missionValid = missionSelected !== null && missionPhases.a.trim().length >= 30 && missionPhases.b.trim().length >= 30 && missionPhases.c.trim().length >= 30;
 
   const submitMission = () => {
+    if (devMode) { addXP(30); nextStep(); return; }
     if (!missionValid) return;
     addXP(25);
     nextStep();
@@ -407,6 +415,7 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
 
   // ----- Módulo 16: Reflexión -----
   const handleReflect = () => {
+    if (devMode) { addXP(15); nextStep(); return; }
     if (reflectText.trim().length >= 90) {
       addXP(15);
       nextStep();
@@ -447,7 +456,7 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
               <Text style={styles.cardTitle}>⭐ Hasta 260 XP</Text>
               <Text style={styles.cardText}>18 módulos · ~40-50 min</Text>
             </View>
-      
+
             {/* BOTÓN PARA COMENZAR */}
             <TouchableOpacity style={styles.primaryBtn} onPress={nextStep}>
               <Text style={styles.primaryBtnText}>¡Comenzar misión! →</Text>
@@ -670,9 +679,9 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
               </View>
             )}
             <TouchableOpacity
-              style={[styles.primaryBtn, !builderComplete && styles.btnDisabled]}
+              style={[styles.primaryBtn, !builderComplete && !devMode && styles.btnDisabled]}
               onPress={handleBuilderNext}
-              disabled={!builderComplete}
+              disabled={!builderComplete && !devMode}
             >
               <Text style={styles.primaryBtnText}>Continuar →</Text>
             </TouchableOpacity>
@@ -773,9 +782,9 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
               </View>
             ))}
             <TouchableOpacity
-              style={[styles.primaryBtn, !allReadmeDone && styles.btnDisabled]}
-              onPress={nextStep}
-              disabled={!allReadmeDone}
+              style={[styles.primaryBtn, !allReadmeDone && !devMode && styles.btnDisabled]}
+              onPress={devMode ? nextStep : allReadmeDone ? nextStep : undefined}
+              disabled={!allReadmeDone && !devMode}
             >
               <Text style={styles.primaryBtnText}>Continuar →</Text>
             </TouchableOpacity>
@@ -790,6 +799,17 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
               <Text style={styles.title}>✅ Ética completada</Text>
               <TouchableOpacity style={styles.primaryBtn} onPress={nextStep}>
                 <Text style={styles.primaryBtnText}>Continuar →</Text>
+              </TouchableOpacity>
+            </View>
+          );
+        }
+        if (devMode) {
+          return (
+            <View style={styles.stepContainer}>
+              <Text style={styles.tag}>⚖️ Módulo 13 · Ethics Check</Text>
+              <Text style={styles.title}>¿Tu proyecto pasa el filtro ético?</Text>
+              <TouchableOpacity style={styles.primaryBtn} onPress={() => { setEthicsFinished(true); addXP(20); nextStep(); }}>
+                <Text style={styles.primaryBtnText}>Saltar (Dev) →</Text>
               </TouchableOpacity>
             </View>
           );
@@ -899,9 +919,9 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
                   multiline
                 />
                 <TouchableOpacity
-                  style={[styles.primaryBtn, !missionValid && styles.btnDisabled]}
+                  style={[styles.primaryBtn, !missionValid && !devMode && styles.btnDisabled]}
                   onPress={submitMission}
-                  disabled={!missionValid}
+                  disabled={!missionValid && !devMode}
                 >
                   <Text style={styles.primaryBtnText}>Completar misión ✨</Text>
                 </TouchableOpacity>
@@ -956,9 +976,9 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
             />
             <Text style={styles.charCount}>{reflectText.trim().length} / 90 mínimo</Text>
             <TouchableOpacity
-              style={[styles.primaryBtn, reflectText.trim().length < 90 && styles.btnDisabled]}
+              style={[styles.primaryBtn, reflectText.trim().length < 90 && !devMode && styles.btnDisabled]}
               onPress={handleReflect}
-              disabled={reflectText.trim().length < 90}
+              disabled={reflectText.trim().length < 90 && !devMode}
             >
               <Text style={styles.primaryBtnText}>Enviar reflexión →</Text>
             </TouchableOpacity>
@@ -995,7 +1015,7 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
     <View style={styles.screen}>
       {/* Barra de progreso */}
       <View style={styles.progressBar}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.closeBtn}>
+        <TouchableOpacity onPress={handleClose} style={styles.closeBtn}>
           <MaterialIcons name="close" size={24} color={colors.textSecondary} />
         </TouchableOpacity>
         <View style={styles.progressTrack}>
@@ -1009,8 +1029,13 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
       </ScrollView>
 
       {showNextButton && (
-        <View style={styles.footer}>
-          <TouchableOpacity style={styles.nextBtn} onPress={nextStep}>
+        <View style={[styles.footer, styles.footerRow]}>
+          {step > 0 && (
+            <TouchableOpacity style={styles.backButton} onPress={() => { setStep(s => s - 1); }}>
+              <Text style={styles.backButtonText}>← Volver</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity style={[styles.nextBtn, step > 0 && styles.nextBtnFlex]} onPress={nextStep}>
             <Text style={styles.nextBtnText}>Continuar →</Text>
           </TouchableOpacity>
         </View>
@@ -1102,4 +1127,8 @@ const styles = StyleSheet.create({
   footer: { paddingHorizontal: 16, paddingBottom: 16 },
   nextBtn: { backgroundColor: colors.success, padding: 14, borderRadius: 12, alignItems: 'center' },
   nextBtnText: { ...typography.bold, color: '#fff', fontSize: 15 },
+  footerRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingBottom: 16 },
+  backButton: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, padding: 14, borderRadius: 12, alignItems: 'center', paddingHorizontal: 20 },
+  backButtonText: { ...typography.bold, color: colors.textSecondary, fontSize: 15 },
+  nextBtnFlex: { flex: 1 },
 });
