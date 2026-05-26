@@ -55,9 +55,10 @@ MiApp/
 │   │   └── settings.tsx     # → SettingsScreen
 │   ├── world/
 │   │   └── [worldId].tsx    # → WorldScreen (URL: /world/1)
-│   └── level/
-│       └── [worldId]/
-│           └── [levelId].tsx # → LevelScreen (URL: /level/1/3)
+│   ├── level/
+│   │   └── [N].tsx       # → LevelScreen (URL: /level/7)
+│   └── eval/
+│       └── [worldId].tsx # → EvalScreen (URL: /eval/2 | /eval/final)
 ├── app.json                 # Config Expo (scheme: aiexplorer, web.output: spa)
 ├── babel.config.js          # babel-preset-expo
 ├── metro.config.js          # getDefaultConfig(__)
@@ -78,13 +79,12 @@ MiApp/
     │   └── useMobileDetect.ts # Detección UA (android/ios/desktop), PWA, localStorage dismiss
     ├── levels/
     │   ├── BaseLevel.tsx    # Componente base reutilizable (quiz de opción múltiple)
-    │   ├── LevelScreen.tsx  # Dispatcher: worldId+levelId → componente estático
-    │   ├── World1/Level{1-6}.tsx
-    │   ├── World2/Level{1-7}.tsx
-    │   ├── World3/Level{1-7}.tsx
-    │   ├── World4/Level{1-7}.tsx
-    │   ├── World5/Level{1-7}.tsx
-    │   └── World6/Level{1-8}.tsx  # 42 niveles totales
+    │   ├── LevelScreen.tsx  # Dispatcher: N → Level{N} component
+    │   ├── EvalScreen.tsx   # Dispatcher: worldId → Eval{W} | EvalFinal
+    │   ├── Level{1-36}.tsx  # Niveles regulares (N1=World1/L1 … N36=World6/L6)
+    │   └── eval/
+    │       ├── Eval{1-6}.tsx   # Evaluaciones de mundo (N37-N42)
+    │       └── EvalFinal.tsx   # Evaluación final (N43)
     ├── screens/
     │   ├── HomeScreen.tsx   # Tab Inicio: perfil, rango, misión diaria, botón JUGAR, botón descarga APK (web)
     │   ├── MapScreen.tsx    # Tab Mapa: lista de mundos con progreso
@@ -117,19 +117,24 @@ Navegación basada en archivos en `app/`. Entry point: `expo-router/entry`.
 - `/badges` → Trofeos (BadgesScreen)
 - `/settings` → Configuración (SettingsScreen)
 - `/world/[worldId]` → WorldScreen
-- `/level/[worldId]/[levelId]` → LevelScreen
+- `/level/[N]` → LevelScreen (N=1–36, regular levels)
+- `/eval/[worldId]` → EvalScreen (worldId=1–6 o `'final'`)
 
 **Navegación programática:**
 ```ts
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { coordsToGlobalN } from '../store/gameStore';
 
 router.push('/world/1');
-router.push(`/level/${worldId}/${levelId}`);
+router.push(`/level/${coordsToGlobalN(worldId, levelId)}`); // regular levels
+router.push(`/eval/${worldId}`);                             // world eval
+router.push('/eval/final');                                  // final eval
 router.back();
 
 // Leer params de ruta (devuelven string — convertir a número)
+const { N } = useLocalSearchParams<{ N: string }>();
+const n = Number(N);
 const { worldId } = useLocalSearchParams<{ worldId: string }>();
-const id = Number(worldId);
 ```
 
 ---
@@ -138,7 +143,7 @@ const id = Number(worldId);
 
 **Archivo:** `src/store/gameStore.ts`
 **Clave AsyncStorage:** `ai-explorer-storage-v2`
-**Versión actual de migración:** `19`
+**Versión actual de migración:** `20`
 
 ### Entidades principales
 
@@ -187,7 +192,19 @@ interface GameState {
 
 ### Acciones disponibles
 
-`setProfile` · `completeLevel` · `unlockBadge` · `addXP` · `resetProgress` · `setDevMode` · `updateStreak` · `refreshDailyMission` · `updateLevelName` · `updateWorldName`
+`setProfile` · `completeLevel(globalN, stars, xp)` · `unlockBadge` · `addXP` · `resetProgress` · `setDevMode` · `updateStreak` · `refreshDailyMission` · `updateLevelName` · `updateWorldName`
+
+### Utilidades de numeración global (exportadas)
+
+```ts
+import { coordsToGlobalN } from '../store/gameStore';
+
+// Mapping bidireccional (interno al store):
+// N=1–36: worldId=ceil(N/6), levelId=N-(worldId-1)*6
+// N=37–42: worldId=N-36, levelId=7 (eval de mundo)
+// N=43: worldId=6, levelId=8 (eval final)
+coordsToGlobalN(worldId, levelId): number
+```
 
 ---
 
@@ -195,7 +212,7 @@ interface GameState {
 
 ### BaseLevel.tsx
 
-Componente genérico. Recibe `{ worldId, levelId, levelName, questions }`.
+Componente genérico. Recibe `{ globalN, levelName, questions }`.
 
 ```ts
 interface Question {
@@ -206,14 +223,27 @@ interface Question {
 }
 ```
 
-Flujo: pregunta → selección → feedback 1500ms → siguiente pregunta → resultado con estrellas → `completeLevel()` → `router.back()`.
+Flujo: pregunta → selección → feedback 1500ms → siguiente pregunta → resultado con estrellas → `completeLevel(globalN, ...)` → `router.back()`.
 
 **Estrellas:** `floor((correctas / total) * 3)`
 
+### Numeración continua N1–N43
+
+| Rango | Tipo | Ruta |
+|---|---|---|
+| N1–N6 | World 1 regular | `/level/1` … `/level/6` |
+| N7–N12 | World 2 regular | `/level/7` … `/level/12` |
+| N13–N18 | World 3 regular | … |
+| N19–N24 | World 4 regular | … |
+| N25–N30 | World 5 regular | … |
+| N31–N36 | World 6 regular | `/level/31` … `/level/36` |
+| N37–N42 | Evaluaciones de mundo 1–6 | `/eval/1` … `/eval/6` |
+| N43 | Evaluación Final | `/eval/final` |
+
 ### Agregar un nuevo nivel
 
-1. Crear `src/levels/World{N}/Level{M}.tsx` usando `BaseLevel`
-2. Registrar en `LevelScreen.tsx` en el mapa `levelComponents`
+1. Crear `src/levels/Level{N}.tsx` (siguiente N disponible) con su lógica o usando `BaseLevel`
+2. Registrar en `LevelScreen.tsx` en `LEVEL_COMPONENTS`
 3. Agregar entrada en `INITIAL_WORLDS` dentro de `gameStore.ts`
 4. **Incrementar `version`** en el config de `persist` en `gameStore.ts`
 

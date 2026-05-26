@@ -21,7 +21,8 @@ export default function RootLayout() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="world/[worldId]" />
-      <Stack.Screen name="level/[worldId]/[levelId]" />
+      <Stack.Screen name="level/[N]" />
+      <Stack.Screen name="eval/[worldId]" />
       <Stack.Screen name="+not-found" />
     </Stack>
   );

@@ -14,13 +14,12 @@ interface Question {
 }
 
 interface BaseLevelProps {
-  worldId: number;
-  levelId: number;
+  globalN: number;
   levelName: string;
   questions: Question[];
 }
 
-export default function BaseLevel({ worldId, levelId, levelName, questions }: BaseLevelProps) {
+export default function BaseLevel({ globalN, levelName, questions }: BaseLevelProps) {
   const completeLevel = useGameStore(s => s.completeLevel);
 
   const [currentIndex,  setCurrentIndex]  = useState(0);
@@ -52,7 +51,7 @@ export default function BaseLevel({ worldId, levelId, levelName, questions }: Ba
         const finalScore  = score + (isCorrect ? 1 : 0);
         const starsEarned = Math.floor((finalScore / totalQuestions) * 3);
         const xpEarned    = 50 + starsEarned * 20;
-        completeLevel(worldId, levelId, starsEarned, xpEarned);
+        completeLevel(globalN, starsEarned, xpEarned);
         setShowResult(true);
       }
     }, 1500);

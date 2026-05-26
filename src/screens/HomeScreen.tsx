@@ -10,7 +10,7 @@ import {
   Platform,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useGameStore } from '../store/gameStore';
+import { useGameStore, coordsToGlobalN } from '../store/gameStore';
 import { colors, typography } from '../theme';
 import { getRankInfo } from '../utils/rankSystem';
 import { getMissionProgress } from '../utils/dailyMission';
@@ -70,7 +70,12 @@ export default function HomeScreen() {
     return { bg: '#eef3ff', accent: colors.primary, border: '#57a3ff25', icon: 'track-changes' as const, label: 'PENDIENTE' };
   }, [dailyMission?.status]);
 
-  const handlePlay = () => router.push(`/level/${resumeTarget.worldId}/${resumeTarget.levelId}`);
+  const handlePlay = () => {
+    const { worldId, levelId } = resumeTarget;
+    if (levelId === 8) router.push('/eval/final');
+    else if (levelId === 7) router.push(`/eval/${worldId}`);
+    else router.push(`/level/${coordsToGlobalN(worldId, levelId)}`);
+  };
 
   const apkUrl = DOWNLOAD_CONFIG.apkUrl ?? DOWNLOAD_CONFIG.playStoreUrl;
   const DownloadButton = Platform.OS === 'web' && apkUrl ? (
@@ -92,7 +97,9 @@ export default function HomeScreen() {
     const canGoDirectly = targetLevel?.status === 'current' || targetLevel?.status === 'completed';
     const wId = canGoDirectly ? dailyMission.targetWorldId : resumeTarget.worldId;
     const lId = canGoDirectly ? dailyMission.targetLevelId : resumeTarget.levelId;
-    router.push(`/level/${wId}/${lId}`);
+    if (lId === 8) router.push('/eval/final');
+    else if (lId === 7) router.push(`/eval/${wId}`);
+    else router.push(`/level/${coordsToGlobalN(wId, lId)}`);
   };
 
   /* ─── Bloques reutilizables ─── */

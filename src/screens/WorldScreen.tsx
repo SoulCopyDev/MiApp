@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, Platform, ScrollView } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useGameStore } from '../store/gameStore';
+import { useGameStore, coordsToGlobalN } from '../store/gameStore';
 import { colors, typography } from '../theme';
 import { useBreakpoint } from '../hooks/useBreakpoint';
 
@@ -100,7 +100,7 @@ export default function WorldScreen() {
 
         {/* Grid de niveles */}
         <View style={styles.levelGrid}>
-          {world.levels.map((level, index) => {
+          {world.levels.map((level) => {
             const accessible = isAccessible(level.status);
             const isCompleted = level.status === 'completed' && !devMode;
             const isCurrent   = level.status === 'current' && !devMode;
@@ -121,15 +121,19 @@ export default function WorldScreen() {
                 onPress={() => {
                   if (!accessible) {
                     Alert.alert('🔒 Bloqueado', 'Completa el nivel anterior para desbloquear');
+                  } else if (level.id === 8) {
+                    router.push('/eval/final');
+                  } else if (level.id === 7) {
+                    router.push(`/eval/${world.id}`);
                   } else {
-                    router.push(`/level/${world.id}/${level.id}`);
+                    router.push(`/level/${coordsToGlobalN(world.id, level.id)}`);
                   }
                 }}
               >
                 {/* Número */}
                 <View style={[styles.levelNumber, isCompleted && styles.levelNumberDone, isCurrent && styles.levelNumberCurrent]}>
                   <Text style={[styles.levelNumberText, (isCompleted || isCurrent) && styles.levelNumberTextLight]}>
-                    {index + 1}
+                    {level.id === 8 ? 'EF' : level.id === 7 ? 'E' : `N${coordsToGlobalN(world.id, level.id)}`}
                   </Text>
                 </View>
 
@@ -204,7 +208,9 @@ export default function WorldScreen() {
           activeOpacity={accessible ? 0.5 : 0.7}
           onPress={() => {
             if (!accessible) Alert.alert('🔒 Bloqueado', 'Completa el nivel anterior para desbloquear');
-            else router.push(`/level/${world.id}/${level.id}`);
+            else if (level.id === 8) router.push('/eval/final');
+            else if (level.id === 7) router.push(`/eval/${world.id}`);
+            else router.push(`/level/${coordsToGlobalN(world.id, level.id)}`);
           }}
         >
           {!accessible ? (

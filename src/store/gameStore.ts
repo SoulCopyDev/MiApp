@@ -8,6 +8,22 @@ import {
 } from '../utils/dailyMission';
 import { DEFAULT_AVATAR_EMOJI } from '../config/avatarEmojis';
 
+// ---------- Utilidades de numeración global ----------
+/** Converts global level number (N=1..43) to worldId/levelId coords. */
+function globalNToCoords(N: number): { worldId: number; levelId: number } {
+  if (N === 43) return { worldId: 6, levelId: 8 };
+  if (N >= 37)  return { worldId: N - 36, levelId: 7 };
+  const worldId = Math.ceil(N / 6);
+  return { worldId, levelId: N - (worldId - 1) * 6 };
+}
+
+/** Converts worldId/levelId to global level number (N=1..43). */
+export function coordsToGlobalN(worldId: number, levelId: number): number {
+  if (levelId === 8) return 43;
+  if (levelId === 7) return worldId + 36;
+  return (worldId - 1) * 6 + levelId;
+}
+
 // ---------- Tipos ----------
 export type LevelStatus = 'locked' | 'current' | 'completed';
 
@@ -57,7 +73,7 @@ export interface GameState {
   devMode: boolean;
 
   setProfile: (profile: Partial<UserProfile>) => void;
-  completeLevel: (worldId: number, levelId: number, starsEarned: number, xpEarned: number) => void;
+  completeLevel: (globalN: number, starsEarned: number, xpEarned: number) => void;
   unlockBadge: (badgeId: number) => void;
   addXP: (amount: number) => void;
   resetProgress: () => void;
@@ -220,7 +236,8 @@ export const useGameStore = create<GameState>()(
         profile: { ...state.profile, ...newProfile }
       })),
 
-      completeLevel: (worldId, levelId, starsEarned, xpEarned) => {
+      completeLevel: (globalN, starsEarned, xpEarned) => {
+        const { worldId, levelId } = globalNToCoords(globalN);
         const state = get();
         const worldIndex = state.worlds.findIndex(w => w.id === worldId);
         if (worldIndex === -1) return;
@@ -288,8 +305,8 @@ export const useGameStore = create<GameState>()(
         const isWorldComplete = (wId: number) =>
           updatedWorlds.find(w => w.id === wId)?.levels.every(l => l.status === 'completed') ?? false;
 
-        // 1 — Primer nivel completado
-        if (worldId === 1 && levelId === 1)  get().unlockBadge(1);
+        // 1 — Primer nivel completado (N1)
+        if (globalN === 1)                   get().unlockBadge(1);
         // 2 — World 1 completo
         if (isWorldComplete(1))              get().unlockBadge(2);
         // 3 — Primera vez con 3 estrellas en cualquier nivel
@@ -300,10 +317,10 @@ export const useGameStore = create<GameState>()(
         if (newTotalStars >= 15)             get().unlockBadge(5);
         // 6 — World 3 completo
         if (isWorldComplete(3))              get().unlockBadge(6);
-        // 7 — World 2 Nivel 3: Prompts Creativos
-        if (worldId === 2 && levelId === 3)  get().unlockBadge(7);
-        // 8 — World 1 Nivel 5: IA y Ética
-        if (worldId === 1 && levelId === 5)  get().unlockBadge(8);
+        // 7 — N9: Prompts Creativos (World2/Level3)
+        if (globalN === 9)                   get().unlockBadge(7);
+        // 8 — N5: IA y Ética (World1/Level5)
+        if (globalN === 5)                   get().unlockBadge(8);
         // 9 — World 4 completo
         if (isWorldComplete(4))              get().unlockBadge(9);
         // 10 — 30 estrellas acumuladas
@@ -312,8 +329,8 @@ export const useGameStore = create<GameState>()(
         if (isWorldComplete(5))              get().unlockBadge(11);
         // 12 — 50 estrellas acumuladas
         if (newTotalStars >= 50)             get().unlockBadge(12);
-        // 13 — World 3 Nivel 1: Generación de Imágenes
-        if (worldId === 3 && levelId === 1)  get().unlockBadge(13);
+        // 13 — N13: Generación de Imágenes (World3/Level1)
+        if (globalN === 13)                  get().unlockBadge(13);
         // 14 — 75 estrellas acumuladas
         if (newTotalStars >= 75)             get().unlockBadge(14);
         // 15 — Todos los mundos completados
@@ -326,7 +343,7 @@ export const useGameStore = create<GameState>()(
           !mission.rewardClaimed &&
           mission.status !== 'completed' &&
           mission.targetWorldId === worldId &&
-          mission.targetLevelId === levelId
+          mission.targetLevelId === levelId  // worldId/levelId extracted from globalN above
         ) {
           set({ dailyMission: { ...mission, status: 'completed', rewardClaimed: true } });
           get().addXP(mission.reward.xp);
@@ -426,6 +443,7 @@ export const useGameStore = create<GameState>()(
               : world
           ),
         })),
+
 
       updateWorldName: (worldId, newName) =>
         set((state) => ({
