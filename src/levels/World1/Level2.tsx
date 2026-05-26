@@ -15,6 +15,7 @@ import { useNavigation } from '@react-navigation/native';
 import { router } from 'expo-router';
 import { useGameStore } from '../../store/gameStore';
 import { colors, typography } from '../../theme';
+import XPToast from '../../components/XPToast';
 
 // ---------- Tipos y constantes ----------
 type DragItem = { text: string; correct: string };
@@ -310,7 +311,11 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
     }
   }, [step, matchPairs]);
 
-  const addXP = (amount: number) => setXp(prev => prev + amount);
+  const [xpToast, setXpToast] = useState<{ amount: number; id: number } | null>(null);
+  const addXP = (amount: number) => {
+    setXp(prev => prev + amount);
+    if (amount > 0) setXpToast(prev => ({ amount, id: (prev?.id ?? 0) + 1 }));
+  };
 
   const goToNextStep = () => {
     setStepResult(null);
@@ -369,8 +374,9 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
     if (item.correct === zone) {
       setDrag3Placed(prev => ({ ...prev, [drag3Sel]: zone }));
       setDrag3Sel(null);
+      setStepResult(null);
     } else {
-      Alert.alert('Incorrecto', `"${item.text}" no pertenece a esta categoría.`);
+      showResult(false, `"${item.text}" no pertenece a esta categoría.`);
     }
   };
 
@@ -387,7 +393,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
     if (drag3Ok) return true;
     const placedCount = Object.keys(drag3Placed).length;
     if (placedCount < drag3Items.length) {
-      Alert.alert('Faltan habilidades', `Coloca todas las habilidades (${drag3Items.length - placedCount} restantes).`);
+      showResult(false, `Faltan habilidades. Coloca todas (${drag3Items.length - placedCount} restantes).`);
       return false;
     }
     setDrag3Attempts(prev => prev + 1);
@@ -405,7 +411,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
       showResult(true, `¡Perfecto! Clasificaste todos correctamente. +${earned} XP`);
       return false;
     } else {
-      Alert.alert('Algunas incorrectas', `${correct} de ${drag3Items.length} correctas. Las incorrectas vuelven al banco.`);
+      showResult(false, `${correct} de ${drag3Items.length} correctas. Las incorrectas vuelven al banco.`);
       const newPlaced = { ...drag3Placed };
       wrongIndices.forEach(i => delete newPlaced[i]);
       setDrag3Placed(newPlaced);
@@ -426,8 +432,9 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
     if (item.correct === zone) {
       setLlmPlaced(prev => ({ ...prev, [llmSel]: zone }));
       setLlmSel(null);
+      setStepResult(null);
     } else {
-      Alert.alert('Incorrecto', `"${item.text}" no corresponde a este LLM.`);
+      showResult(false, `"${item.text}" no corresponde a este LLM.`);
     }
   };
   
@@ -444,7 +451,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
     if (llmOk) return true;
     const placedCount = Object.keys(llmPlaced).length;
     if (placedCount < llmItems.length) {
-      Alert.alert('Faltan tareas', `Asigna todas las tareas (${llmItems.length - placedCount} restantes).`);
+      showResult(false, `Faltan tareas. Asigna todas (${llmItems.length - placedCount} restantes).`);
       return false;
     }
     setLlmAttempts(prev => prev + 1);
@@ -462,7 +469,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
       showResult(true, `¡Perfecto! Asignaste todas las tareas correctamente. +${earned} XP`);
       return false;
     } else {
-      Alert.alert('Algunas incorrectas', `${correct} de ${llmItems.length} correctas. Las incorrectas vuelven al banco.`);
+      showResult(false, `${correct} de ${llmItems.length} correctas. Las incorrectas vuelven al banco.`);
       const newPlaced = { ...llmPlaced };
       wrongIndices.forEach(i => delete newPlaced[i]);
       setLlmPlaced(newPlaced);
@@ -473,6 +480,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
   // Matching (módulo 5)
   const handleLeftClick = (idx: number) => {
     if (matchedLeft.has(idx)) return;
+    setStepResult(null);
     setMatchLeft(idx);
   };
 
@@ -490,11 +498,9 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
       if (newCount === matchPairs.length) {
         addXP(15);
         showResult(true, '¡Completado! Conectaste todos los pares. +15 XP');
-      } else {
-        Alert.alert('¡Correcto!', `Llevas ${newCount} de ${matchPairs.length} pares.`);
       }
     } else {
-      Alert.alert('Incorrecto', 'Ese par no es correcto. Intenta de nuevo.');
+      showResult(false, 'Ese par no es correcto. Intenta de nuevo.');
       setMatchLeft(null);
     }
   };
@@ -518,7 +524,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
       showResult(true, '¡Exacto! Ese es el orden real de procesamiento de un LLM. +15 XP');
       return false;
     } else {
-      Alert.alert('Incorrecto', 'Algunos pasos están fuera de lugar. ¡Piensa en el orden lógico!');
+      showResult(false, 'Algunos pasos están fuera de lugar. ¡Piensa en el orden lógico!');
       return false;
     }
   };
@@ -533,7 +539,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
     if (devMode) { setQuizChecked(true); addXP(32); return true; }
     if (quizChecked) return true;
     if (Object.keys(quizAnswers).length < quizQuestions.length) {
-      Alert.alert('Incompleto', 'Responde todas las preguntas primero.');
+      showResult(false, 'Incompleto. Responde todas las preguntas primero.');
       return false;
     }
     setQuizChecked(true);
@@ -557,7 +563,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
     if (devMode) { setTfChecked(true); addXP(25); return true; }
     if (tfChecked) return true;
     if (Object.keys(tfAnswers).length < tfItems.length) {
-      Alert.alert('Incompleto', 'Responde todas las afirmaciones.');
+      showResult(false, 'Incompleto. Responde todas las afirmaciones.');
       return false;
     }
     setTfChecked(true);
@@ -581,7 +587,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
     if (devMode) { setFillChecked(true); addXP(15); return true; }
     if (fillChecked) return true;
     if (fillSel === null) {
-      Alert.alert('Elige una opción', 'Selecciona la palabra correcta.');
+      showResult(false, 'Selecciona la palabra correcta.');
       return false;
     }
     setFillChecked(true);
@@ -605,7 +611,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
     if (devMode) { setPromptsChecked(true); addXP(20); return true; }
     if (promptsChecked) return true;
     if (Object.keys(promptSels).length < promptItems.length) {
-      Alert.alert('Incompleto', 'Elige un prompt en cada situación.');
+      showResult(false, 'Incompleto. Elige un prompt en cada situación.');
       return false;
     }
     setPromptsChecked(true);
@@ -626,7 +632,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
       addXP(15);
       goToNextStep();
     } else {
-      Alert.alert('Muy corto', 'Escribe al menos 70 caracteres.');
+      showResult(false, 'Muy corto. Escribe al menos 70 caracteres.');
     }
   };
 
@@ -1190,6 +1196,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
           <Text style={styles.resultBannerText}>{stepResult.ok ? '✅ ' : '❌ '}{stepResult.msg}</Text>
         </View>
       )}
+      {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} />}
       <View style={styles.footerRow}>
         {showBackButton && (
           <TouchableOpacity style={styles.backButton} onPress={goToPrevStep}>

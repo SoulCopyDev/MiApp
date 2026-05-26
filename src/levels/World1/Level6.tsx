@@ -15,6 +15,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useGameStore } from '../../store/gameStore';
 import { colors, typography } from '../../theme';
+import XPToast from '../../components/XPToast';
 
 // ---------- Tipos ----------
 type TFItem = { stmt: string; correct: boolean; explain: string };
@@ -170,6 +171,10 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
 
   const [ethicsIdx, setEthicsIdx] = useState(0);
   const [ethicsFinished, setEthicsFinished] = useState(false);
+  const [ethicsResult, setEthicsResult] = useState<{ isOk: boolean; explain: string } | null>(null);
+
+  const [stepResult, setStepResult] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [xpToast, setXpToast] = useState<{ amount: number; id: number } | null>(null);
 
   const [buildAns, setBuildAns] = useState<{ [key: number]: number }>({});
   const [buildChecked, setBuildChecked] = useState(false);
@@ -220,9 +225,15 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
   }, [sprintRunning, sprintSec, sprintOver]);
 
   // ----- Helpers -----
-  const addXP = (amount: number) => setXp((prev) => prev + amount);
+  const addXP = (amount: number) => {
+    setXp((prev) => prev + amount);
+    if (amount > 0) setXpToast((prev) => ({ amount, id: (prev?.id ?? 0) + 1 }));
+  };
+
+  const showResult = (ok: boolean, msg: string) => setStepResult({ ok, msg });
 
   const nextStep = () => {
+    setStepResult(null);
     if (step < TOTAL_STEPS - 1) setStep(step + 1);
   };
 
@@ -271,9 +282,10 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
     if (tipoSelected === null) return;
     const item = tipoItems[tipoSelected];
     if (item.correct !== zone) {
-      Alert.alert('Incorrecto', 'Ese proyecto no pertenece a esta categoría.');
+      showResult(false, 'Ese proyecto no pertenece a esta categoría.');
       return;
     }
+    setStepResult(null);
     setTipoPlaced((prev) => ({ ...prev, [tipoSelected]: zone }));
     setTipoSelected(null);
   };
@@ -289,7 +301,7 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
   const checkTipo = () => {
     if (devMode) { addXP(15); nextStep(); return; }
     if (Object.keys(tipoPlaced).length < tipoItems.length) {
-      Alert.alert('Faltan tarjetas', `Coloca todas las tarjetas (${tipoItems.length - Object.keys(tipoPlaced).length} restantes).`);
+      showResult(false, `Faltan tarjetas. Coloca todas (${tipoItems.length - Object.keys(tipoPlaced).length} restantes).`);
       return;
     }
     addXP(15);
@@ -312,7 +324,7 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
       addXP(15);
       nextStep();
     } else {
-      Alert.alert('Incorrecto', 'Revisa el orden lógico de los pasos.');
+      showResult(false, 'Revisa el orden lógico de los pasos.');
     }
   };
 
@@ -355,20 +367,18 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
   const answerEthics = (val: string) => {
     const item = ethicsItems[ethicsIdx];
     const isOk = val === item.correct;
-    Alert.alert(isOk ? '✅ Correcto' : '❌ Incorrecto', item.explain, [
-      {
-        text: 'OK',
-        onPress: () => {
-          if (ethicsIdx + 1 < ethicsItems.length) {
-            setEthicsIdx((prev) => prev + 1);
-          } else {
-            setEthicsFinished(true);
-            addXP(20);
-            nextStep();
-          }
-        },
-      },
-    ]);
+    setEthicsResult({ isOk, explain: item.explain });
+  };
+
+  const advanceEthics = () => {
+    setEthicsResult(null);
+    if (ethicsIdx + 1 < ethicsItems.length) {
+      setEthicsIdx((prev) => prev + 1);
+    } else {
+      setEthicsFinished(true);
+      addXP(20);
+      nextStep();
+    }
   };
 
   // ----- Módulo 13: Quiz construcción -----
@@ -420,7 +430,7 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
       addXP(15);
       nextStep();
     } else {
-      Alert.alert('Muy corto', 'Escribe al menos 90 caracteres.');
+      showResult(false, 'Muy corto. Escribe al menos 90 caracteres.');
     }
   };
 
@@ -820,17 +830,28 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
             <Text style={styles.tag}>⚖️ Módulo 13 · Ethics Check</Text>
             <Text style={styles.title}>¿Tu proyecto pasa el filtro ético?</Text>
             <Text style={styles.questionBox}>{currentEthic.scenario}</Text>
-            <View style={styles.row}>
-              <TouchableOpacity style={styles.ethButton} onPress={() => answerEthics('safe')}>
-                <Text>✅ Seguro</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.ethButton} onPress={() => answerEthics('doubt')}>
-                <Text>🤔 Revisar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.ethButton} onPress={() => answerEthics('bad')}>
-                <Text>⛔ No publicar</Text>
-              </TouchableOpacity>
-            </View>
+            {ethicsResult ? (
+              <>
+                <View style={[styles.resultBanner, ethicsResult.isOk ? styles.resultBannerOk : styles.resultBannerErr]}>
+                  <Text style={styles.resultBannerText}>{ethicsResult.isOk ? '✅ ' : '❌ '}{ethicsResult.explain}</Text>
+                </View>
+                <TouchableOpacity style={styles.primaryBtn} onPress={advanceEthics}>
+                  <Text style={styles.primaryBtnText}>{ethicsIdx + 1 < ethicsItems.length ? 'Siguiente →' : 'Continuar →'}</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <View style={styles.row}>
+                <TouchableOpacity style={styles.ethButton} onPress={() => answerEthics('safe')}>
+                  <Text>✅ Seguro</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.ethButton} onPress={() => answerEthics('doubt')}>
+                  <Text>🤔 Revisar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.ethButton} onPress={() => answerEthics('bad')}>
+                  <Text>⛔ No publicar</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         );
 
@@ -1028,6 +1049,13 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
         {renderStepContent()}
       </ScrollView>
 
+      {stepResult && (
+        <View style={[styles.resultBanner, stepResult.ok ? styles.resultBannerOk : styles.resultBannerErr]}>
+          <Text style={styles.resultBannerText}>{stepResult.ok ? '✅ ' : '❌ '}{stepResult.msg}</Text>
+        </View>
+      )}
+      {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} />}
+
       {showNextButton && (
         <View style={[styles.footer, styles.footerRow]}>
           {step > 0 && (
@@ -1124,6 +1152,10 @@ const styles = StyleSheet.create({
   completeTitle: { ...typography.extraBold, fontSize: 22, marginBottom: 8 },
   completeSub: { ...typography.regular, fontSize: 14, color: colors.textSecondary, textAlign: 'center', marginBottom: 16, paddingHorizontal: 10 },
   xpEarned: { ...typography.bold, fontSize: 18, color: colors.accentDark, marginBottom: 20 },
+  resultBanner: { margin: 12, padding: 14, borderRadius: 14, borderWidth: 1 },
+  resultBannerOk: { backgroundColor: '#dcfce7', borderColor: colors.success },
+  resultBannerErr: { backgroundColor: '#fee2e2', borderColor: colors.error },
+  resultBannerText: { ...typography.bold, fontSize: 13, color: colors.textPrimary, lineHeight: 20 },
   footer: { paddingHorizontal: 16, paddingBottom: 16 },
   nextBtn: { backgroundColor: colors.success, padding: 14, borderRadius: 12, alignItems: 'center' },
   nextBtnText: { ...typography.bold, color: '#fff', fontSize: 15 },

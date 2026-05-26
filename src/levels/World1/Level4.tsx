@@ -15,6 +15,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useGameStore } from '../../store/gameStore';
 import { colors, typography } from '../../theme';
+import XPToast from '../../components/XPToast';
 
 // ---------- Tipos y constantes ----------
 interface Question {
@@ -251,7 +252,11 @@ export default function World1Level4({ navigation: propsNavigation, setAllowBack
     return () => clearInterval(timer);
   }, [sprint2Started, sprint2Finished]);
 
-  const addXP = (amount: number) => setXp(prev => prev + amount);
+  const [xpToast, setXpToast] = useState<{ amount: number; id: number } | null>(null);
+  const addXP = (amount: number) => {
+    setXp(prev => prev + amount);
+    if (amount > 0) setXpToast(prev => ({ amount, id: (prev?.id ?? 0) + 1 }));
+  };
 
   const goToNextStep = () => {
     if (step < TOTAL_STEPS - 1) setStep(step + 1);
@@ -1071,6 +1076,7 @@ export default function World1Level4({ navigation: propsNavigation, setAllowBack
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {renderContent()}
       </ScrollView>
+      {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} />}
       <View style={styles.footerRow}>
         {showBackButton && (
           <TouchableOpacity style={styles.backButton} onPress={goToPrevStep}>
