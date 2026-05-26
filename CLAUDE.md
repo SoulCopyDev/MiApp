@@ -9,7 +9,8 @@ Referencia técnica completa del proyecto. Actualizar cuando cambien arquitectur
 | `.claude/description.md` | Onboarding, entender qué es el proyecto, decisiones de arquitectura |
 | `.claude/standards.md` | Antes de escribir código — convenciones, patrones, compatibilidad web |
 | `.claude/workflow.md` | Deploy, ramas, estado de auditoría, onboarding de colaboradores |
-| `.claude/commands/new-level.md` | Scaffolding de niveles nuevos (`/project:new-level`) |
+| `.claude/commands/new-level.md` | Generador autónomo de niveles (`/project:new-level ruta/spec.md`) |
+| `.claude/commands/_nivel-template.md` | Template del spec file — copiar y rellenar para crear un nivel |
 
 > Estos archivos son parte de la documentación viva. Actualizarlos proactivamente igual que este CLAUDE.md.
 
