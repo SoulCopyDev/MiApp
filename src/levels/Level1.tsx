@@ -645,7 +645,11 @@ export default function GameLevel1({ navigation: propsNavigation, setAllowBack }
           <Text style={styles.checkButtonText}>Continuar →</Text>
         </TouchableOpacity>
       ) : (
-        <TouchableOpacity style={styles.checkButton} onPress={checkDrag}>
+        <TouchableOpacity
+          style={[styles.checkButton, Object.keys(dragPlaced).length < dragItems.length && styles.checkButtonDisabled]}
+          onPress={checkDrag}
+          disabled={Object.keys(dragPlaced).length < dragItems.length}
+        >
           <Text style={styles.checkButtonText}>Verificar clasificación</Text>
         </TouchableOpacity>
       )}
@@ -734,12 +738,20 @@ export default function GameLevel1({ navigation: propsNavigation, setAllowBack }
       {quizQuestions.map((q, qIdx) => (
         <View key={qIdx} style={styles.quizCard}>
           <Text style={styles.quizQuestion}>{qIdx+1}. {q.q}</Text>
-          {q.opts.map((opt, optIdx) => (
-            <TouchableOpacity key={optIdx} style={[styles.quizOption, quizAnswers[qIdx] === optIdx && styles.quizOptionSelected]} onPress={() => selectQuiz(qIdx, optIdx)} disabled={quizChecked}>
-              <Text style={styles.quizLetter}>{String.fromCharCode(65+optIdx)}</Text>
-              <Text style={styles.quizOptText}>{opt}</Text>
-            </TouchableOpacity>
-          ))}
+          {q.opts.map((opt, optIdx) => {
+            const isSelected = quizAnswers[qIdx] === optIdx;
+            const isCorrect = optIdx === q.correct;
+            const optStyle = !quizChecked
+              ? [styles.quizOption, isSelected && styles.quizOptionSelected]
+              : [styles.quizOption, isCorrect ? styles.quizOptionCorrect : isSelected ? styles.quizOptionWrong : null];
+            return (
+              <TouchableOpacity key={optIdx} style={optStyle} onPress={() => selectQuiz(qIdx, optIdx)} disabled={quizChecked}>
+                <Text style={styles.quizLetter}>{String.fromCharCode(65+optIdx)}</Text>
+                <Text style={styles.quizOptText}>{opt}</Text>
+              </TouchableOpacity>
+            );
+          })}
+          {quizChecked && <Text style={styles.explainText}>{q.explain}</Text>}
         </View>
       ))}
       {quizChecked ? (
@@ -758,15 +770,35 @@ export default function GameLevel1({ navigation: propsNavigation, setAllowBack }
     <View style={styles.stepContainer}>
       <Text style={styles.tag}>✅ Módulo 9 de 10 · Verdadero o Falso</Text>
       <Text style={styles.title}>¿Verdad o mentira?</Text>
-      {tfItems.map((item, idx) => (
-        <View key={idx} style={styles.tfSet}>
-          <Text style={styles.tfQuestion}>{idx+1}. {item.stmt}</Text>
-          <View style={styles.tfOpts}>
-            <TouchableOpacity style={[styles.tfBtn, tfAnswers[idx] === true && styles.tfBtnTrue]} onPress={() => selectTF(idx, true)} disabled={tfChecked}><Text>✅ Verdadero</Text></TouchableOpacity>
-            <TouchableOpacity style={[styles.tfBtn, tfAnswers[idx] === false && styles.tfBtnFalse]} onPress={() => selectTF(idx, false)} disabled={tfChecked}><Text>❌ Falso</Text></TouchableOpacity>
+      {tfItems.map((item, idx) => {
+        const userPick = tfAnswers[idx];
+        return (
+          <View key={idx} style={styles.tfSet}>
+            <Text style={styles.tfQuestion}>{idx+1}. {item.stmt}</Text>
+            <View style={styles.tfOpts}>
+              <TouchableOpacity
+                style={[styles.tfBtn,
+                  !tfChecked && userPick === true && styles.tfBtnTrue,
+                  tfChecked && item.correct === true && styles.tfBtnResultCorrect,
+                  tfChecked && item.correct !== true && userPick === true && styles.tfBtnResultWrong,
+                ]}
+                onPress={() => selectTF(idx, true)}
+                disabled={tfChecked}
+              ><Text>✅ Verdadero</Text></TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.tfBtn,
+                  !tfChecked && userPick === false && styles.tfBtnFalse,
+                  tfChecked && item.correct === false && styles.tfBtnResultCorrect,
+                  tfChecked && item.correct !== false && userPick === false && styles.tfBtnResultWrong,
+                ]}
+                onPress={() => selectTF(idx, false)}
+                disabled={tfChecked}
+              ><Text>❌ Falso</Text></TouchableOpacity>
+            </View>
+            {tfChecked && <Text style={styles.explainText}>{item.explain}</Text>}
           </View>
-        </View>
-      ))}
+        );
+      })}
       {tfChecked ? (
         <TouchableOpacity style={styles.checkButton} onPress={goToNextStep}>
           <Text style={styles.checkButtonText}>Continuar →</Text>
@@ -787,11 +819,18 @@ export default function GameLevel1({ navigation: propsNavigation, setAllowBack }
         <Text>{fillItem.sentence.replace('<b>___</b>', '_____')}</Text>
       </View>
       <View style={styles.fillOpts}>
-        {fillItem.allOpts.map((opt, idx) => (
-          <TouchableOpacity key={idx} style={[styles.fillOpt, fillSel === idx && styles.fillOptSelected]} onPress={() => selectFill(idx)} disabled={fillChecked}>
-            <Text>{opt}</Text>
-          </TouchableOpacity>
-        ))}
+        {fillItem.allOpts.map((opt, idx) => {
+          const isSelected = fillSel === idx;
+          const isCorrect = idx === fillItem.correct.fb0;
+          const optStyle = !fillChecked
+            ? [styles.fillOpt, isSelected && styles.fillOptSelected]
+            : [styles.fillOpt, isCorrect ? styles.fillOptCorrect : isSelected ? styles.fillOptWrong : null];
+          return (
+            <TouchableOpacity key={idx} style={optStyle} onPress={() => selectFill(idx)} disabled={fillChecked}>
+              <Text>{opt}</Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
       {fillChecked ? (
         <TouchableOpacity style={styles.checkButton} onPress={goToNextStep}>
@@ -805,18 +844,25 @@ export default function GameLevel1({ navigation: propsNavigation, setAllowBack }
     </View>
   );
 
-  const renderReflect = () => (
-    <View style={styles.stepContainer}>
-      <Text style={styles.tag}>✍️ Reflexión final · +15 XP</Text>
-      <Text style={styles.title}>Ahora piensa tú</Text>
-      <Text style={styles.subtitle}>Piensa en una app que usas todos los días. ¿Qué crees que está haciendo la IA en esa app? Y ahora que sabes cómo funciona por dentro, ¿cambia algo la manera en que la vas a usar?</Text>
-      <TextInput style={styles.textArea} multiline numberOfLines={6} placeholder="Escribe tu reflexión (mínimo 60 caracteres)..." value={reflectText} onChangeText={setReflectText} />
-      <Text style={styles.charCount}>{reflectText.trim().length} / 60 mínimo</Text>
-      <TouchableOpacity style={styles.checkButton} onPress={checkReflect}>
-        <Text style={styles.checkButtonText}>Enviar reflexión</Text>
-      </TouchableOpacity>
-    </View>
-  );
+  const renderReflect = () => {
+    const reflectReady = reflectText.trim().length >= 60;
+    return (
+      <View style={styles.stepContainer}>
+        <Text style={styles.tag}>✍️ Reflexión final · +15 XP</Text>
+        <Text style={styles.title}>Ahora piensa tú</Text>
+        <Text style={styles.subtitle}>Piensa en una app que usas todos los días. ¿Qué crees que está haciendo la IA en esa app? Y ahora que sabes cómo funciona por dentro, ¿cambia algo la manera en que la vas a usar?</Text>
+        <TextInput style={styles.textArea} multiline numberOfLines={6} placeholder="Escribe tu reflexión (mínimo 60 caracteres)..." value={reflectText} onChangeText={setReflectText} />
+        <Text style={styles.charCount}>{reflectText.trim().length} / 60 mínimo</Text>
+        <TouchableOpacity
+          style={[styles.checkButton, !reflectReady && styles.checkButtonDisabled]}
+          onPress={checkReflect}
+          disabled={!reflectReady}
+        >
+          <Text style={styles.checkButtonText}>Enviar reflexión</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
 
   const renderCompletion = () => (
     <View style={styles.completeContainer}>
@@ -947,6 +993,7 @@ const styles = StyleSheet.create({
   dropChip: { backgroundColor: '#dbeafe', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
   dropChipText: { ...typography.regular, fontSize: 11, color: colors.primary },
   checkButton: { backgroundColor: colors.success, padding: 12, borderRadius: 11, alignItems: 'center', marginTop: 16 },
+  checkButtonDisabled: { opacity: 0.4 },
   checkButtonText: { ...typography.bold, color: '#fff' },
   matchColumns: { flexDirection: 'row', gap: 12, marginTop: 12 },
   matchLeftColumn: { flex: 1, gap: 8 },
@@ -965,6 +1012,9 @@ const styles = StyleSheet.create({
   quizQuestion: { ...typography.bold, fontSize: 14, color: colors.textPrimary, marginBottom: 8, padding: 12, backgroundColor: colors.surfaceVariant, borderRadius: 10 },
   quizOption: { flexDirection: 'row', alignItems: 'center', padding: 12, borderWidth: 1, borderColor: colors.border, borderRadius: 11, marginBottom: 6, gap: 10 },
   quizOptionSelected: { borderColor: colors.primary, backgroundColor: '#eff6ff' },
+  quizOptionCorrect: { borderColor: colors.success, backgroundColor: '#dcfce7', borderWidth: 2 },
+  quizOptionWrong: { borderColor: colors.error, backgroundColor: '#fee2e2', borderWidth: 2 },
+  explainText: { ...typography.regular, fontSize: 12, color: '#374151', lineHeight: 18, marginTop: 6, paddingHorizontal: 4, fontStyle: 'italic' },
   quizLetter: { width: 26, height: 26, borderRadius: 8, backgroundColor: '#f3f4f6', textAlign: 'center', lineHeight: 26, ...typography.bold },
   quizOptText: { flex: 1, ...typography.regular, fontSize: 13, color: colors.textPrimary },
   tfSet: { marginBottom: 14 },
@@ -973,16 +1023,20 @@ const styles = StyleSheet.create({
   tfBtn: { flex: 1, padding: 12, borderRadius: 11, borderWidth: 2, borderColor: colors.border, backgroundColor: colors.surface, alignItems: 'center' },
   tfBtnTrue: { borderColor: colors.success, backgroundColor: '#f0fdf4' },
   tfBtnFalse: { borderColor: colors.error, backgroundColor: '#fff1f2' },
+  tfBtnResultCorrect: { borderColor: colors.success, backgroundColor: '#dcfce7', borderWidth: 2 },
+  tfBtnResultWrong: { borderColor: colors.error, backgroundColor: '#fee2e2', borderWidth: 2 },
   fillSentence: { backgroundColor: '#f0f9ff', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#bae6fd', marginBottom: 11 },
   fillOpts: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 8 },
   fillOpt: { padding: 8, borderRadius: 10, borderWidth: 1.5, borderColor: colors.border, backgroundColor: colors.surface },
   fillOptSelected: { borderColor: colors.primary, backgroundColor: '#e0f2fe' },
+  fillOptCorrect: { borderColor: colors.success, backgroundColor: '#dcfce7', borderWidth: 2 },
+  fillOptWrong: { borderColor: colors.error, backgroundColor: '#fee2e2', borderWidth: 2 },
   textArea: { borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 12, ...typography.regular, fontSize: 13, color: colors.textPrimary, textAlignVertical: 'top', minHeight: 100, backgroundColor: '#fafafa' },
   charCount: { ...typography.regular, fontSize: 11, color: colors.textSecondary, textAlign: 'right', marginTop: 4 },
   completeContainer: { alignItems: 'center', padding: 20 },
   completeBadgeText: { fontSize: 44, marginBottom: 14 },
   completeTitle: { ...typography.extraBold, fontSize: 21, color: colors.textPrimary, marginBottom: 6 },
-  completeSub: { ...typography.regular, fontSize: 12, color: colors.textSecondary, textAlign: 'center', lineHeight: 1.7, marginBottom: 16 },
+  completeSub: { ...typography.regular, fontSize: 12, color: colors.textSecondary, textAlign: 'center', lineHeight: 20, marginBottom: 16 },
   xpEarnedText: { ...typography.bold, fontSize: 15, color: colors.accentDark, marginBottom: 14 },
   nextLevelButton: { backgroundColor: colors.primary, padding: 14, borderRadius: 11, width: '100%', alignItems: 'center' },
   nextLevelText: { ...typography.bold, color: '#fff' },
