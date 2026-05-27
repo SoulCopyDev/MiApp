@@ -640,9 +640,15 @@ export default function GameLevel1({ navigation: propsNavigation, setAllowBack }
           </View>
         </TouchableOpacity>
       </View>
-      <TouchableOpacity style={styles.checkButton} onPress={checkDrag}>
-        <Text style={styles.checkButtonText}>Verificar clasificación</Text>
-      </TouchableOpacity>
+      {dragOk ? (
+        <TouchableOpacity style={styles.checkButton} onPress={goToNextStep}>
+          <Text style={styles.checkButtonText}>Continuar →</Text>
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity style={styles.checkButton} onPress={checkDrag}>
+          <Text style={styles.checkButtonText}>Verificar clasificación</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 
