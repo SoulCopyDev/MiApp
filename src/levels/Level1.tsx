@@ -673,6 +673,11 @@ export default function GameLevel1({ navigation: propsNavigation, setAllowBack }
           ))}
         </View>
       </View>
+      {matchDone >= matchPairs.length && (
+        <TouchableOpacity style={styles.checkButton} onPress={goToNextStep}>
+          <Text style={styles.checkButtonText}>Continuar →</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 
@@ -710,9 +715,15 @@ export default function GameLevel1({ navigation: propsNavigation, setAllowBack }
           </View>
         </View>
       ))}
-      <TouchableOpacity style={styles.checkButton} onPress={checkSort}>
-        <Text style={styles.checkButtonText}>Verificar orden</Text>
-      </TouchableOpacity>
+      {sortOk ? (
+        <TouchableOpacity style={styles.checkButton} onPress={goToNextStep}>
+          <Text style={styles.checkButtonText}>Continuar →</Text>
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity style={styles.checkButton} onPress={checkSort}>
+          <Text style={styles.checkButtonText}>Verificar orden</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 
@@ -731,9 +742,15 @@ export default function GameLevel1({ navigation: propsNavigation, setAllowBack }
           ))}
         </View>
       ))}
-      <TouchableOpacity style={styles.checkButton} onPress={checkQuiz}>
-        <Text style={styles.checkButtonText}>Comprobar respuestas</Text>
-      </TouchableOpacity>
+      {quizChecked ? (
+        <TouchableOpacity style={styles.checkButton} onPress={goToNextStep}>
+          <Text style={styles.checkButtonText}>Continuar →</Text>
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity style={styles.checkButton} onPress={checkQuiz}>
+          <Text style={styles.checkButtonText}>Comprobar respuestas</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 
@@ -750,9 +767,15 @@ export default function GameLevel1({ navigation: propsNavigation, setAllowBack }
           </View>
         </View>
       ))}
-      <TouchableOpacity style={styles.checkButton} onPress={checkTF}>
-        <Text style={styles.checkButtonText}>Comprobar</Text>
-      </TouchableOpacity>
+      {tfChecked ? (
+        <TouchableOpacity style={styles.checkButton} onPress={goToNextStep}>
+          <Text style={styles.checkButtonText}>Continuar →</Text>
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity style={styles.checkButton} onPress={checkTF}>
+          <Text style={styles.checkButtonText}>Comprobar</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 
@@ -770,9 +793,15 @@ export default function GameLevel1({ navigation: propsNavigation, setAllowBack }
           </TouchableOpacity>
         ))}
       </View>
-      <TouchableOpacity style={styles.checkButton} onPress={checkFill}>
-        <Text style={styles.checkButtonText}>Verificar respuesta</Text>
-      </TouchableOpacity>
+      {fillChecked ? (
+        <TouchableOpacity style={styles.checkButton} onPress={goToNextStep}>
+          <Text style={styles.checkButtonText}>Continuar →</Text>
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity style={styles.checkButton} onPress={checkFill}>
+          <Text style={styles.checkButtonText}>Verificar respuesta</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 
