@@ -15,6 +15,7 @@ import { useNavigation } from '@react-navigation/native';
 import { router } from 'expo-router';
 import { useGameStore } from '../store/gameStore';
 import { colors, typography } from '../theme';
+import XPToast from '../components/XPToast';
 
 // ---------- Tipos ----------
 type EthicsItem = { scenario: string; correct: 'safe' | 'doubt' | 'bad'; explain: string };
@@ -144,6 +145,7 @@ export default function World1Level5({ navigation: propsNavigation, setAllowBack
   const [step, setStep] = useState(0);
   const [xp, setXp] = useState(0);
   const [stepResult, setStepResult] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [xpToast, setXpToast] = useState<{ amount: number; id: number } | null>(null);
 
   // Pools aleatorios
   const [ethicsItems] = useState(() => pickN(ETHICS_POOL, 5));
@@ -231,7 +233,10 @@ export default function World1Level5({ navigation: propsNavigation, setAllowBack
     if (step === 2) { setExpandedCards(new Set()); }
   }, [step]);
 
-  const addXP = (amount: number) => setXp((prev) => prev + amount);
+  const addXP = (amount: number) => {
+    setXp((prev) => prev + amount);
+    if (amount > 0) setXpToast((prev) => ({ amount, id: (prev?.id ?? 0) + 1 }));
+  };
   const goToNextStep = () => { setStepResult(null); if (step < TOTAL_STEPS - 1) setStep(step + 1); };
 
   const showResult = (ok: boolean, msg: string) => {
@@ -951,6 +956,7 @@ export default function World1Level5({ navigation: propsNavigation, setAllowBack
           <Text style={styles.resultBannerText}>{stepResult.ok ? '✓ ' : '✗ '}{stepResult.msg}</Text>
         </View>
       )}
+      {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} />}
       <View style={styles.footerRow}>
         {showBackButtonL5 && showNextBtn && (
           <TouchableOpacity style={styles.backButton} onPress={goToPrevStep}>
