@@ -8,6 +8,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useGameStore } from '../store/gameStore';
 import { colors, typography } from '../theme';
+import XPToast from '../components/XPToast';
 
 // ---------- Tipos ----------
 type ModuleData = {
@@ -131,6 +132,7 @@ export default function World3Level3({ navigation: propsNavigation, setAllowBack
 
   const [current, setCurrent] = useState(0);
   const [xp, setXp] = useState(0);
+  const [xpToast, setXpToast] = useState<{ amount: number; id: number } | null>(null);
   const [correctAnswers, setCorrectAnswers] = useState(0);
 
   // Quiz
@@ -194,7 +196,10 @@ export default function World3Level3({ navigation: propsNavigation, setAllowBack
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, [sprintRunning, sprintSec, sprintDone]);
 
-  const addXP = (v: number) => setXp(prev => prev + v);
+  const addXP = (v: number) => {
+    setXp(prev => prev + v);
+    if (v > 0) setXpToast((prev) => ({ amount: v, id: (prev?.id ?? 0) + 1 }));
+  };
   const nextModule = () => {
     if (current < MODULES.length - 1) {
       setCurrent(c => c + 1);
@@ -584,6 +589,7 @@ export default function World3Level3({ navigation: propsNavigation, setAllowBack
       </View>
       <Text style={styles.tag}>Nivel 15 · 21 módulos</Text>
       {renderModule()}
+      {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} />}
     </View>
   );
 }

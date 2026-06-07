@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useGameStore } from '../store/gameStore';
 import { colors, typography } from '../theme';
+import XPToast from '../components/XPToast';
 
 // ─── TIPOS DE MÓDULO ──────────────────────────────────────
 interface BaseModule {
@@ -392,6 +393,7 @@ export default function World3Level4() {
 
   const [step, setStep] = useState(0);
   const [xp, setXp] = useState(0);
+  const [xpToast, setXpToast] = useState<{ amount: number; id: number } | null>(null);
   const [correctCount, setCorrectCount] = useState(0);
   const [completed, setCompleted] = useState(false);
 
@@ -461,6 +463,7 @@ export default function World3Level4() {
   const addXP = useCallback((amount: number) => {
     setXp(prev => prev + amount);
     addXPToStore(amount);
+    if (amount > 0) setXpToast((prev) => ({ amount, id: (prev?.id ?? 0) + 1 }));
   }, [addXPToStore]);
 
   const handleNext = () => {
@@ -882,7 +885,8 @@ export default function World3Level4() {
   const progress = Math.round((step / (MODULES.length - 1)) * 100);
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.container}>
+    <View style={styles.screen}>
+    <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.header}>
         <Text style={styles.levelBadge}>Nivel 16 · 20 módulos</Text>
         <Text style={styles.levelTitle}>
@@ -924,6 +928,8 @@ export default function World3Level4() {
         </View>
       )}
     </ScrollView>
+    {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} />}
+    </View>
   );
 }
 

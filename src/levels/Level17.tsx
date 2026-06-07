@@ -8,6 +8,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useGameStore } from '../store/gameStore';
 import { colors, typography } from '../theme';
+import XPToast from '../components/XPToast';
 
 // ---------- Tipos ----------
 type PairItem = { a: string; b: string };
@@ -139,6 +140,7 @@ export default function World3Level5({ navigation: propsNavigation, setAllowBack
 
   const [current, setCurrent] = useState(0);
   const [xp, setXp] = useState(0);
+  const [xpToast, setXpToast] = useState<{ amount: number; id: number } | null>(null);
   const [correctCount, setCorrectCount] = useState(0);
 
   // Quiz / Chart
@@ -213,7 +215,10 @@ export default function World3Level5({ navigation: propsNavigation, setAllowBack
     }
   }, [current, quizLocked]);
 
-  const addXP = (v: number) => setXp(prev => prev + v);
+  const addXP = (v: number) => {
+    setXp(prev => prev + v);
+    if (v > 0) setXpToast((prev) => ({ amount: v, id: (prev?.id ?? 0) + 1 }));
+  };
   const nextModule = () => {
     if (current < MODULES.length - 1) {
       setCurrent(c => c + 1);
@@ -585,6 +590,7 @@ export default function World3Level5({ navigation: propsNavigation, setAllowBack
           </View>
         )}
       </ScrollView>
+      {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} />}
     </View>
   );
 }
