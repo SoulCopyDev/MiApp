@@ -15,6 +15,7 @@ import { useNavigation } from '@react-navigation/native';
 import { router } from 'expo-router';
 import { useGameStore } from '../store/gameStore';
 import { colors, typography } from '../theme';
+import XPToast from '../components/XPToast';
 
 // ---------- Tipos y constantes ----------
 type DiagItem = {
@@ -327,6 +328,7 @@ export default function World1Level3({ navigation: propsNavigation, setAllowBack
   const [step, setStep] = useState(0);
   const [xp, setXp] = useState(0);
   const [stepResult, setStepResult] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [xpToast, setXpToast] = useState<{ amount: number; id: number } | null>(null);
 
   // Pools aleatorios
   const [diagItems] = useState(() => pickN(DIAG_POOL, 4));
@@ -468,7 +470,10 @@ export default function World1Level3({ navigation: propsNavigation, setAllowBack
     return () => clearInterval(timer);
   }, [step, sprintIdx, sprintDone, sprintAnswered]);
 
-  const addXP = (amount: number) => setXp((prev) => prev + amount);
+  const addXP = (amount: number) => {
+    setXp((prev) => prev + amount);
+    if (amount > 0) setXpToast((prev) => ({ amount, id: (prev?.id ?? 0) + 1 }));
+  };
 
   const goToNextStep = () => {
     setStepResult(null);
@@ -1252,6 +1257,7 @@ export default function World1Level3({ navigation: propsNavigation, setAllowBack
           <Text style={styles.resultBannerText}>{stepResult.ok ? '✓ ' : '✗ '}{stepResult.msg}</Text>
         </View>
       )}
+      {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} />}
       <View style={styles.footerRow}>
         {showBackButton && showNextBtn && (
           <TouchableOpacity style={styles.backButton} onPress={goToPrevStep}>
