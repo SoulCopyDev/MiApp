@@ -7,6 +7,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useGameStore } from '../store/gameStore';
 import { colors, typography } from '../theme';
+import XPToast from '../components/XPToast';
 
 // ---------- Tipos ----------
 type QuizPoolItem = {
@@ -117,6 +118,7 @@ export default function World4Level6({ navigation: propsNavigation, setAllowBack
 
   const [step, setStep] = useState(0);
   const [xp, setXp] = useState(0);
+  const [xpToast, setXpToast] = useState<{ amount: number; id: number } | null>(null);
 
   // Pools aleatorios
   const [quizArbolItem] = useState(() => pickN(QUIZ_ARBOL_POOL, 1)[0]);
@@ -158,7 +160,10 @@ export default function World4Level6({ navigation: propsNavigation, setAllowBack
     if (step === 18) { setQuizMaestroSel(null); setQuizMaestroDone(false); }
   }, [step]);
 
-  const addXP = (n: number) => setXp((p) => p + n);
+  const addXP = (n: number) => {
+    setXp((p) => p + n);
+    if (n > 0) setXpToast((prev) => ({ amount: n, id: (prev?.id ?? 0) + 1 }));
+  };
   const goNext = () => { if (step < TOTAL_STEPS - 1) setStep(step + 1); };
   const handleClose = () => Alert.alert('Salir', '¿Seguro?', [{ text: 'Cancelar' }, { text: 'Salir', onPress: () => router.back() }]);
   const handleFinish = () => {
@@ -559,6 +564,7 @@ export default function World4Level6({ navigation: propsNavigation, setAllowBack
       <ScrollView contentContainerStyle={styles.scroll}>{renderStep()}</ScrollView>
       {showNext && <TouchableOpacity style={styles.nextBtn} onPress={goNext}><Text style={styles.nextText}>Continuar →</Text></TouchableOpacity>}
       {showCheck && <TouchableOpacity style={styles.nextBtn} onPress={handleMain}><Text style={styles.nextText}>{step === 9 ? (sprintDone ? 'Continuar →' : 'Verificar') : 'Comprobar'}</Text></TouchableOpacity>}
+      {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} />}
     </View>
   );
 }
