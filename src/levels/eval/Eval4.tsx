@@ -8,6 +8,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useGameStore } from '../../store/gameStore';
 import { colors, typography } from '../../theme';
+import XPToast from '../../components/XPToast';
 
 // ---------- Tipos ----------
 type QuizQ = { q: string; opts: string[]; c: number; fb: string };
@@ -106,6 +107,7 @@ export default function World4Level7({ navigation: propsNavigation, setAllowBack
 
   const [currentPart, setCurrentPart] = useState(1);
   const [xp, setXp] = useState(0);
+  const [xpToast, setXpToast] = useState<{ amount: number; id: number } | null>(null);
   const [totalCorrect, setTotalCorrect] = useState(0);
 
   // Pools barajadas (se fijan al montar)
@@ -154,7 +156,7 @@ export default function World4Level7({ navigation: propsNavigation, setAllowBack
     return () => h.remove();
   }, []);
 
-  const addXP = (v: number) => setXp(p => p + v);
+  const addXP = (v: number) => { setXp(p => p + v); if (v > 0) setXpToast((prev) => ({ amount: v, id: (prev?.id ?? 0) + 1 })); };
 
   // Quiz
   const selectQuiz = (i: number, j: number) => {
@@ -423,6 +425,7 @@ export default function World4Level7({ navigation: propsNavigation, setAllowBack
           </TouchableOpacity>
         )}
       </ScrollView>
+      {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} />}
     </View>
   );
 }
