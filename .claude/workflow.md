@@ -54,7 +54,7 @@ Refactor completo de numeración continua N1–N43. Ver propuesta en `/Descargas
 | GLOBAL-01 | ✅ Resuelto | Botón ← Volver en pasos teóricos (THEORY_STEPS) en N1–N6 |
 | GLOBAL-02 | ✅ Resuelto | resultBanner fuera de ScrollView, showResult sin andAdvance |
 | GLOBAL-03 | ⏳ Pendiente | Alert.alert → feedback inline en respuestas incorrectas (N1/N2/N4/N6) |
-| GLOBAL-04 | ⏳ Pendiente | Toast "+N XP ✨" global al completar ejercicios |
+| GLOBAL-04 | ✅ Resuelto | Toast "+N XP ✨" global — propagado a L1-L36 + Eval1-6 |
 | GLOBAL-06 | ✅ Resuelto | allowBack declarado correctamente en LevelScreen |
 | GLOBAL-07 | ✅ Resuelto | DevMode bypass en todas las funciones check de N1–N6 |
 | EVAL-M1-01 | ✅ Resuelto | Eval1.tsx — evaluación final Mundo 1 (ex World1/Level7) |
