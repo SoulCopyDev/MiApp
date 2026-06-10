@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useGameStore } from '../store/gameStore';
 import { colors, typography } from '../theme';
+import XPToast from '../components/XPToast';
 
 // ─── Tipos de módulo ──────────────────────────────────────
 interface TheoryStep {
@@ -629,6 +630,7 @@ export default function World4Level2() {
   const steps = useRef(buildSteps()).current;
   const [step, setStep] = useState(0);
   const [xp, setXp] = useState(0);
+  const [xpToast, setXpToast] = useState<{ amount: number; id: number } | null>(null);
   const [completed, setCompleted] = useState(false);
 
   // Estados de arrastre
@@ -690,6 +692,7 @@ export default function World4Level2() {
   const addXP = useCallback((amount: number) => {
     setXp(prev => prev + amount);
     addXPToStore(amount);
+    if (amount > 0) setXpToast((prev) => ({ amount, id: (prev?.id ?? 0) + 1 }));
   }, [addXPToStore]);
 
   const handleNext = () => {
@@ -788,7 +791,8 @@ export default function World4Level2() {
   const progress = Math.round((step / (steps.length - 1)) * 100);
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.container}>
+    <View style={styles.screen}>
+    <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.header}>
         <Text style={styles.levelBadge}>🌟 MUNDO 4 · NIVEL 2</Text>
         <Text style={styles.levelTitle}>Claude</Text>
@@ -923,6 +927,8 @@ export default function World4Level2() {
         </View>
       )}
     </ScrollView>
+    {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} />}
+    </View>
   );
 }
 

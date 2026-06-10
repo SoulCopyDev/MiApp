@@ -8,6 +8,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useGameStore } from '../store/gameStore';
 import { colors, typography } from '../theme';
+import XPToast from '../components/XPToast';
 
 // ---------- Tipos ----------
 type CompareItem = {
@@ -97,6 +98,7 @@ export default function World2Level6({ navigation: propsNavigation, setAllowBack
 
   const [step, setStep] = useState(0);
   const [xp, setXp] = useState(0);
+  const [xpToast, setXpToast] = useState<{ amount: number; id: number } | null>(null);
 
   // One-shot compare
   const [osChoice, setOsChoice] = useState<number | null>(null);
@@ -182,7 +184,10 @@ export default function World2Level6({ navigation: propsNavigation, setAllowBack
     return () => clearTimeout(t);
   }, [spRunning, spSec, spDone, spAns]);
 
-  const addXP = (v: number) => setXp(p => p + v);
+  const addXP = (v: number) => {
+    setXp(p => p + v);
+    if (v > 0) setXpToast((prev) => ({ amount: v, id: (prev?.id ?? 0) + 1 }));
+  };
   const nextStep = () => { if (step < TOTAL_STEPS - 1) setStep(step + 1); };
   const finish = () => {
     let stars = xp >= 200 ? 3 : xp >= 130 ? 2 : xp >= 60 ? 1 : 0;
@@ -287,6 +292,7 @@ export default function World2Level6({ navigation: propsNavigation, setAllowBack
         <Text style={styles.xpChip}>{xp} XP</Text>
       </View>
       <ScrollView contentContainerStyle={styles.scrollContent}>{renderStep()}</ScrollView>
+      {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} />}
     </View>
   );
 }

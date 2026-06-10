@@ -8,6 +8,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useGameStore } from '../../store/gameStore';
 import { colors, typography } from '../../theme';
+import XPToast from '../../components/XPToast';
 
 // ---------- Tipos ----------
 type QuizItem = { q: string; opts: string[]; correct: number; explain: string };
@@ -115,6 +116,7 @@ export default function World1Level7({ navigation: propsNavigation, setAllowBack
 
   const [step, setStep] = useState(0);
   const [xp, setXp] = useState(0);
+  const [xpToast, setXpToast] = useState<{ amount: number; id: number } | null>(null);
 
   const completeLevel = useGameStore((state) => state.completeLevel);
   const devMode = useGameStore((state) => state.devMode);
@@ -151,7 +153,7 @@ export default function World1Level7({ navigation: propsNavigation, setAllowBack
     return () => backHandler.remove();
   }, [isExamMode]);
 
-  const addXP = (n: number) => setXp(p => p + n);
+  const addXP = (n: number) => { setXp(p => p + n); if (n > 0) setXpToast((prev) => ({ amount: n, id: (prev?.id ?? 0) + 1 })); };
 
   const handleClose = () => {
     if (Platform.OS === 'web') {
@@ -407,6 +409,7 @@ export default function World1Level7({ navigation: propsNavigation, setAllowBack
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {renderContent()}
       </ScrollView>
+      {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} />}
     </View>
   );
 }

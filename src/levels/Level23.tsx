@@ -8,6 +8,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useGameStore } from '../store/gameStore';
 import { colors, typography } from '../theme';
+import XPToast from '../components/XPToast';
 
 // ---------- Tipos ----------
 type VFItem = { s: string; correct: boolean; fb: string };
@@ -127,6 +128,7 @@ export default function World4Level5({ navigation: propsNavigation, setAllowBack
 
   const [current, setCurrent] = useState(0);
   const [xp, setXp] = useState(0);
+  const [xpToast, setXpToast] = useState<{ amount: number; id: number } | null>(null);
   const [correctCount, setCorrectCount] = useState(0);
 
   // Pools aleatorias
@@ -183,7 +185,10 @@ export default function World4Level5({ navigation: propsNavigation, setAllowBack
     setSprintRunning(false); setSprintDone(false); setSprintSec(60); setSprintInputs(['','','','','']);
   }, [current]);
 
-  const addXP = (v: number) => setXp(p => p + v);
+  const addXP = (v: number) => {
+    setXp(p => p + v);
+    if (v > 0) setXpToast((prev) => ({ amount: v, id: (prev?.id ?? 0) + 1 }));
+  };
   const nextModule = () => { if (current < TOTAL_STEPS - 1) setCurrent(c => c + 1); };
   const prevModule = () => { if (current > 0) setCurrent(c => c - 1); };
   const finish = () => {
@@ -467,6 +472,7 @@ export default function World4Level5({ navigation: propsNavigation, setAllowBack
           </View>
         )}
       </ScrollView>
+      {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} />}
     </View>
   );
 }

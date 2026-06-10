@@ -8,6 +8,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useGameStore } from '../store/gameStore';
 import { colors, typography } from '../theme';
+import XPToast from '../components/XPToast';
 
 // ---------- Tipos ----------
 type MatchPair = { left: string; right: string };
@@ -135,6 +136,7 @@ export default function World5Level1({ navigation: propsNavigation, setAllowBack
 
   const [step, setStep] = useState(0);
   const [xp, setXp] = useState(0);
+  const [xpToast, setXpToast] = useState<{ amount: number; id: number } | null>(null);
 
   // Pools
   const matchPairs = useRef(pickN(MATCH_PAIRS, 4)).current;
@@ -203,7 +205,7 @@ export default function World5Level1({ navigation: propsNavigation, setAllowBack
     return () => { if (sprintTimer.current) clearTimeout(sprintTimer.current); };
   }, [sprintRunning, sprintSec, sprintDone]);
 
-  const addXP = (v: number) => setXp(prev => prev + v);
+  const addXP = (v: number) => { setXp(prev => prev + v); if (v > 0) setXpToast((prev) => ({ amount: v, id: (prev?.id ?? 0) + 1 })); };
   const nextStep = () => { setStep(s => s + 1); resetActivity(); };
   const finishLevel = () => {
     let stars = xp >= 180 ? 3 : xp >= 120 ? 2 : 1;
@@ -615,6 +617,7 @@ export default function World5Level1({ navigation: propsNavigation, setAllowBack
         <Text style={styles.xpChip}>{xp} XP</Text>
       </View>
       <ScrollView contentContainerStyle={styles.scrollContent}>{renderContent()}</ScrollView>
+      {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} />}
     </View>
   );
 }

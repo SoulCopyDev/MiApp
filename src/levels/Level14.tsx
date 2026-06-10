@@ -8,6 +8,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useGameStore } from '../store/gameStore';
 import { colors, typography } from '../theme';
+import XPToast from '../components/XPToast';
 
 // ---------- Tipos ----------
 type QuizItem = { q: string; opts: string[]; correct: number; fb: string };
@@ -134,6 +135,7 @@ export default function World3Level2({ navigation: propsNavigation, setAllowBack
 
   const [step, setStep] = useState(0);
   const [xp, setXp] = useState(0);
+  const [xpToast, setXpToast] = useState<{ amount: number; id: number } | null>(null);
   const [correctCount, setCorrectCount] = useState(0);
 
   // Quiz states
@@ -189,7 +191,11 @@ export default function World3Level2({ navigation: propsNavigation, setAllowBack
     return () => { if (sprintTimerRef.current) clearInterval(sprintTimerRef.current); };
   }, [sprintRunning, sprintSec]);
 
-  const addXP = (v: number) => { setXp(prev => prev + v); setCorrectCount(prev => prev + 1); };
+  const addXP = (v: number) => {
+    setXp(prev => prev + v);
+    setCorrectCount(prev => prev + 1);
+    if (v > 0) setXpToast((prev) => ({ amount: v, id: (prev?.id ?? 0) + 1 }));
+  };
   const nextStep = () => { if (step < MODULE_COUNT - 1) setStep(step + 1); };
   const prevStep = () => { if (step > 0) setStep(step - 1); };
 
@@ -631,6 +637,7 @@ export default function World3Level2({ navigation: propsNavigation, setAllowBack
         <Text style={styles.xpChip}>{xp} XP</Text>
       </View>
       <ScrollView contentContainerStyle={styles.scrollContent}>{renderStep()}</ScrollView>
+      {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} />}
     </View>
   );
 }

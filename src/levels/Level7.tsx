@@ -13,6 +13,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useGameStore } from '../store/gameStore';
 import { colors, typography } from '../theme';
+import XPToast from '../components/XPToast';
 
 // ---------- Tipos ----------
 type CompareItem = { task: string; bad: string; good: string; badWhy: string; goodWhy: string };
@@ -143,6 +144,7 @@ export default function World2Level1({ navigation: propsNavigation, setAllowBack
   const [step, setStep] = useState(0);
   const [xp, setXp] = useState(0);
   const [stepResult, setStepResult] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [xpToast, setXpToast] = useState<{ amount: number; id: number } | null>(null);
 
   const [compareItems] = useState(() => pickN(COMPARE_POOL, 3));
   const [matchPairs] = useState(() => pickN(MATCH_POOL, 4));
@@ -212,8 +214,12 @@ export default function World2Level1({ navigation: propsNavigation, setAllowBack
     if (step === 18) { setSprintSec(60); setSprintQ(0); setSprintCorrect(0); setSprintDone(false); setSprintStarted(false); if (sprintTimer.current) clearInterval(sprintTimer.current); }
   }, [step]);
 
-  const addXP = (n: number) => setXp(prev => prev + n);
+  const addXP = (n: number) => {
+    setXp(prev => prev + n);
+    if (n > 0) setXpToast((prev) => ({ amount: n, id: (prev?.id ?? 0) + 1 }));
+  };
   const goToNextStep = () => { setStepResult(null); if (step < TOTAL_STEPS - 1) setStep(step + 1); };
+  const goToPrevStep = () => { setStepResult(null); setStep(s => s - 1); };
 
   const showResult = (ok: boolean, msg: string, andAdvance = false) => {
     setStepResult({ ok, msg });
@@ -810,6 +816,7 @@ export default function World2Level1({ navigation: propsNavigation, setAllowBack
     goToNextStep();
   };
 
+  const showBackButton = step > 0 && !isExamMode;
   const showNextBtn = step < TOTAL_STEPS - 1 && ![3, 5, 7, 8, 10, 12, 14, 16, 18, 20, 21].includes(step);
   const showCheckBtn = [3, 5, 7, 8, 10, 12, 14, 16, 18, 20].includes(step) && step < TOTAL_STEPS - 1;
 
@@ -832,8 +839,24 @@ export default function World2Level1({ navigation: propsNavigation, setAllowBack
           </View>
         )}
       </ScrollView>
-      {showNextBtn && <TouchableOpacity style={styles.nextButton} onPress={goToNextStep}><Text style={styles.nextButtonText}>Continuar →</Text></TouchableOpacity>}
-      {showCheckBtn && <TouchableOpacity style={styles.nextButton} onPress={step === 18 && !sprintStarted ? startSprint : handleMainBtn}><Text style={styles.nextButtonText}>{getBtnLabel()}</Text></TouchableOpacity>}
+      {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} />}
+      <View style={styles.footerRow}>
+        {showBackButton && (
+          <TouchableOpacity style={styles.backButton} onPress={goToPrevStep}>
+            <Text style={styles.backButtonText}>← Volver</Text>
+          </TouchableOpacity>
+        )}
+        {showNextBtn && (
+          <TouchableOpacity style={[styles.nextButton, showBackButton && styles.nextButtonFlex]} onPress={goToNextStep}>
+            <Text style={styles.nextButtonText}>Continuar →</Text>
+          </TouchableOpacity>
+        )}
+        {showCheckBtn && (
+          <TouchableOpacity style={[styles.nextButton, showBackButton && styles.nextButtonFlex]} onPress={step === 18 && !sprintStarted ? startSprint : handleMainBtn}>
+            <Text style={styles.nextButtonText}>{getBtnLabel()}</Text>
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 }
@@ -877,6 +900,10 @@ const styles = StyleSheet.create({
   textArea: { borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 10, padding: 12, fontSize: 13, color: '#334155', textAlignVertical: 'top', minHeight: 80, backgroundColor: '#fafafa' },
   nextButton: { backgroundColor: '#e11d48', padding: 14, margin: 16, borderRadius: 11, alignItems: 'center' },
   nextButtonText: { ...typography.bold, color: '#fff', fontSize: 15 },
+  footerRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 16, gap: 8 },
+  backButton: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, padding: 14, borderRadius: 11, alignItems: 'center', paddingHorizontal: 20 },
+  backButtonText: { ...typography.bold, color: colors.textSecondary, fontSize: 15 },
+  nextButtonFlex: { flex: 1, margin: 0 },
   finishButton: { backgroundColor: '#e11d48', padding: 14, borderRadius: 11, width: '100%', alignItems: 'center', marginTop: 14 },
   resultBanner: { margin: 16, padding: 14, borderRadius: 14, borderWidth: 1 },
   resultBannerOk: { backgroundColor: '#dcfce7', borderColor: colors.success },
