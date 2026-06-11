@@ -452,8 +452,29 @@ export default function World4Level3({ navigation: propsNavigation, setAllowBack
         <View style={styles.completeContainer}>
           <View style={styles.completeIcon}><Text style={styles.iconEmoji}>✦</Text></View>
           <Text style={styles.completeTitle}>¡Nivel 21 completado!</Text>
-          <Text style={styles.completeSub}>Ahora dominas Gemini: búsqueda en tiempo real, integración Google, y sabes cuándo usarlo vs Claude vs ChatGPT.</Text>
+          <Text style={styles.completeSub}>Terminaste "Gemini — La IA que vive en el ecosistema Google". Ahora tienes dos LLMs dominados: Claude y Gemini.</Text>
           <Text style={styles.xpBig}>⭐ {xp} XP ganados</Text>
+          <View style={{ backgroundColor: '#f0fdf4', borderRadius: 12, padding: 13, marginBottom: 14, borderWidth: 1, borderColor: '#bbf7d0', width: '100%' }}>
+            {[
+              'Sé la historia de Gemini y por qué Google lo creó',
+              'Entiendo la integración con Gmail, Docs, Drive y YouTube como fortaleza clave',
+              'Sé cuándo Gemini supera a Claude y cuándo Claude supera a Gemini',
+              'Puedo escribir prompts que aprovechan la búsqueda en tiempo real de Gemini',
+              'Entiendo los aspectos de privacidad al usar Gemini con mis cuentas de Google',
+            ].map((skill, i) => (
+              <View key={i} style={{ flexDirection: 'row', gap: 8, marginBottom: i < 4 ? 7 : 0 }}>
+                <Text style={{ color: '#10b981', fontWeight: '700', fontSize: 14 }}>✓</Text>
+                <Text style={{ fontSize: 12, color: '#334155', lineHeight: 18, flex: 1 }}>{skill}</Text>
+              </View>
+            ))}
+          </View>
+          <View style={{ backgroundColor: '#f8fafc', borderRadius: 10, padding: 11, marginBottom: 14, borderWidth: 1, borderColor: '#e2e8f0', width: '100%' }}>
+            <Text style={{ fontSize: 12, color: '#334155', lineHeight: 20 }}>
+              ⚡ <Text style={{ fontWeight: '700' }}>Nivel 22: Grok — La IA con personalidad propia{'\n\n'}</Text>
+              Conocerás a Grok, el LLM de xAI creado por Elon Musk. Es diferente a todos los demás: tiene acceso en tiempo real a X (Twitter) y una personalidad que ningún otro LLM tiene.
+            </Text>
+          </View>
+          <Text style={{ fontSize: 10, color: '#94a3b8', marginBottom: 8 }}>Nivel 21 de 36 completado · 58% del camino a IA Explorer</Text>
           {btn('Volver al mapa', finish)}
         </View>
       );

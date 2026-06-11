@@ -747,8 +747,32 @@ export default function World2Level1({ navigation: propsNavigation, setAllowBack
     <View style={{ alignItems: 'center', padding: 20 }}>
       <Text style={{ fontSize: 44, marginBottom: 14 }}>✍️</Text>
       <Text style={[styles.title, { textAlign: 'center' }]}>¡Nivel 7 completado!</Text>
-      <Text style={[styles.subtitle, { textAlign: 'center' }]}>Terminaste "Prompting como un profesional". ¡5 trucos avanzados que muy poca gente conoce!</Text>
-      <Text style={{ fontWeight: 'bold', fontSize: 15, color: '#92400e', marginBottom: 14 }}>⭐ {xp} XP ganados</Text>
+      <Text style={[styles.subtitle, { textAlign: 'center', marginBottom: 14 }]}>Terminaste "Prompting como un profesional". ¡Ahora tienes 5 trucos avanzados que muy poca gente conoce! Eso te hace un usuario experto de IA.</Text>
+      <View style={{ backgroundColor: '#fef9c3', borderRadius: 12, padding: 11, marginBottom: 14, borderWidth: 1, borderColor: '#fcd34d', width: '100%' }}>
+        <Text style={{ fontSize: 15, fontWeight: '700', color: '#92400e', textAlign: 'center' }}>⭐ {xp} XP ganados en este nivel</Text>
+      </View>
+      <View style={{ backgroundColor: '#f0fdf4', borderRadius: 12, padding: 13, marginBottom: 14, borderWidth: 1, borderColor: '#bbf7d0', width: '100%' }}>
+        {[
+          'Sé usar "piensa paso a paso" para que la IA resuelva problemas difíciles',
+          'Puedo dar ejemplos para conseguir el formato exacto que quiero',
+          'Sé decirle qué NO hacer para evitar respuestas que no me sirven',
+          'Sé darle una identidad detallada para que cambie su forma de responder',
+          'Puedo dividir tareas grandes en pasos pequeños para mejores resultados',
+          'Sé combinar trucos y diagnosticar qué falla cuando un prompt no funciona',
+        ].map((skill, i) => (
+          <View key={i} style={{ flexDirection: 'row', gap: 8, marginBottom: i < 5 ? 7 : 0 }}>
+            <Text style={{ color: '#10b981', fontWeight: '700', fontSize: 14 }}>✓</Text>
+            <Text style={{ fontSize: 12, color: '#334155', lineHeight: 18, flex: 1 }}>{skill}</Text>
+          </View>
+        ))}
+      </View>
+      <View style={{ backgroundColor: '#f8fafc', borderRadius: 10, padding: 11, marginBottom: 14, borderWidth: 1, borderColor: '#e2e8f0', width: '100%' }}>
+        <Text style={{ fontSize: 12, color: '#334155', lineHeight: 20 }}>
+          🧠 <Text style={{ fontWeight: '700' }}>Nivel 8: El Cerebro Secreto de la IA{'\n\n'}</Text>
+          Ahora que dominas el prompting intermedio, vas a abrir el capó: tokens, transformers, temperatura, alucinaciones. Entender cómo funciona la IA por dentro hace que todos tus prompts tengan más sentido.
+        </Text>
+      </View>
+      <Text style={{ fontSize: 10, color: '#94a3b8', marginBottom: 8 }}>Nivel 7 de 36 completado · Mundo 2 — Domina el Prompting</Text>
       <TouchableOpacity style={styles.finishButton} onPress={handleFinish}><Text style={{ fontWeight: 'bold', color: '#fff' }}>Volver al mapa</Text></TouchableOpacity>
     </View>
   );

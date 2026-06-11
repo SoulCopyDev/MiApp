@@ -706,8 +706,30 @@ export default function World4Level1({ navigation: propsNavigation, setAllowBack
         <View style={styles.completeContainer}>
           <View style={styles.completeIcon}><Text style={styles.iconEmoji}>💬</Text></View>
           <Text style={styles.completeTitle}>¡Nivel 19 completado!</Text>
-          <Text style={styles.completeSub}>Ahora eres un experto en ChatGPT y sabes usar todas sus herramientas secretas.</Text>
+          <Text style={styles.completeSub}>Terminaste "ChatGPT: tu compañero de aventuras". Ahora eres un experto en ChatGPT y sabes usar todas sus herramientas secretas.</Text>
           <Text style={styles.xpBig}>⭐ {xp} XP ganados</Text>
+          <View style={{ backgroundColor: '#f0fdf4', borderRadius: 12, padding: 13, marginBottom: 14, borderWidth: 1, borderColor: '#bbf7d0', width: '100%' }}>
+            {[
+              'Conozco los 5 superpoderes de ChatGPT: imágenes, voz, GPTs, archivos y código',
+              'Sé cuándo usar GPT-3.5 y cuándo necesito GPT-4o',
+              'Puedo crear prompts detallados para DALL-E y generar imágenes',
+              'Sé usar ChatGPT para estudiar de forma inteligente sin trampa',
+              'Detecto las alucinaciones y sé cuándo verificar información',
+              'Sé cuándo ChatGPT no es la herramienta correcta y cuál usar',
+            ].map((skill, i) => (
+              <View key={i} style={{ flexDirection: 'row', gap: 8, marginBottom: i < 5 ? 7 : 0 }}>
+                <Text style={{ color: '#10b981', fontWeight: '700', fontSize: 14 }}>✓</Text>
+                <Text style={{ fontSize: 12, color: '#334155', lineHeight: 18, flex: 1 }}>{skill}</Text>
+              </View>
+            ))}
+          </View>
+          <View style={{ backgroundColor: '#f8fafc', borderRadius: 10, padding: 11, marginBottom: 14, borderWidth: 1, borderColor: '#e2e8f0', width: '100%' }}>
+            <Text style={{ fontSize: 12, color: '#334155', lineHeight: 20 }}>
+              🌟 <Text style={{ fontWeight: '700' }}>Nivel 20: Claude, el LLM honesto{'\n\n'}</Text>
+              Claude fue creado por Anthropic con una misión especial: ser honesto y seguro. Tiene superpoderes únicos para análisis profundos y conversaciones largas.
+            </Text>
+          </View>
+          <Text style={{ fontSize: 10, color: '#94a3b8', marginBottom: 8 }}>Nivel 19 de 36 completado · 53% del camino a IA Explorer</Text>
           {btn('Volver al mapa', finish)}
         </View>
       );

@@ -925,8 +925,31 @@ export default function World2Level3({ navigation: propsNavigation, setAllowBack
     <View style={{ alignItems: 'center', padding: 20 }}>
       <Text style={{ fontSize: 44, marginBottom: 14 }}>🏅</Text>
       <Text style={[styles.title, { textAlign: 'center' }]}>¡Nivel 9 completado!</Text>
-      <Text style={[styles.subtitle, { textAlign: 'center' }]}>Terminaste "Prompts Creativos". Ahora no solo sabes escribir prompts — sabes dirigirlos.</Text>
-      <Text style={{ fontWeight: 'bold', fontSize: 15, color: '#92400e', marginBottom: 14 }}>⭐ {xp} XP ganados</Text>
+      <Text style={[styles.subtitle, { textAlign: 'center', marginBottom: 14 }]}>Terminaste "Prompts Creativos". Ahora no solo sabes escribir prompts — sabes dirigirlos. Con tono, con estilo, con intención.</Text>
+      <View style={{ backgroundColor: '#fef9c3', borderRadius: 12, padding: 11, marginBottom: 14, borderWidth: 1, borderColor: '#fcd34d', width: '100%' }}>
+        <Text style={{ fontSize: 15, fontWeight: '700', color: '#92400e', textAlign: 'center' }}>⭐ {xp} XP ganados</Text>
+      </View>
+      <View style={{ backgroundColor: '#f5f3ff', borderRadius: 12, padding: 13, marginBottom: 14, borderWidth: 1, borderColor: '#c4b5fd', width: '100%' }}>
+        {[
+          'Construí prompts narrativos con 3 palabras como punto de partida',
+          'Aprendí cómo el tono y los adjetivos emocionales cambian el resultado',
+          'Creé personajes, canciones y juegos con prompts estructurados',
+          'Comparé estilos narrativos y elegí el correcto para cada tipo de historia',
+          'Reflexioné sobre el límite entre co-crear y depender de la IA',
+        ].map((skill, i) => (
+          <View key={i} style={{ flexDirection: 'row', gap: 8, marginBottom: i < 4 ? 7 : 0 }}>
+            <Text style={{ color: '#7c3aed', fontWeight: '700', fontSize: 14 }}>✓</Text>
+            <Text style={{ fontSize: 12, color: '#334155', lineHeight: 18, flex: 1 }}>{skill}</Text>
+          </View>
+        ))}
+      </View>
+      <View style={{ backgroundColor: '#f8fafc', borderRadius: 10, padding: 11, marginBottom: 14, borderWidth: 1, borderColor: '#e2e8f0', width: '100%' }}>
+        <Text style={{ fontSize: 12, color: '#334155', lineHeight: 20 }}>
+          🐛 <Text style={{ fontWeight: '700' }}>Nivel 10: Prompts que Fallan{'\n\n'}</Text>
+          Ahora que sabes crear, vas a aprender a depurar. Prompts ambiguos, alucinaciones, errores de contexto y cómo corregirlos. El nivel donde te conviertes en detective de la IA.
+        </Text>
+      </View>
+      <Text style={{ fontSize: 10, color: '#94a3b8', marginBottom: 8 }}>Nivel 9 de 36 completado · Mundo 2 — Domina el Prompting</Text>
       <TouchableOpacity style={styles.finishButton} onPress={handleFinish}>
         <Text style={{ fontWeight: 'bold', color: '#fff' }}>Volver al mapa</Text>
       </TouchableOpacity>

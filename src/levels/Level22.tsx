@@ -633,8 +633,29 @@ export default function World4Level4({ navigation: propsNavigation, setAllowBack
     <View style={{ alignItems: 'center', padding: 20 }}>
       <Text style={{ fontSize: 44 }}>⚡</Text>
       <Text style={[styles.title, { textAlign: 'center' }]}>¡Nivel 22 completado!</Text>
-      <Text style={styles.subtitle}>Ya dominas los tres LLMs principales: Claude, Gemini y Grok.</Text>
+      <Text style={[styles.subtitle, { textAlign: 'center', marginBottom: 14 }]}>Terminaste "Grok: La IA con personalidad propia". Ya dominas los tres LLMs principales: Claude para razonar, Gemini para buscar, Grok para el pulso de X.</Text>
       <Text style={{ fontWeight: 'bold', fontSize: 15, color: '#854d0e', marginBottom: 14 }}>⭐ {xp} XP</Text>
+      <View style={{ backgroundColor: '#f0fdf4', borderRadius: 12, padding: 13, marginBottom: 14, borderWidth: 1, borderColor: '#bbf7d0', width: '100%' }}>
+        {[
+          'Sé quién creó a Grok y qué hace única a xAI',
+          'Entiendo el acceso en tiempo real a X como fortaleza clave',
+          'Conozco la diferencia entre modo normal y modo divertido',
+          'Sé cómo usar Aurora para generar imágenes con prompts detallados',
+          'Puedo elegir entre Claude, Gemini y Grok según cada situación real',
+        ].map((skill, i) => (
+          <View key={i} style={{ flexDirection: 'row', gap: 8, marginBottom: i < 4 ? 7 : 0 }}>
+            <Text style={{ color: '#10b981', fontWeight: '700', fontSize: 14 }}>✓</Text>
+            <Text style={{ fontSize: 12, color: '#334155', lineHeight: 18, flex: 1 }}>{skill}</Text>
+          </View>
+        ))}
+      </View>
+      <View style={{ backgroundColor: '#f8fafc', borderRadius: 10, padding: 11, marginBottom: 14, borderWidth: 1, borderColor: '#e2e8f0', width: '100%' }}>
+        <Text style={{ fontSize: 12, color: '#334155', lineHeight: 20 }}>
+          🏆 <Text style={{ fontWeight: '700' }}>Nivel 23: El Gran Torneo{'\n\n'}</Text>
+          Ya conoces a los 4 LLMs principales: ChatGPT, Claude, Gemini y Grok. Ahora viene el reto: un torneo donde tu misión es elegir la herramienta correcta para cada situación real.
+        </Text>
+      </View>
+      <Text style={{ fontSize: 10, color: '#94a3b8', marginBottom: 8 }}>Nivel 22 de 36 completado · 61% del camino a IA Explorer</Text>
       <TouchableOpacity style={styles.finishBtn} onPress={handleFinish}><Text style={{ color: '#fff', fontWeight: 'bold' }}>Volver al mapa</Text></TouchableOpacity>
     </View>
   );

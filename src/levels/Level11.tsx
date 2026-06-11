@@ -842,8 +842,31 @@ export default function World2Level5({ navigation: propsNavigation, setAllowBack
     <View style={{ alignItems: 'center', padding: 20 }}>
       <Text style={{ fontSize: 44, marginBottom: 14 }}>🏅</Text>
       <Text style={[styles.title, { textAlign: 'center' }]}>¡Nivel 11 completado!</Text>
-      <Text style={[styles.subtitle, { textAlign: 'center' }]}>Badge: 🔗 Chain Master desbloqueado.</Text>
-      <Text style={{ fontWeight: 'bold', fontSize: 15, color: '#92400e', marginBottom: 14 }}>⭐ {xp} XP ganados</Text>
+      <Text style={[styles.subtitle, { textAlign: 'center', marginBottom: 14 }]}>Badge: 🔗 Chain Master desbloqueado. Ahora construyes secuencias de prompts que la mayoría de adultos no sabe usar.</Text>
+      <View style={{ backgroundColor: '#fef9c3', borderRadius: 12, padding: 11, marginBottom: 14, borderWidth: 1, borderColor: '#fcd34d', width: '100%' }}>
+        <Text style={{ fontSize: 15, fontWeight: '700', color: '#92400e', textAlign: 'center' }}>⭐ {xp} XP ganados</Text>
+      </View>
+      <View style={{ backgroundColor: '#eff6ff', borderRadius: 12, padding: 13, marginBottom: 14, borderWidth: 1, borderColor: '#bfdbfe', width: '100%' }}>
+        {[
+          'Entiendo qué es Chain-of-Thought y cuándo aplicarlo',
+          'Dividí tareas complejas en sub-prompts manejables',
+          'Construí prompts iterativos de 3 rondas',
+          'Detecté falacias, saltos de conclusión y datos falsos',
+          'Conozco los límites reales del razonamiento en LLMs',
+        ].map((skill, i) => (
+          <View key={i} style={{ flexDirection: 'row', gap: 8, marginBottom: i < 4 ? 7 : 0 }}>
+            <Text style={{ color: '#1e40af', fontWeight: '700', fontSize: 14 }}>✓</Text>
+            <Text style={{ fontSize: 12, color: '#334155', lineHeight: 18, flex: 1 }}>{skill}</Text>
+          </View>
+        ))}
+      </View>
+      <View style={{ backgroundColor: '#f8fafc', borderRadius: 10, padding: 11, marginBottom: 14, borderWidth: 1, borderColor: '#e2e8f0', width: '100%' }}>
+        <Text style={{ fontSize: 12, color: '#334155', lineHeight: 20 }}>
+          🔑 <Text style={{ fontWeight: '700' }}>Nivel 12: Trucos Secretos{'\n\n'}</Text>
+          Zero-shot, few-shot, system prompts, temperatura máxima/mínima, ReAct. Los trucos que usan los ingenieros de IA. El nivel final del Mundo 2.
+        </Text>
+      </View>
+      <Text style={{ fontSize: 10, color: '#94a3b8', marginBottom: 8 }}>Nivel 11 de 36 completado · Mundo 2 — Domina el Prompting</Text>
       <TouchableOpacity style={styles.finishButton} onPress={handleFinish}><Text style={{ fontWeight: 'bold', color: '#fff' }}>Volver al mapa</Text></TouchableOpacity>
     </View>
   );

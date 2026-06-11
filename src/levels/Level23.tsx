@@ -384,7 +384,7 @@ export default function World4Level5({ navigation: propsNavigation, setAllowBack
     <View style={styles.completeContainer}>
       <View style={styles.completeIcon}><Text style={styles.iconEmoji}>🧭</Text></View>
       <Text style={styles.completeTitle}>¡Nivel 23 Completado!</Text>
-      <Text style={styles.completeSub}>Ahora conoces el mapa completo del ecosistema de IA.</Text>
+      <Text style={styles.completeSub}>Ahora conoces el mapa completo del ecosistema de IA. Ya no eres de los que solo conocen ChatGPT.</Text>
       <Text style={styles.xpBig}>⭐ {xp} XP ganados</Text>
       <View style={styles.statsRow}>
         <View style={styles.statItem}><Text style={styles.statNum}>{correctCount}</Text><Text style={styles.statLbl}>Correctas</Text></View>
@@ -395,6 +395,13 @@ export default function World4Level5({ navigation: propsNavigation, setAllowBack
         <Text style={styles.badgeTitle}>Insignia: AI Navigator</Text>
         <Text style={styles.badgeSub}>Conoces el mapa entero de la IA moderna</Text>
       </View>
+      <View style={{ backgroundColor: '#f8fafc', borderRadius: 10, padding: 11, marginBottom: 14, borderWidth: 1, borderColor: '#e2e8f0', width: '100%' }}>
+        <Text style={{ fontSize: 12, color: '#334155', lineHeight: 20 }}>
+          🎯 <Text style={{ fontWeight: '700' }}>Siguiente parada: Nivel 24{'\n'}</Text>
+          "¿Cuál herramienta uso? Elige como un pro" — aprenderás a elegir la IA correcta para cada tarea según el contexto.
+        </Text>
+      </View>
+      <Text style={{ fontSize: 10, color: '#94a3b8', marginBottom: 8 }}>Nivel 23 de 36 completado · Mundo 4 — Los LLMs</Text>
       {btn('Volver al mapa', finish)}
     </View>
   );

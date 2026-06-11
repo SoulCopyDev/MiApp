@@ -256,6 +256,7 @@ export default function World2Level2({ navigation: propsNavigation, setAllowBack
     if (v > 0) setXpToast((prev) => ({ amount: v, id: (prev?.id ?? 0) + 1 }));
   };
   const nextStep = () => { if (step < TOTAL_STEPS - 1) setStep(step + 1); };
+  const goToPrevStep = () => setStep(s => s - 1);
   const finishLevel = () => {
     let stars = xp >= 180 ? 3 : xp >= 120 ? 2 : xp >= 50 ? 1 : 0;
     completeLevel(8, stars, xp);
@@ -646,8 +647,30 @@ export default function World2Level2({ navigation: propsNavigation, setAllowBack
         <View style={styles.completeContainer}>
           <View style={styles.completeIcon}><Text style={styles.iconEmoji}>🧠</Text></View>
           <Text style={styles.completeTitle}>¡Nivel 8 completado!</Text>
-          <Text style={styles.completeSub}>Ahora entiendes tokens, temperatura, contexto, alucinaciones y sesgos como un profesional.</Text>
+          <Text style={styles.completeSub}>Terminaste "Habla el lenguaje de la IA". Ya no eres un usuario común — entiendes tokens, temperatura, contexto, alucinaciones y sesgos como lo hacen los profesionales.</Text>
           <Text style={styles.xpBig}>⭐ {xp} XP ganados</Text>
+          <View style={{ backgroundColor: '#f0fdf4', borderRadius: 12, padding: 13, marginBottom: 14, borderWidth: 1, borderColor: '#bbf7d0', width: '100%' }}>
+            {[
+              'Entiendo qué son los tokens y cómo afectan los límites y costos de los LLMs',
+              'Sé cómo funciona la temperatura y cuándo usarla alta o baja',
+              'Conozco los límites de la memoria y el contexto en los LLMs',
+              'Puedo detectar y prevenir alucinaciones en respuestas de IA',
+              'Identifico sesgos de datos, confirmación y culturales en los LLMs',
+              'Elijo el modelo correcto (Claude, ChatGPT, Gemini, Grok) según la tarea',
+            ].map((skill, i) => (
+              <View key={i} style={{ flexDirection: 'row', gap: 8, marginBottom: i < 5 ? 7 : 0 }}>
+                <Text style={{ color: '#10b981', fontWeight: '700', fontSize: 14 }}>✓</Text>
+                <Text style={{ fontSize: 12, color: '#334155', lineHeight: 18, flex: 1 }}>{skill}</Text>
+              </View>
+            ))}
+          </View>
+          <View style={{ backgroundColor: '#f8fafc', borderRadius: 10, padding: 11, marginBottom: 14, borderWidth: 1, borderColor: '#e2e8f0', width: '100%' }}>
+            <Text style={{ fontSize: 12, color: '#334155', lineHeight: 20 }}>
+              ✨ <Text style={{ fontWeight: '700' }}>Nivel 9: Prompts Creativos{'\n\n'}</Text>
+              Ahora que entiendes cómo funciona la IA por dentro, vas a usar ese conocimiento para crear. Historias, personajes, canciones, juegos — todo construido con prompts que van más allá de lo básico.
+            </Text>
+          </View>
+          <Text style={{ fontSize: 10, color: '#94a3b8', marginBottom: 8 }}>Nivel 8 de 36 completado · Mundo 2 — Domina el Prompting</Text>
           <TouchableOpacity style={styles.btn} onPress={finishLevel}><Text style={styles.btnText}>Volver al mapa</Text></TouchableOpacity>
         </View>
       );
@@ -733,4 +756,7 @@ const styles = StyleSheet.create({
   completeTitle: { ...typography.extraBold, fontSize: 21 },
   completeSub: { ...typography.regular, textAlign: 'center', marginVertical: 8 },
   xpBig: { ...typography.bold, fontSize: 18, color: colors.accentDark, marginBottom: 16 },
+  footerRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 16, gap: 8 },
+  backButton: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, padding: 14, borderRadius: 11, alignItems: 'center', paddingHorizontal: 20 },
+  backButtonText: { ...typography.bold, color: colors.textSecondary, fontSize: 15 },
 });

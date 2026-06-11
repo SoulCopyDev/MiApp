@@ -243,6 +243,7 @@ export default function World2Level4({ navigation: propsNavigation, setAllowBack
     if (v > 0) setXpToast((prev) => ({ amount: v, id: (prev?.id ?? 0) + 1 }));
   };
   const nextStep = () => { if (step < TOTAL_STEPS - 1) setStep(step + 1); };
+  const goToPrevStep = () => setStep(s => s - 1);
   const finish = () => {
     let stars = xp >= 180 ? 3 : xp >= 120 ? 2 : xp >= 50 ? 1 : 0;
     completeLevel(10, stars, xp);
@@ -665,6 +666,27 @@ export default function World2Level4({ navigation: propsNavigation, setAllowBack
           <Text style={styles.completeTitle}>¡Nivel 10 completado!</Text>
           <Text style={styles.completeSub}>Badge: 🐛 Bug Hunter desbloqueado. Ahora ves los errores de prompting que antes eran invisibles.</Text>
           <Text style={styles.xpBig}>⭐ {xp} XP ganados</Text>
+          <View style={{ backgroundColor: '#fffbeb', borderRadius: 12, padding: 13, marginBottom: 14, borderWidth: 1, borderColor: '#fde68a', width: '100%' }}>
+            {[
+              'Identifico los 4 tipos de error en un prompt',
+              'Distingo alucinación de mentira intencional',
+              'Sé cuándo reformular en lugar de repetir',
+              'Clasifiqué prompts éticos y problemáticos',
+              'Tengo mis 5 reglas de oro del prompting seguro',
+            ].map((skill, i) => (
+              <View key={i} style={{ flexDirection: 'row', gap: 8, marginBottom: i < 4 ? 7 : 0 }}>
+                <Text style={{ color: '#d97706', fontWeight: '700', fontSize: 14 }}>✓</Text>
+                <Text style={{ fontSize: 12, color: '#334155', lineHeight: 18, flex: 1 }}>{skill}</Text>
+              </View>
+            ))}
+          </View>
+          <View style={{ backgroundColor: '#f8fafc', borderRadius: 10, padding: 11, marginBottom: 14, borderWidth: 1, borderColor: '#e2e8f0', width: '100%' }}>
+            <Text style={{ fontSize: 12, color: '#334155', lineHeight: 20 }}>
+              🔗 <Text style={{ fontWeight: '700' }}>Nivel 11: Prompts en Cadena{'\n\n'}</Text>
+              Ahora que sabes evitar errores, vas a aprender a construir secuencias. Chain-of-thought, prompts iterativos, árbol de decisiones. La IA que razona paso a paso.
+            </Text>
+          </View>
+          <Text style={{ fontSize: 10, color: '#94a3b8', marginBottom: 8 }}>Nivel 10 de 36 completado · Mundo 2 — Domina el Prompting</Text>
           {btn('Volver al mapa', finish)}
         </View>
       );
@@ -745,4 +767,7 @@ const styles = StyleSheet.create({
   completeTitle: { ...typography.extraBold, fontSize: 21 },
   completeSub: { ...typography.regular, textAlign: 'center', marginVertical: 8 },
   xpBig: { ...typography.bold, fontSize: 18, color: colors.accentDark, marginBottom: 16 },
+  footerRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 16, gap: 8 },
+  backButton: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, padding: 14, borderRadius: 11, alignItems: 'center', paddingHorizontal: 20 },
+  backButtonText: { ...typography.bold, color: colors.textSecondary, fontSize: 15 },
 });

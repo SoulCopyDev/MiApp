@@ -189,6 +189,7 @@ export default function World2Level6({ navigation: propsNavigation, setAllowBack
     if (v > 0) setXpToast((prev) => ({ amount: v, id: (prev?.id ?? 0) + 1 }));
   };
   const nextStep = () => { if (step < TOTAL_STEPS - 1) setStep(step + 1); };
+  const goToPrevStep = () => setStep(s => s - 1);
   const finish = () => {
     let stars = xp >= 200 ? 3 : xp >= 130 ? 2 : xp >= 60 ? 1 : 0;
     completeLevel(12, stars, xp);
@@ -275,7 +276,27 @@ export default function World2Level6({ navigation: propsNavigation, setAllowBack
       case 16: return (<View style={styles.stepContainer}>{tag('🗂️ Módulo 16 · Drag-drop')}{title('¿Qué técnica para cada tarea?')}<View style={styles.chipWrap}>{ddPool.map((item, i) => (<TouchableOpacity key={i} style={[styles.chip, ddSel === i && styles.chipOn]} onPress={() => setDdSel(ddSel === i ? null : i)}><Text>{item.text}</Text></TouchableOpacity>))}</View><View style={styles.dropGrid}>{['zero', 'one', 'few', 'cot', 'sys'].map(col => (<TouchableOpacity key={col} style={styles.dropZone} onPress={() => { if (ddSel !== null) placeDd(DD_TECNICAS[ddSel], col); }}><Text style={styles.dropHeader}>{col.toUpperCase()}</Text>{ddCols[col].map((item, i) => (<TouchableOpacity key={i} onPress={() => returnDd(item, col)}><Text style={styles.dropChip}>{item.text} ✕</Text></TouchableOpacity>))}</TouchableOpacity>))}</View>{btn('Verificar', verifyDd, ddPool.length > 0)}</View>);
       case 17: return (<View style={styles.stepContainer}>{tag('🔍 Módulo 17 · Quiz')}{!quizDone ? (<><Text style={styles.qText}>"{QUIZ_TECNICAS[quizIdx].prompt}"</Text>{QUIZ_TECNICAS[quizIdx].opts.map((o, i) => (<TouchableOpacity key={i} style={[styles.quizOpt, quizAns === i && styles.quizOptOn]} onPress={() => checkQuiz(i)} disabled={quizAns !== null}><Text>{o}</Text></TouchableOpacity>))}{quizAns !== null && <Text style={quizAns === QUIZ_TECNICAS[quizIdx].correct ? styles.fbGood : styles.fbBad}>{QUIZ_TECNICAS[quizIdx].explain}</Text>}{quizAns !== null && btn('Siguiente →', nextQuiz)}</>) : btn('Continuar →', nextStep)}</View>);
       case 18: return (<View style={styles.stepContainer}>{tag('💬 Módulo 18 · Reflexión')}{title('¿Eres ya un Prompt Master?')}<TextInput style={styles.textArea} placeholder="¿Qué dominas y qué te falta?" value={reflect} onChangeText={setReflect} multiline />{btn('Completar nivel →', () => { if (reflect.trim().length >= 50) { addXP(15); nextStep(); } else Alert.alert('Muy corto', 'Mínimo 50 caracteres.'); }, reflect.trim().length < 50)}</View>);
-      case 19: return (<View style={styles.completeContainer}><View style={styles.completeIcon}><Text style={styles.iconEmoji}>🏅</Text></View><Text style={styles.completeTitle}>¡Nivel 12 completado!</Text><Text style={styles.completeSub}>Badge: 🔑 Prompt Master. Completaste el Mundo 2.</Text><Text style={styles.xpBig}>⭐ {xp} XP ganados</Text>{btn('Volver al mapa', finish)}</View>);
+      case 19: return (<View style={styles.completeContainer}><View style={styles.completeIcon}><Text style={styles.iconEmoji}>🏅</Text></View><Text style={styles.completeTitle}>¡Nivel 12 completado!</Text><Text style={styles.completeSub}>Badge: 🔑 Prompt Master desbloqueado. Completaste el Mundo 2 — Domina el Prompting.</Text><Text style={styles.xpBig}>⭐ {xp} XP ganados</Text>
+          <View style={{ backgroundColor: '#fffbeb', borderRadius: 12, padding: 13, marginBottom: 14, borderWidth: 1, borderColor: '#fde68a', width: '100%' }}>
+            {[
+              'Domino zero-shot, one-shot, few-shot y cuándo usar cada uno',
+              'Construí un system prompt completo con los 5 componentes',
+              'Entiendo temperatura alta vs. baja y cuándo aplica cada una',
+              'Tengo mi librería personal de 5 prompts reutilizables',
+              'Escribí el prompt más complejo que he construido hasta ahora',
+            ].map((skill, i) => (
+              <View key={i} style={{ flexDirection: 'row', gap: 8, marginBottom: i < 4 ? 7 : 0 }}>
+                <Text style={{ color: '#d97706', fontWeight: '700', fontSize: 14 }}>✓</Text>
+                <Text style={{ fontSize: 12, color: '#334155', lineHeight: 18, flex: 1 }}>{skill}</Text>
+              </View>
+            ))}
+          </View>
+          <View style={{ backgroundColor: '#fef9c3', borderRadius: 12, padding: 14, marginBottom: 14, borderWidth: 1, borderColor: '#fcd34d', width: '100%', alignItems: 'center' }}>
+            <Text style={{ fontSize: 14, fontWeight: '800', color: '#92400e', marginBottom: 4 }}>🌍 Mundo 1 ✅ · 🎯 Mundo 2 ✅</Text>
+            <Text style={{ fontSize: 12, color: '#92400e', textAlign: 'center' }}>Siguiente: 🎨 Mundo 3 — IA Creativa{'\n'}Imágenes, audio, video, datos y multimodalidad</Text>
+          </View>
+          <Text style={{ fontSize: 10, color: '#94a3b8', marginBottom: 8 }}>Nivel 12 de 36 completado · Mundo 2 completado · ¡Empieza el Mundo 3!</Text>
+          {btn('Volver al mapa', finish)}</View>);
       default: return null;
     }
   };
@@ -343,4 +364,7 @@ const styles = StyleSheet.create({
   completeTitle: { ...typography.extraBold, fontSize: 21 },
   completeSub: { ...typography.regular, textAlign: 'center', marginVertical: 8 },
   xpBig: { ...typography.bold, fontSize: 18, color: colors.accentDark, marginBottom: 16 },
+  footerRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 16, gap: 8 },
+  backButton: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, padding: 14, borderRadius: 11, alignItems: 'center', paddingHorizontal: 20 },
+  backButtonText: { ...typography.bold, color: colors.textSecondary, fontSize: 15 },
 });

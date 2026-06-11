@@ -907,8 +907,29 @@ export default function World4Level2() {
           <View style={styles.completionScreen}>
             <Text style={styles.completionIcon}>🌟</Text>
             <Text style={styles.completionTitle}>¡Nivel 20 completado!</Text>
-            <Text style={styles.completionText}>Conoces a Claude por dentro: sus orígenes, principios, fortalezas reales y cómo hablarle.</Text>
+            <Text style={styles.completionText}>Terminaste "Claude — El asistente que piensa contigo". Ahora conoces a Claude por dentro: sus orígenes, principios, fortalezas reales y cómo hablarle.</Text>
             <Text style={styles.xpGained}>⭐ {xp} XP ganados</Text>
+            <View style={{ backgroundColor: '#f0fdf4', borderRadius: 12, padding: 13, marginBottom: 14, borderWidth: 1, borderColor: '#bbf7d0', width: '100%' }}>
+              {[
+                'Sé quién creó a Claude y cuáles son sus 3 principios de diseño',
+                'Entiendo la ventana de contexto y por qué hace especial a Claude',
+                'Sé cuándo usar Claude y cuándo hay una herramienta mejor',
+                'Puedo escribir prompts con rol, contexto, tarea y formato',
+                'Entiendo cómo usar Claude responsablemente para aprender de verdad',
+              ].map((skill, i) => (
+                <View key={i} style={{ flexDirection: 'row', gap: 8, marginBottom: i < 4 ? 7 : 0 }}>
+                  <Text style={{ color: '#10b981', fontWeight: '700', fontSize: 14 }}>✓</Text>
+                  <Text style={{ fontSize: 12, color: '#334155', lineHeight: 18, flex: 1 }}>{skill}</Text>
+                </View>
+              ))}
+            </View>
+            <View style={{ backgroundColor: '#f8fafc', borderRadius: 10, padding: 11, marginBottom: 14, borderWidth: 1, borderColor: '#e2e8f0', width: '100%' }}>
+              <Text style={{ fontSize: 12, color: '#334155', lineHeight: 20 }}>
+                ✦ <Text style={{ fontWeight: '700' }}>Nivel 21: Gemini — La IA que vive en el ecosistema Google{'\n\n'}</Text>
+                Vas a conocer a Gemini: el LLM de Google que tiene acceso a Búsqueda, YouTube, Docs y Gmail. Aprenderás cuándo Gemini supera a Claude y cuándo no.
+              </Text>
+            </View>
+            <Text style={{ fontSize: 10, color: '#94a3b8', marginBottom: 8 }}>Nivel 20 de 36 completado · 56% del camino a IA Explorer</Text>
             <TouchableOpacity style={styles.finishBtn} onPress={finishLevel}>
               <Text style={styles.finishBtnText}>Terminar nivel</Text>
             </TouchableOpacity>
