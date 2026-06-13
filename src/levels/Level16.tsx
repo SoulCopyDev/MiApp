@@ -865,6 +865,12 @@ export default function World3Level4() {
           <Text style={styles.statLbl}>Próximo</Text>
         </View>
       </View>
+      <View style={{ backgroundColor: '#f8fafc', borderRadius: 10, padding: 11, marginBottom: 14, borderWidth: 1, borderColor: '#e2e8f0', width: '100%' }}>
+        <Text style={{ fontSize: 12, color: '#334155', lineHeight: 20 }}>
+          📊 <Text style={{ fontWeight: '700' }}>Nivel 17: IA y Datos{'\n\n'}</Text>
+          Ahora que sabes construir apps, vas a aprender a analizar datos con IA: NotebookLM, gráficas, detectar cuando los datos te quieren engañar. La habilidad más pedida en el mundo laboral.
+        </Text>
+      </View>
       <TouchableOpacity style={styles.btn} onPress={finishLevel}>
         <Text style={styles.btnText}>Terminar nivel</Text>
       </TouchableOpacity>

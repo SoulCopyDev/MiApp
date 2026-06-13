@@ -474,6 +474,9 @@ export default function World3Level1() {
     }
   };
 
+  const THEORY_STEPS = new Set([0, 1, 5, 9, 16]);
+  const showBackButton = THEORY_STEPS.has(step);
+
   const handlePrev = () => {
     if (step > 0) setStep((s) => s - 1);
   };
@@ -950,6 +953,12 @@ export default function World3Level1() {
           <Text style={styles.statLbl}>Próximo</Text>
         </View>
       </View>
+      <View style={{ backgroundColor: '#f8fafc', borderRadius: 10, padding: 11, marginBottom: 14, borderWidth: 1, borderColor: '#e2e8f0', width: '100%' }}>
+        <Text style={{ fontSize: 12, color: '#334155', lineHeight: 20 }}>
+          🎵 <Text style={{ fontWeight: '700' }}>Nivel 14: IA y Audio{'\n\n'}</Text>
+          Ahora que dominas las imágenes, vas a explorar el sonido: voces sintéticas, clonación de voz, música generativa con Suno y Udio, y los riesgos que conlleva esta tecnología.
+        </Text>
+      </View>
       <TouchableOpacity style={styles.btn} onPress={finishLevel}>
         <Text style={styles.btnText}>Terminar nivel</Text>
       </TouchableOpacity>
@@ -1004,9 +1013,9 @@ export default function World3Level1() {
       {currentMod.type !== 'completion' && (
         <View style={styles.navButtons}>
           <TouchableOpacity
-            style={[styles.navBtn, step === 0 && styles.navBtnHidden]}
+            style={[styles.navBtn, !showBackButton && styles.navBtnHidden]}
             onPress={handlePrev}
-            disabled={step === 0}
+            disabled={!showBackButton}
           >
             <Text style={styles.navBtnText}>← Anterior</Text>
           </TouchableOpacity>

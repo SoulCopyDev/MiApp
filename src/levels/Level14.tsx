@@ -174,8 +174,9 @@ export default function World3Level2({ navigation: propsNavigation, setAllowBack
 
   // Theory steps allow back
   const theorySteps = new Set([0, 1, 3, 7, 11, 15]);
+  const canGoBack = theorySteps.has(step);
 
-  useEffect(() => { setAllowBack?.(true); }, []);
+  useEffect(() => { setAllowBack?.(canGoBack); }, [canGoBack]);
   useEffect(() => { return () => { if (sprintTimerRef.current) clearInterval(sprintTimerRef.current); }; }, []);
 
   // Sprint timer
@@ -616,8 +617,14 @@ export default function World3Level2({ navigation: propsNavigation, setAllowBack
           <View style={styles.completeIcon}><Text style={styles.iconEmoji}>🎵</Text></View>
           <Text style={styles.completeTitle}>¡Badge desbloqueado!</Text>
           <View style={styles.badgeBox}><Text style={styles.badgeText}>🏅 Sound Designer</Text></View>
-          <Text style={styles.completeSub}>¡Nivel 14 completado! Ahora entiendes el mundo del audio con IA.</Text>
+          <Text style={styles.completeSub}>¡Nivel 14 completado! Ahora entiendes el mundo del audio con IA: voces sintéticas, clonación, música generativa y los riesgos que conlleva esta tecnología.</Text>
           <Text style={styles.xpBig}>⭐ {xp} XP ganados</Text>
+          <View style={{ backgroundColor: '#f8fafc', borderRadius: 10, padding: 11, marginBottom: 14, borderWidth: 1, borderColor: '#e2e8f0', width: '100%' }}>
+            <Text style={{ fontSize: 12, color: '#334155', lineHeight: 20 }}>
+              🎬 <Text style={{ fontWeight: '700' }}>Nivel 15: IA y Video{'\n\n'}</Text>
+              Del audio al video: Runway, Sora, Kling. Cómo se generan videos con IA, deepfakes, copyright y el futuro del cine. Completarás el Módulo 3 del Mundo 3.
+            </Text>
+          </View>
           {btn('Volver al mapa', finishLevel)}
         </View>
       );
@@ -638,6 +645,13 @@ export default function World3Level2({ navigation: propsNavigation, setAllowBack
       </View>
       <ScrollView contentContainerStyle={styles.scrollContent}>{renderStep()}</ScrollView>
       {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} />}
+      {canGoBack && (
+        <View style={styles.footerRow}>
+          <TouchableOpacity style={styles.backButton} onPress={prevStep}>
+            <Text style={styles.backButtonText}>← Volver</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 }
@@ -702,4 +716,7 @@ const styles = StyleSheet.create({
   badgeText: { fontSize: 16, fontWeight: '700', color: '#0f766e' },
   completeSub: { ...typography.regular, textAlign: 'center', marginBottom: 12 },
   xpBig: { ...typography.bold, fontSize: 18, color: colors.accentDark, marginBottom: 16 },
+  footerRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 16, gap: 8 },
+  backButton: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, padding: 14, borderRadius: 11, alignItems: 'center', paddingHorizontal: 20 },
+  backButtonText: { ...typography.bold, color: colors.textSecondary, fontSize: 15 },
 });

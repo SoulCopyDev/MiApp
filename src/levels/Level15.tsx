@@ -526,11 +526,17 @@ export default function World3Level3({ navigation: propsNavigation, setAllowBack
       <View style={styles.completeIcon}><Text style={styles.iconEmoji}>🎬</Text></View>
       <Text style={styles.completeTitle}>¡Badge desbloqueado!</Text>
       <View style={styles.badgeBox}><Text style={styles.badgeText}>🏅 Film Director</Text></View>
-      <Text style={styles.completeSub}>¡Completaste el Nivel 15 y el Módulo 3! Ahora entiendes el mundo del video con IA.</Text>
+      <Text style={styles.completeSub}>¡Completaste el Nivel 15 y el Módulo 3! Ahora entiendes el mundo del video con IA: cómo funciona, quién lo usa, deepfakes, copyright y el futuro del cine.</Text>
       <Text style={styles.xpBig}>⭐ {xp} XP ganados</Text>
       <View style={styles.statsRow}>
         <View style={styles.statItem}><Text style={styles.statNum}>{correctAnswers}</Text><Text style={styles.statLbl}>Correctas</Text></View>
         <View style={styles.statItem}><Text style={styles.statNum}>20</Text><Text style={styles.statLbl}>Módulos</Text></View>
+      </View>
+      <View style={{ backgroundColor: '#f8fafc', borderRadius: 10, padding: 11, marginBottom: 14, borderWidth: 1, borderColor: '#e2e8f0', width: '100%' }}>
+        <Text style={{ fontSize: 12, color: '#334155', lineHeight: 20 }}>
+          💻 <Text style={{ fontWeight: '700' }}>Nivel 16: Tu Primera Web con IA{'\n\n'}</Text>
+          ¡Prepárate para el Nivel 16! Construirás apps web con herramientas no-code: Lovable, Bolt, Bubble. Aprenderás a describir tus ideas para que la IA las construya.
+        </Text>
       </View>
       <TouchableOpacity style={styles.btnPrimary} onPress={finishLevel}><Text style={styles.btnText}>Volver al mapa</Text></TouchableOpacity>
     </View>

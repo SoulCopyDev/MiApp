@@ -180,16 +180,17 @@ export default function World6Level6({ navigation: propsNavigation, setAllowBack
   const [reflectText, setReflectText] = useState('');
 
   const theorySteps = new Set([0, 1, 6, 11]);
-  const canGoBack = theorySteps.has(step);
+  const showBackButton = step > 0 && theorySteps.has(step);
+  const goToPrevStep = () => { setStep(s => s - 1); };
 
-  useEffect(() => { setAllowBack?.(canGoBack); }, [canGoBack]);
+  useEffect(() => { setAllowBack?.(showBackButton); }, [showBackButton]);
   useEffect(() => {
     const h = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (!canGoBack) { Alert.alert('Actividad en curso', 'Completa la actividad antes de salir.'); return true; }
+      if (!showBackButton) { Alert.alert('Actividad en curso', 'Completa la actividad antes de salir.'); return true; }
       return false;
     });
     return () => h.remove();
-  }, [canGoBack]);
+  }, [showBackButton]);
 
   // Sprint timer
   useEffect(() => {
@@ -593,6 +594,11 @@ export default function World6Level6({ navigation: propsNavigation, setAllowBack
       </View>
       <ScrollView contentContainerStyle={styles.scrollContent}>{renderContent()}</ScrollView>
       {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} />}
+      {showBackButton && (
+        <TouchableOpacity style={styles.backButton} onPress={goToPrevStep}>
+          <Text style={styles.backButtonText}>← Volver</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -615,6 +621,8 @@ const styles = StyleSheet.create({
   btnAccent: { backgroundColor: '#b45309' },
   btnText: { ...typography.bold, color: '#fff', fontSize: 15 },
   btnOff: { opacity: 0.4 },
+  backButton: { backgroundColor: '#f3f4f6', borderRadius: 12, paddingVertical: 14, paddingHorizontal: 20, marginHorizontal: 16, marginBottom: 8, alignItems: 'center' },
+  backButtonText: { color: '#374151', fontWeight: '600', fontSize: 15 },
   card: { backgroundColor: '#f9fafb', borderRadius: 14, padding: 13, marginBottom: 10, borderWidth: 1, borderColor: '#e5e7eb' },
   cardTitle: { fontSize: 13, fontWeight: '700', color: '#111827', marginBottom: 4 },
   cardText: { fontSize: 13, color: '#374151', lineHeight: 20 },

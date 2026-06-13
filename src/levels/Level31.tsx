@@ -156,6 +156,8 @@ export default function World6Level1({ navigation: propsNavigation, setAllowBack
 
   const examSteps = new Set([3, 6, 9, 10, 13, 16, 17, 18]);
   const isExam = examSteps.has(step);
+  const showBackButton = step > 0 && !isExam;
+  const goToPrevStep = () => setStep(s => s - 1);
 
   useEffect(() => { setAllowBack?.(!isExam); }, [isExam, setAllowBack]);
   useEffect(() => {
@@ -553,6 +555,11 @@ export default function World6Level1({ navigation: propsNavigation, setAllowBack
         <Text style={styles.xpText}>{xp} XP</Text>
       </View>
       <ScrollView contentContainerStyle={styles.scroll}>{renderStep()}</ScrollView>
+      {showBackButton && (
+        <TouchableOpacity style={styles.backButton} onPress={goToPrevStep}>
+          <Text style={styles.backButtonText}>← Volver</Text>
+        </TouchableOpacity>
+      )}
       {showNext && <TouchableOpacity style={styles.nextBtn} onPress={goNext}><Text style={styles.nextText}>Continuar →</Text></TouchableOpacity>}
       {showCheck && <TouchableOpacity style={styles.nextBtn} onPress={handleMain}><Text style={styles.nextText}>Comprobar</Text></TouchableOpacity>}
       {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} />}
@@ -591,5 +598,7 @@ const styles = StyleSheet.create({
   textArea: { borderWidth: 1.5, borderColor: '#e5e7eb', borderRadius: 10, padding: 12, fontSize: 13, minHeight: 100, textAlignVertical: 'top', marginBottom: 8 },
   nextBtn: { backgroundColor: '#475569', padding: 14, margin: 16, borderRadius: 11, alignItems: 'center' },
   nextText: { fontWeight: 'bold', color: '#fff', fontSize: 15 },
+  backButton: { backgroundColor: '#f3f4f6', borderRadius: 12, paddingVertical: 14, paddingHorizontal: 20, marginHorizontal: 16, marginBottom: 4, alignItems: 'center' },
+  backButtonText: { color: '#374151', fontWeight: '600', fontSize: 15 },
   finishBtn: { backgroundColor: '#475569', padding: 14, borderRadius: 11, width: '100%', alignItems: 'center', marginTop: 14 },
 });
