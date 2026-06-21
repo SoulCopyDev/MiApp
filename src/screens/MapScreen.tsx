@@ -69,7 +69,7 @@ export default function MapScreen() {
         <View style={styles.worldInfo}>
           <View style={styles.worldHeader}>
             <Text style={[styles.worldName, desktop && styles.worldNameDesktop]}>
-              {world.name}
+              Mundo {world.id}: {world.name}
             </Text>
             <TouchableOpacity onPress={() => handleEditWorldName(world)} style={styles.editButton}>
               <MaterialIcons name="edit" size={16} color={colors.textSecondary} />
