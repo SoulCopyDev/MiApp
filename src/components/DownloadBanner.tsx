@@ -188,7 +188,7 @@ const styles = StyleSheet.create({
   desktopCard: {
     position: 'absolute' as any,
     bottom: 32,
-    right: 32,
+    left: 32,
     width: 220,
     backgroundColor: colors.surface,
     borderRadius: 20,
