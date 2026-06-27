@@ -551,7 +551,7 @@ export default function World2Level3({ navigation: propsNavigation, setAllowBack
     const genreOpts = ['misterio', 'comedia', 'aventura', 'terror'];
     return (
       <View>
-        <View style={[styles.tag, { backgroundColor: '#fef3c7' }]}><Text style={[styles.tagText, { color: '#92400e' }]}>🎭 Módulo 2 · Matching</Text></View>
+        <View style={[styles.tag, { backgroundColor: '#ecfdf5' }]}><Text style={[styles.tagText, { color: '#065f46' }]}>🎭 Módulo 2 · Matching</Text></View>
         <Text style={styles.title}>Cambia el género</Text>
         <Text style={styles.subtitle}>Mismo tema, géneros distintos. Conecta cada descripción con su género.</Text>
         <View style={[styles.card, { backgroundColor: '#f8fafc' }]}>
@@ -824,7 +824,7 @@ export default function World2Level3({ navigation: propsNavigation, setAllowBack
 
   const renderSprint = () => (
     <View>
-      <View style={[styles.tag, { backgroundColor: '#fef3c7' }]}><Text style={[styles.tagText, { color: '#92400e' }]}>⚡ Módulo 14 · Sprint creativo</Text></View>
+      <View style={[styles.tag, { backgroundColor: '#ecfdf5' }]}><Text style={[styles.tagText, { color: '#065f46' }]}>⚡ Módulo 14 · Sprint creativo</Text></View>
       <Text style={styles.title}>Sprint: 3 prompts en 2 minutos</Text>
       <Text style={{ fontSize: 28, fontWeight: 'bold', textAlign: 'center', color: '#7c3aed', marginVertical: 8 }}>
         {Math.floor(sprintSec / 60)}:{String(sprintSec % 60).padStart(2, '0')}
@@ -923,7 +923,9 @@ export default function World2Level3({ navigation: propsNavigation, setAllowBack
 
   const renderCompletion = () => (
     <View style={{ alignItems: 'center', padding: 20 }}>
-      <Text style={{ fontSize: 44, marginBottom: 14 }}>🏅</Text>
+      <View style={{ width: 86, height: 86, borderRadius: 24, backgroundColor: '#a7f3d0', justifyContent: 'center', alignItems: 'center', marginBottom: 14 }}>
+        <Text style={{ fontSize: 44 }}>🏅</Text>
+      </View>
       <Text style={[styles.title, { textAlign: 'center' }]}>¡Nivel 9 completado!</Text>
       <Text style={[styles.subtitle, { textAlign: 'center', marginBottom: 14 }]}>Terminaste "Prompts Creativos". Ahora no solo sabes escribir prompts — sabes dirigirlos. Con tono, con estilo, con intención.</Text>
       <View style={{ backgroundColor: '#fef9c3', borderRadius: 12, padding: 11, marginBottom: 14, borderWidth: 1, borderColor: '#fcd34d', width: '100%' }}>
@@ -951,7 +953,7 @@ export default function World2Level3({ navigation: propsNavigation, setAllowBack
       </View>
       <Text style={{ fontSize: 10, color: '#94a3b8', marginBottom: 8 }}>Nivel 9 de 36 completado · Mundo 2 — Domina el Prompting</Text>
       <TouchableOpacity style={styles.finishButton} onPress={handleFinish}>
-        <Text style={{ fontWeight: 'bold', color: '#fff' }}>Volver al mapa</Text>
+        <Text style={{ fontWeight: 'bold', color: '#fff' }}>Siguiente nivel →</Text>
       </TouchableOpacity>
     </View>
   );
@@ -1052,7 +1054,7 @@ export default function World2Level3({ navigation: propsNavigation, setAllowBack
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {renderStepContent()}
       </ScrollView>
-      {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} />}
+      {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} bgColor="#10b981" textColor="#fff" />}
       <View style={styles.footerRow}>
         {showBackButton && (
           <TouchableOpacity style={styles.backButton} onPress={goToPrevStep}>
@@ -1079,8 +1081,8 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   progressBar: { flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
   closeBtn: { padding: 4 },
-  progressTrack: { flex: 1, height: 6, backgroundColor: colors.borderLight, borderRadius: 3, marginHorizontal: 12 },
-  progressFill: { height: '100%', backgroundColor: '#10b981', borderRadius: 3 },
+  progressTrack: { flex: 1, height: 8, backgroundColor: colors.borderLight, borderRadius: 4, marginHorizontal: 12 },
+  progressFill: { height: '100%', backgroundColor: '#10b981', borderRadius: 4 },
   xpText: { ...typography.bold, fontSize: 14, color: '#92400e' },
   scrollView: { flex: 1 },
   scrollContent: { padding: 16, paddingBottom: 40 },

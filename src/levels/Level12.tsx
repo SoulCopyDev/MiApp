@@ -296,7 +296,7 @@ export default function World2Level6({ navigation: propsNavigation, setAllowBack
             <Text style={{ fontSize: 12, color: '#92400e', textAlign: 'center' }}>Siguiente: 🎨 Mundo 3 — IA Creativa{'\n'}Imágenes, audio, video, datos y multimodalidad</Text>
           </View>
           <Text style={{ fontSize: 10, color: '#94a3b8', marginBottom: 8 }}>Nivel 12 de 36 completado · Mundo 2 completado · ¡Empieza el Mundo 3!</Text>
-          {btn('Volver al mapa', finish)}</View>);
+          {btn('Siguiente nivel →', finish)}</View>);
       default: return null;
     }
   };
@@ -313,7 +313,7 @@ export default function World2Level6({ navigation: propsNavigation, setAllowBack
         <Text style={styles.xpChip}>{xp} XP</Text>
       </View>
       <ScrollView contentContainerStyle={styles.scrollContent}>{renderStep()}</ScrollView>
-      {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} />}
+      {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} bgColor="#10b981" textColor="#fff" />}
     </View>
   );
 }
@@ -321,8 +321,8 @@ export default function World2Level6({ navigation: propsNavigation, setAllowBack
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   bar: { flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
-  track: { flex: 1, height: 6, backgroundColor: colors.borderLight, borderRadius: 3, marginHorizontal: 12 },
-  fill: { height: '100%', backgroundColor: colors.success, borderRadius: 3 },
+  track: { flex: 1, height: 8, backgroundColor: colors.borderLight, borderRadius: 4, marginHorizontal: 12 },
+  fill: { height: '100%', backgroundColor: '#10b981', borderRadius: 4 },
   xpChip: { ...typography.bold, fontSize: 14, color: colors.accentDark },
   scrollContent: { padding: 16, paddingBottom: 40 },
   stepContainer: { flex: 1 },
@@ -360,7 +360,7 @@ const styles = StyleSheet.create({
   codeBox: { backgroundColor: '#1e1e1e', padding: 12, borderRadius: 10, marginTop: 10 },
   codeText: { color: '#d4d4d4', fontFamily: 'monospace', fontSize: 11 },
   completeContainer: { alignItems: 'center', padding: 20 },
-  completeIcon: { width: 86, height: 86, borderRadius: 24, backgroundColor: '#fef9c3', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
+  completeIcon: { width: 86, height: 86, borderRadius: 24, backgroundColor: '#a7f3d0', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
   completeTitle: { ...typography.extraBold, fontSize: 21 },
   completeSub: { ...typography.regular, textAlign: 'center', marginVertical: 8 },
   xpBig: { ...typography.bold, fontSize: 18, color: colors.accentDark, marginBottom: 16 },
