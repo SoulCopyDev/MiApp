@@ -1257,7 +1257,7 @@ export default function World1Level3({ navigation: propsNavigation, setAllowBack
           <Text style={styles.resultBannerText}>{stepResult.ok ? '✓ ' : '✗ '}{stepResult.msg}</Text>
         </View>
       )}
-      {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} />}
+      {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} bgColor="#fff7ed" textColor="#c2410c" />}
       <View style={styles.footerRow}>
         {showBackButton && showNextBtn && (
           <TouchableOpacity style={styles.backButton} onPress={goToPrevStep}>
@@ -1325,8 +1325,8 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   progressBar: { flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
   closeBtn: { padding: 4 },
-  progressTrack: { flex: 1, height: 6, backgroundColor: colors.borderLight, borderRadius: 3, marginHorizontal: 12 },
-  progressFill: { height: '100%', backgroundColor: colors.success, borderRadius: 3 },
+  progressTrack: { flex: 1, height: 8, backgroundColor: colors.borderLight, borderRadius: 4, marginHorizontal: 12 },
+  progressFill: { height: '100%', backgroundColor: '#f97316', borderRadius: 4 },
   xpText: { ...typography.bold, fontSize: 14, color: '#92400e' },
   scrollView: { flex: 1 },
   scrollContent: { padding: 16, paddingBottom: 40 },
@@ -1342,7 +1342,7 @@ const styles = StyleSheet.create({
   cardText: { ...typography.regular, fontSize: 13, color: colors.textSecondary, lineHeight: 20 },
   highlightOrange: { borderLeftWidth: 3, borderLeftColor: '#f97316', backgroundColor: '#fff7ed', padding: 11, marginVertical: 10, borderRadius: 4 },
   highlightText: { fontSize: 13, color: '#c2410c', lineHeight: 20 },
-  nextButton: { backgroundColor: colors.success, padding: 14, margin: 16, borderRadius: 11, alignItems: 'center' },
+  nextButton: { backgroundColor: '#f97316', padding: 14, margin: 16, borderRadius: 11, alignItems: 'center' },
   nextButtonText: { ...typography.bold, color: '#fff', fontSize: 15 },
   footerRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 16, gap: 8 },
   backButton: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, padding: 14, borderRadius: 11, alignItems: 'center', paddingHorizontal: 20 },
@@ -1374,7 +1374,7 @@ const styles = StyleSheet.create({
   tfBtnTrue: { borderColor: colors.success, backgroundColor: '#f0fdf4' },
   tfBtnFalse: { borderColor: colors.error, backgroundColor: '#fff1f2' },
   textArea: { borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 10, padding: 12, fontSize: 13, color: '#334155', textAlignVertical: 'top', minHeight: 100, backgroundColor: '#fafafa' },
-  finishButton: { backgroundColor: colors.primary, padding: 14, borderRadius: 11, width: '100%', alignItems: 'center', marginTop: 14 },
+  finishButton: { backgroundColor: '#f97316', padding: 14, borderRadius: 11, width: '100%', alignItems: 'center', marginTop: 14 },
   resultBanner: { margin: 16, padding: 14, borderRadius: 14, borderWidth: 1 },
   resultBannerOk: { backgroundColor: '#dcfce7', borderColor: colors.success },
   resultBannerErr: { backgroundColor: '#fee2e2', borderColor: colors.error },
