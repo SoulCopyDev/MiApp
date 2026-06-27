@@ -1188,7 +1188,9 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
 
   const renderCompletion = () => (
     <View style={styles.completeContainer}>
-      <Text style={styles.completeBadgeText}>🎖️</Text>
+      <View style={styles.completeBadgeCircle}>
+        <Text style={styles.completeBadgeText}>🎖️</Text>
+      </View>
       <Text style={styles.completeTitle}>¡Nivel 2 completado!</Text>
       <Text style={styles.completeSub}>Terminaste "La IA que vive en tus apps". Ahora ves las apps de otra manera — y tienes tu primera brújula para usar los LLMs correctamente.</Text>
       <Text style={styles.xpEarnedText}>⭐ {xp} XP ganados en este nivel</Text>
@@ -1365,7 +1367,8 @@ const styles = StyleSheet.create({
   textArea: { borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 12, ...typography.regular, fontSize: 13, color: colors.textPrimary, textAlignVertical: 'top', minHeight: 100, backgroundColor: '#fafafa' },
   charCount: { ...typography.regular, fontSize: 11, color: colors.textSecondary, textAlign: 'right', marginTop: 4 },
   completeContainer: { alignItems: 'center', padding: 20 },
-  completeBadgeText: { fontSize: 44, marginBottom: 14 },
+  completeBadgeCircle: { width: 86, height: 86, borderRadius: 43, backgroundColor: '#bae6fd', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
+  completeBadgeText: { fontSize: 44 },
   completeTitle: { ...typography.extraBold, fontSize: 21, color: colors.textPrimary, marginBottom: 6 },
   completeSub: { ...typography.regular, fontSize: 12, color: colors.textSecondary, textAlign: 'center', lineHeight: 1.7, marginBottom: 16 },
   xpEarnedText: { ...typography.bold, fontSize: 15, color: colors.accentDark, marginBottom: 14 },

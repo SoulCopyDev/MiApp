@@ -855,7 +855,9 @@ export default function World1Level5({ navigation: propsNavigation, setAllowBack
 
   const renderCompletion = () => (
     <View style={{ alignItems: 'center', padding: 20 }}>
-      <Text style={{ fontSize: 44, marginBottom: 14 }}>🎓</Text>
+      <View style={{ width: 86, height: 86, borderRadius: 43, backgroundColor: '#ede9fe', justifyContent: 'center', alignItems: 'center', marginBottom: 16 }}>
+        <Text style={{ fontSize: 44 }}>🎓</Text>
+      </View>
       <Text style={[styles.title, { textAlign: 'center' }]}>¡Nivel 5 completado!</Text>
       <Text style={[styles.subtitle, { textAlign: 'center' }]}>Terminaste "IA con conciencia". Cerraste el Arco de Fundamentos. Ahora eres un usuario consciente, crítico y ético de la IA.</Text>
       <View style={{ backgroundColor: '#f5f3ff', padding: 12, borderRadius: 12, width: '100%', marginBottom: 14 }}>

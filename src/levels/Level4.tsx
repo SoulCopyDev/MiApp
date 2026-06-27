@@ -1011,7 +1011,9 @@ export default function World1Level4({ navigation: propsNavigation, setAllowBack
 
   const renderCompletion = () => (
     <View style={styles.completeContainer}>
-      <Text style={styles.completeBadgeText}>🚀</Text>
+      <View style={styles.completeBadgeCircle}>
+        <Text style={styles.completeBadgeText}>🚀</Text>
+      </View>
       <Text style={styles.completeTitle}>¡Nivel 4 completado!</Text>
       <Text style={styles.completeSub}>Terminaste "¡Crea algo con IA Hoy!". Hoy no solo aprendiste — creaste. Con texto, con prompts, con intención. Eso es lo que hacen los creadores.</Text>
       <View style={styles.skillList}>
@@ -1184,7 +1186,8 @@ const styles = StyleSheet.create({
   tfBtnFalse: { borderColor: colors.error, backgroundColor: '#fff1f2' },
   galleryNum: { fontSize: 10, fontWeight: '700', color: colors.success, textTransform: 'uppercase', marginBottom: 6 },
   completeContainer: { alignItems: 'center', padding: 20 },
-  completeBadgeText: { fontSize: 44, marginBottom: 14 },
+  completeBadgeCircle: { width: 86, height: 86, borderRadius: 43, backgroundColor: '#a7f3d0', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
+  completeBadgeText: { fontSize: 44 },
   completeTitle: { ...typography.extraBold, fontSize: 21, color: colors.textPrimary, marginBottom: 6 },
   completeSub: { ...typography.regular, fontSize: 12, color: colors.textSecondary, textAlign: 'center', lineHeight: 1.7, marginBottom: 16 },
   skillList: { backgroundColor: '#f0fdf4', borderRadius: 12, padding: 13, marginBottom: 14, borderWidth: 1, borderColor: '#a7f3d0', width: '100%' },

@@ -1169,7 +1169,9 @@ export default function World1Level3({ navigation: propsNavigation, setAllowBack
 
   const renderCompletion = () => (
     <View style={{ alignItems: 'center', padding: 20 }}>
-      <Text style={{ fontSize: 44, marginBottom: 14 }}>🏆</Text>
+      <View style={{ width: 86, height: 86, borderRadius: 43, backgroundColor: '#ffedd5', justifyContent: 'center', alignItems: 'center', marginBottom: 16 }}>
+        <Text style={{ fontSize: 44 }}>🏆</Text>
+      </View>
       <Text style={[styles.title, { textAlign: 'center' }]}>¡Nivel 3 completado!</Text>
       <Text style={[styles.subtitle, { textAlign: 'center' }]}>Terminaste "El Arte del Prompting". Ahora sabes comunicarte con IA de forma efectiva, ética y estratégica.</Text>
       <Text style={{ fontWeight: 'bold', fontSize: 15, color: '#92400e', marginBottom: 14 }}>⭐ {xp} XP ganados en este nivel</Text>
