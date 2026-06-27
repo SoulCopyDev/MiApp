@@ -467,7 +467,7 @@ export default function World1Level4({ navigation: propsNavigation, setAllowBack
       <Text style={styles.builderLabel}>🦸 Personaje principal</Text>
       <TextInput style={styles.input} placeholder="una científica de 14 años, un robot perdido..." value={storyChar} onChangeText={setStoryChar} />
       <Text style={styles.builderLabel}>🌍 Lugar</Text>
-      <TextInput style={styles.input} placeholder="el metro de Bogotá, una estación espacial..." value={storyPlace} onChangeText={setStoryPlace} />
+      <TextInput style={styles.input} placeholder="el metro de tu ciudad, una estación espacial..." value={storyPlace} onChangeText={setStoryPlace} />
       <Text style={styles.builderLabel}>🌀 Giro final sorpresivo</Text>
       <TextInput style={styles.input} placeholder="resulta que el villano era su mejor amigo..." value={storyTwist} onChangeText={setStoryTwist} />
       {storyGenerated ? (
@@ -739,7 +739,7 @@ export default function World1Level4({ navigation: propsNavigation, setAllowBack
       <Text style={styles.subtitle}>3 prompts que dan resultados decepcionantes — y la razón exacta.</Text>
       {[
         { title: '"Hazme una presentación"', text: 'No dice el tema, la audiencia, el número de slides ni el tono. La IA hace algo genérico inútil.' },
-        { title: '"Dame información sobre Colombia"', text: 'Colombia tiene historia, geografía, economía, cultura... La IA no sabe qué aspecto te interesa.' },
+        { title: '"Dame información sobre mi país"', text: 'Tu país tiene historia, geografía, economía, cultura... La IA no sabe qué aspecto te interesa.' },
         { title: '"Escríbeme algo bonito"', text: '"Bonito" no significa nada para la IA. ¿Poema? ¿Carta? ¿Para quién? ¿Qué emoción?' },
       ].map((item, i) => (
         <View key={i} style={[styles.card, { borderColor: '#fecdd3', backgroundColor: '#fff1f2' }]}>

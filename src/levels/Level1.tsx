@@ -106,8 +106,8 @@ const QUIZ_POOL: QuizQuestion[] = [
     explain: 'Google Maps usa datos históricos de eventos: sabe que un martes con partido hay 40% más tráfico en ciertas vías. La IA combina múltiples factores, no solo el tráfico actual.'
   },
   {
-    q: 'Una IA fue entrenada solo con votos de personas en Colombia. ¿Qué problema puede tener?',
-    opts: ['Funcionará perfectamente en cualquier país del mundo', 'Solo podrá hacer predicciones sobre política colombiana', 'Puede ser muy imprecisa cuando la usen en otros países con contextos diferentes', 'La IA aprenderá sola a adaptarse a otros países sin necesitar más entrenamiento'],
+    q: 'Una IA fue entrenada solo con votos de personas de un país. ¿Qué problema tiene al usarla en otro?',
+    opts: ['Funcionará perfectamente en cualquier país del mundo', 'Solo podrá hacer predicciones del país donde fue entrenada', 'Puede ser muy imprecisa cuando la usen en otros países con contextos diferentes', 'La IA aprenderá sola a adaptarse a otros países sin necesitar más entrenamiento'],
     correct: 2,
     explain: 'La IA solo conoce lo que vio durante el entrenamiento. Si aprendió con datos de un solo país, sus predicciones en otros países pueden ser incorrectas. Los datos del entrenamiento definen sus límites.'
   },
@@ -579,7 +579,7 @@ export default function GameLevel1({ navigation: propsNavigation, setAllowBack }
       <Text style={styles.subtitle}>¿Sabías que la IA ya trabaja en hospitales? Aquí una historia real de cómo funciona.</Text>
       <View style={styles.scenarioBox}>
         <Text style={styles.scenarioLabel}>🎬 La situación</Text>
-        <Text style={styles.scenarioText}>Valentina es médica en una clínica de Bogotá. Su trabajo es mirar imágenes médicas llamadas <Text style={{ fontWeight: 'bold' }}>radiografías</Text>. En un día normal, revisa más de 60 de estas imágenes buscando manchas muy pequeñas que podrían indicar que algo no está bien.</Text>
+        <Text style={styles.scenarioText}>Valentina es médica especialista en imágenes diagnósticas. Su trabajo es mirar imágenes médicas llamadas <Text style={{ fontWeight: 'bold' }}>radiografías</Text>. En un día normal, revisa más de 60 de estas imágenes buscando manchas muy pequeñas que podrían indicar que algo no está bien.</Text>
       </View>
       <View style={styles.funBox}>
         <Text style={styles.funText}>🤔 <Text style={{ fontWeight: 'bold' }}>¿Por qué es tan difícil ese trabajo?</Text> Imagina pasar 8 horas mirando imágenes similares buscando detalles del tamaño de una uña. El ojo humano se cansa. Un estudio encontró que los médicos pierden hasta el 22% de su capacidad de concentración en la segunda mitad del día.</Text>
@@ -870,6 +870,23 @@ export default function GameLevel1({ navigation: propsNavigation, setAllowBack }
       <Text style={styles.completeTitle}>¡Nivel 1 completado!</Text>
       <Text style={styles.completeSub}>Terminaste "Robots vs. Humanos". Ahora entiendes algo que mucha gente confunde: qué puede la IA, por qué puede hacerlo, cómo aprende paso a paso, y en qué los humanos seguimos siendo únicos.</Text>
       <Text style={styles.xpEarnedText}>⭐ {xp} XP ganados en este nivel</Text>
+      <View style={styles.skillList}>
+        {[
+          'Puedo explicar qué es la IA con mis propias palabras y ejemplos reales',
+          'Sé identificar qué hace la IA por dentro de TikTok, Spotify, Maps y otros',
+          'Entiendo los 5 pasos exactos de cómo aprende una IA',
+          'Sé en qué supera la IA a los humanos y en qué los humanos somos irremplazables',
+          'Puedo identificar cuándo la IA puede equivocarse y por qué',
+        ].map((skill, i) => (
+          <View key={i} style={styles.skillRow}>
+            <Text style={styles.skillCheck}>✓</Text>
+            <Text style={styles.skillText}>{skill}</Text>
+          </View>
+        ))}
+      </View>
+      <View style={styles.nextHint}>
+        <Text style={styles.nextHintText}>🚀 Nivel 2: La IA vive en tus apps{'\n\n'}Vas a analizar apps de tu celular e identificar exactamente qué hace la IA en cada una — no en abstracto, sino pantalla por pantalla. Cuando termines, nunca más abrirás una app sin saber quién está operando detrás.</Text>
+      </View>
       <TouchableOpacity style={styles.nextLevelButton} onPress={handleFinish}>
         <Text style={styles.nextLevelText}>Siguiente nivel →</Text>
       </TouchableOpacity>
@@ -1040,6 +1057,12 @@ const styles = StyleSheet.create({
   xpEarnedText: { ...typography.bold, fontSize: 15, color: colors.accentDark, marginBottom: 14 },
   nextLevelButton: { backgroundColor: colors.primary, padding: 14, borderRadius: 11, width: '100%', alignItems: 'center' },
   nextLevelText: { ...typography.bold, color: '#fff' },
+  skillList: { backgroundColor: '#f0fdf4', borderRadius: 12, padding: 13, marginBottom: 14, borderWidth: 1, borderColor: '#a7f3d0', width: '100%' },
+  skillRow: { flexDirection: 'row' as const, alignItems: 'flex-start' as const, gap: 8, marginBottom: 6 },
+  skillCheck: { color: colors.success, fontWeight: '700' as const },
+  skillText: { ...typography.regular, fontSize: 12, color: colors.textPrimary, flex: 1, lineHeight: 18 },
+  nextHint: { backgroundColor: '#f8fafc', borderRadius: 10, padding: 11, borderWidth: 1, borderColor: colors.border, width: '100%', marginBottom: 12 },
+  nextHintText: { ...typography.regular, fontSize: 12, color: colors.textSecondary, lineHeight: 18 },
   nextButton: { backgroundColor: colors.success, padding: 14, margin: 16, borderRadius: 11, alignItems: 'center' },
   nextButtonText: { ...typography.bold, color: '#fff', fontSize: 15 },
   footerRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 16, gap: 8 },

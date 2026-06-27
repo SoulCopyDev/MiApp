@@ -266,19 +266,19 @@ const ETHICS_POOL: EthicsItem[] = [
   { prompt: '"Escribe un mensaje haciéndote pasar por el profesor García para cancelar un examen"', correct: 'prob', explain: 'Suplantar identidad para difundir información falsa es engaño y potencialmente fraude.' },
   { prompt: '"Ayúdame a entender los argumentos de ambos lados sobre el aborto para un debate"', correct: 'safe', explain: 'Pedir información balanceada para debatir es un uso excelente de los LLMs.' },
   { prompt: '"Crea un perfil falso de una persona real con información inventada"', correct: 'prob', explain: 'Crear perfiles falsos y difundir desinformación es ciberacoso y difamación.' },
-  { prompt: '"Genera ideas para un negocio de comida saludable con $500.000 COP"', correct: 'safe', explain: 'Usar la IA como consultor de negocios es completamente ético y valioso.' },
+  { prompt: '"Genera ideas para un negocio de comida saludable con poco presupuesto"', correct: 'safe', explain: 'Usar la IA como consultor de negocios es completamente ético y valioso.' },
 ];
 
 const DETECT_POOL: DetectItem[] = [
   { prompt: '"Tradúceme esto"', response: '¿Qué deseas que traduzca? No veo ningún texto adjunto.', question: '¿Por qué falló este prompt?', opts: ['El LLM no sabe traducir', 'Falta el texto que se quiere traducir', 'El LLM solo traduce al inglés', 'El prompt debería estar en otro idioma'], correct: 1, explain: 'La instrucción olvidó incluir el contenido a traducir.' },
   { prompt: '"Escríbeme un poema"', response: '[poema genérico de amor de 20 estrofas]', question: 'El estudiante quería un haiku de 3 líneas sobre tecnología. ¿Qué falló?', opts: ['El LLM no sabe escribir haikus', 'No especificó el tipo de poema ni el tema', 'El LLM siempre escribe sobre amor', 'Los poemas no se pueden pedir a un LLM'], correct: 1, explain: 'Sin especificar tipo, tema y extensión, el LLM inventa su propia interpretación.' },
   { prompt: '"Como experto en nutrición, dame un plan de alimentación para bajar de peso rápido, con comidas deliciosas, económicas, fáciles, sin gluten, sin lactosa, vegano, y que me haga sentir muy lleno."', response: '[respuesta inconsistente y contradictoria]', question: '¿Cuál es el problema con este prompt?', opts: ['Es demasiado corto', 'Tiene demasiadas restricciones contradictorias', 'El rol de nutricionista no funciona', 'Falta el formato de salida'], correct: 1, explain: 'Demasiadas restricciones contradictorias abruman al modelo.' },
-  { prompt: '"Explícame todo sobre la historia de Colombia"', response: '[respuesta enciclopédica de 3000 palabras]', question: 'El estudiante necesitaba un resumen de 5 puntos para 2 minutos. ¿Qué faltó?', opts: ['La IA no sabe historia', 'No especificó formato ni extensión', 'La instrucción estaba mal', 'El tema es demasiado amplio'], correct: 1, explain: 'Sin formato definido, la IA generó una respuesta enciclopédica.' },
+  { prompt: '"Explícame todo sobre la historia de mi país"', response: '[respuesta enciclopédica de 3000 palabras]', question: 'El estudiante necesitaba un resumen de 5 puntos para 2 minutos. ¿Qué faltó?', opts: ['La IA no sabe historia', 'No especificó formato ni extensión', 'La instrucción estaba mal', 'El tema es demasiado amplio'], correct: 1, explain: 'Sin formato definido, la IA generó una respuesta enciclopédica.' },
 ];
 
 const SPRINT_POOL: SprintItem[] = [
   { situation: 'Necesitas que la IA te explique la mitosis para un examen en 30 minutos', opts: ['Explícame la mitosis', 'Como profesor de biología para 9° grado, explícame la mitosis en 5 pasos claros con una analogía. Máx 200 palabras.', 'Cuéntame sobre la división celular', '¿Qué es la mitosis?'], correct: 1 },
-  { situation: 'Quieres ideas para un negocio con $300.000 COP', opts: ['Dame ideas de negocios', 'Tengo 16 años, vivo en Medellín y tengo $300.000 COP. Como asesor de emprendimiento, dame 3 ideas viables para empezar este mes, con bajo riesgo.', 'Ideas de emprendimiento baratas', 'Cómo ganar dinero siendo joven'], correct: 1 },
+  { situation: 'Quieres ideas para un negocio con poco capital', opts: ['Dame ideas de negocios', 'Tengo 16 años y quiero emprender con poco capital. Como asesor de emprendimiento, dame 3 ideas viables para empezar este mes, con bajo riesgo.', 'Ideas de emprendimiento baratas', 'Cómo ganar dinero siendo joven'], correct: 1 },
   { situation: 'Quieres mejorar el primer párrafo de tu ensayo de literatura', opts: ['Mejora mi ensayo', 'Lee este párrafo y mejora la redacción manteniendo mis ideas y mi voz. Solo mejora estilo y fluidez: [párrafo]', 'Arregla los errores de este texto', 'Reescribe esto mejor'], correct: 1 },
   { situation: 'Necesitas aprender las capitales de América del Sur', opts: ['Enséñame las capitales de Suramérica', 'Como profesor creativo, crea un juego de 10 preguntas de trivia sobre las capitales de los 12 países de Sudamérica. Incluye respuestas.', 'Dame una lista de capitales', 'Necesito memorizar capitales'], correct: 1 },
   { situation: 'Quieres practicar inglés hablando sobre tu película favorita', opts: ['Hablemos de películas en inglés', 'Act as an English conversation partner at B1 level. Ask me about my favorite movie and correct my grammar gently.', 'Corrige mi inglés mientras hablo', 'Practice English with me about movies'], correct: 1 },
@@ -796,11 +796,11 @@ export default function World1Level3({ navigation: propsNavigation, setAllowBack
       <Text style={styles.sectionTitle}>La diferencia en números reales</Text>
       <View style={[styles.card, { backgroundColor: '#fff1f2' }]}>
         <Text style={styles.cardTitle}>❌ Prompt vago → resultado genérico</Text>
-        <Text style={[styles.cardText, { fontStyle: 'italic' }]}>"Explícame la historia de Colombia" → Respuesta enciclopédica de 2000 palabras que no sirve para nada específico.</Text>
+        <Text style={[styles.cardText, { fontStyle: 'italic' }]}>"Explícame la historia de mi país" → Respuesta enciclopédica de 2000 palabras que no sirve para nada específico.</Text>
       </View>
       <View style={[styles.card, { backgroundColor: '#f0fdf4' }]}>
         <Text style={styles.cardTitle}>✅ Prompt específico → resultado útil</Text>
-        <Text style={[styles.cardText, { fontStyle: 'italic' }]}>"Actúa como profesor de 9° grado. Resume en 5 puntos las causas de la independencia de Colombia, con un ejemplo concreto para cada causa." → Exactamente lo que necesitas.</Text>
+        <Text style={[styles.cardText, { fontStyle: 'italic' }]}>"Actúa como profesor de 9° grado. Resume en 5 puntos las causas de la independencia de tu país, con un ejemplo concreto para cada causa." → Exactamente lo que necesitas.</Text>
       </View>
     </View>
   );
@@ -854,7 +854,7 @@ export default function World1Level3({ navigation: propsNavigation, setAllowBack
       <Text style={styles.subtitle}>Selecciona una opción en cada sección.</Text>
       
       <BuilderSection label="🎭 ROL" color="#5b21b6" bg="#faf5ff" options={['Como tutor de ciencias para secundaria', 'Como coach de emprendimiento juvenil', 'Como corrector de textos académicos', 'Como programador senior explicando a principiantes']} selected={builderRol} onSelect={setBuilderRol} />
-      <BuilderSection label="📋 CONTEXTO" color="#1e40af" bg="#eff6ff" options={['Soy estudiante de 10° y tengo examen en 2 días', 'Tengo 16 años y quiero montar un negocio con $200.000 COP', 'Escribí un ensayo de 3 páginas para español', 'Estoy aprendiendo a programar desde cero']} selected={builderCtx} onSelect={setBuilderCtx} />
+      <BuilderSection label="📋 CONTEXTO" color="#1e40af" bg="#eff6ff" options={['Soy estudiante de 10° y tengo examen en 2 días', 'Tengo 16 años y quiero montar un negocio con poco capital', 'Escribí un ensayo de 3 páginas para español', 'Estoy aprendiendo a programar desde cero']} selected={builderCtx} onSelect={setBuilderCtx} />
       <BuilderSection label="🎯 INSTRUCCIÓN" color="#166534" bg="#f0fdf4" options={['Explícame los conceptos difíciles con ejemplos cotidianos', 'Dame 5 ideas de negocio viables ordenadas por inversión', 'Revisa la redacción y sugiere mejoras sin cambiar mis ideas', 'Enséñame el concepto más importante que debo saber hoy']} selected={builderInst} onSelect={setBuilderInst} />
       <BuilderSection label="📐 FORMATO" color="#c2410c" bg="#fff7ed" options={['En máximo 200 palabras con un ejemplo práctico', 'En formato de lista numerada con pros y contras', 'Señalando errores y explicando por qué lo son', 'Con una analogía de la vida cotidiana']} selected={builderFmt} onSelect={setBuilderFmt} />
       
