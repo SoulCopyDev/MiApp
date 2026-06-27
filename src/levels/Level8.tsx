@@ -94,10 +94,10 @@ const SPRINT_POOL: SprintItem[] = [
 
 const HALL_POOL: HallCase[] = [
   {
-    intro: 'Le pregunté a un LLM: "¿Cuándo fue fundada Medellín?" y esto respondió:',
-    text: 'Medellín fue fundada el 2 de noviembre de 1616 por el español Francisco de Herrera Campuzano. Actualmente es la segunda ciudad más grande de Colombia con alrededor de 4 millones de habitantes en su área metropolitana. Es reconocida mundialmente por su sistema de metro y metrocable.',
+    intro: 'Le pregunté a un LLM: "¿Cuándo fue fundada Lima?" y esto respondió:',
+    text: 'Lima fue fundada el 18 de enero de 1535 por el conquistador Francisco Pizarro. Actualmente es la ciudad más grande de Perú con alrededor de 15 millones de habitantes en su área metropolitana. Es reconocida mundialmente por su gastronomía y sus restos arqueológicos precolombinos.',
     correct: 2,
-    explain: 'El área metropolitana tiene alrededor de 3.9 millones, no 4 millones exactos. Los LLMs frecuentemente inventan estadísticas demográficas.',
+    explain: 'El área metropolitana de Lima tiene alrededor de 11 millones de personas, no 15 millones. Los LLMs frecuentemente inventan estadísticas demográficas.',
   },
   {
     intro: 'Pregunté: "¿Qué hace GPT-4?" y el modelo dijo:',
@@ -107,7 +107,7 @@ const HALL_POOL: HallCase[] = [
   },
   {
     intro: 'Pregunté: "Dame datos sobre la IA en Latinoamérica" y respondió:',
-    text: 'En Latinoamérica, Brasil y México lideran la adopción de IA empresarial. Según un informe de McKinsey de 2023, el 67% de las empresas latinoamericanas ya usan IA en sus operaciones. Colombia tiene más de 2,000 startups de tecnología registradas. La región podría añadir USD 1 billón a su PIB para 2030.',
+    text: 'En Latinoamérica, Brasil y México lideran la adopción de IA empresarial. Según un informe de McKinsey de 2023, el 67% de las empresas latinoamericanas ya usan IA en sus operaciones. Chile y Argentina también cuentan con ecosistemas de startups tecnológicas en rápido crecimiento. La región podría añadir USD 1 billón a su PIB para 2030.',
     correct: 1,
     explain: 'El LLM inventó una cita específica de McKinsey con un porcentaje preciso. Los modelos frecuentemente fabrican referencias.',
   },

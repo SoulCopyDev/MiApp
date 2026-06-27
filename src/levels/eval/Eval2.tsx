@@ -39,7 +39,7 @@ const QUIZ_POOL: QuizItem[] = [
     opts: ['Son errores suaves', 'Las mentiras requieren intención consciente, los LLMs no la tienen', 'Suena más científico', 'Los ingenieros inventaron la palabra para ocultar fallos'], correct: 1, explain: 'Los LLMs generan texto probable sin saber la verdad.' },
   { q: '¿Cuál es el rol del "system prompt" en un asistente de IA personalizado?',
     opts: ['Primer mensaje del usuario', 'Instrucciones base que definen rol, tono y límites antes de cualquier interacción', 'Código fuente del modelo', 'Resumen automático al cerrar conversación'], correct: 1, explain: 'System prompt = configuración invisible que se aplica a toda la conversación.' },
-  { q: '"Actúa como experto" vs "Actúa como oncólogo con 15 años en hospitales pediátricos de Colombia". ¿Cuál funciona mejor?',
+  { q: '"Actúa como experto" vs "Actúa como oncólogo con 15 años en hospitales pediátricos especializados". ¿Cuál funciona mejor?',
     opts: ['El primero porque es más corto', 'El segundo porque la especificidad guía a un registro más preciso', 'Ambos funcionan igual', 'El primero porque mucho contexto confunde'], correct: 1, explain: 'Roles específicos activan vocabulario y contexto muy concretos.' },
   { q: 'Tu prompt "Dame más información sobre eso" obtiene una respuesta genérica. ¿Cuál es el problema?',
     opts: ['La IA no quiso dar más información', 'El prompt carece de referente concreto — "eso" es ambiguo', 'La temperatura estaba demasiado baja', 'El modelo tiene límite de respuestas largas'], correct: 1, explain: '"Eso" no define el tema. Sé específico.' },
