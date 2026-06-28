@@ -103,14 +103,14 @@ interface LevelProps {
 export default function World6Level8({ navigation: propsNavigation, setAllowBack }: LevelProps) {
   const nav = useNavigation();
   const navigation = propsNavigation || nav;
-  const totalXP = useGameStore(state => state.totalStars * 100 + state.playerLevel * 50); // estimación
+  const completeLevel = useGameStore((s) => s.completeLevel);
 
-  // Permitir retroceso siempre (es un nivel de solo lectura)
   React.useEffect(() => {
     setAllowBack?.(true);
   }, []);
 
   const handleClose = () => {
+    completeLevel(43, 3, 0);
     router.back();
   };
 
@@ -276,7 +276,7 @@ export default function World6Level8({ navigation: propsNavigation, setAllowBack
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.background },
+  screen: { flex: 1, backgroundColor: '#ffffff' },
   bar: {
     flexDirection: 'row',
     alignItems: 'center',
