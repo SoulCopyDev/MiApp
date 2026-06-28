@@ -565,6 +565,7 @@ export default function World6Level6({ navigation: propsNavigation, setAllowBack
         <View style={styles.completeContainer}>
           <View style={styles.completeIcon}><Text style={styles.iconEmoji}>🌟</Text></View>
           {tt('¡Nivel 36 completado!')}
+          <Text style={{ fontSize: 12, color: '#9ca3af', marginBottom: 6 }}>Nivel 36 de 36</Text>
           {sub('Terminaste "Tú y la IA: Tu Misión en el Mundo". Ahora eres AI Explorer Graduado.')}
           <Text style={styles.xpBig}>⭐ {xp} XP ganados</Text>
           <View style={styles.skillsBox}>
@@ -604,7 +605,7 @@ export default function World6Level6({ navigation: propsNavigation, setAllowBack
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.background },
+  screen: { flex: 1, backgroundColor: '#ffffff' },
   bar: { flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
   track: { flex: 1, height: 6, backgroundColor: colors.borderLight, borderRadius: 3, marginHorizontal: 12 },
   fill: { height: '100%', backgroundColor: '#b45309', borderRadius: 3 },

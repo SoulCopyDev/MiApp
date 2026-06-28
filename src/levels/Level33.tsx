@@ -157,19 +157,18 @@ export default function World6Level3({ navigation: propsNavigation, setAllowBack
 
   const [reflectVal, setReflectVal] = useState('');
 
-  const examSteps = new Set([3, 6, 8, 9, 16, 18, 19]);
-  const isExam = examSteps.has(step);
-  const showBackButton = step > 0 && !isExam;
+  const theorySteps = new Set([0, 1, 4, 5, 10, 12, 13, 15, 17]);
+  const showBackButton = step > 0 && theorySteps.has(step);
   const goToPrevStep = () => setStep(s => s - 1);
 
-  useEffect(() => { setAllowBack?.(!isExam); }, [isExam, setAllowBack]);
+  useEffect(() => { setAllowBack?.(showBackButton); }, [showBackButton]);
   useEffect(() => {
     const bh = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (isExam) { Alert.alert('Actividad en curso', 'No puedes regresar ahora.'); return true; }
+      if (!showBackButton) { Alert.alert('Actividad en curso', 'No puedes regresar ahora.'); return true; }
       return false;
     });
     return () => bh.remove();
-  }, [isExam]);
+  }, [showBackButton]);
 
   useEffect(() => {
     if (step === 3) { setMatchLeft(null); setMatchDone(0); }
@@ -477,6 +476,7 @@ export default function World6Level3({ navigation: propsNavigation, setAllowBack
     <View style={{ alignItems: 'center', padding: 20 }}>
       <Text style={{ fontSize: 56 }}>🚗</Text>
       <Text style={[styles.title, { textAlign: 'center' }]}>¡Nivel 33 completado!</Text>
+      <Text style={{ fontSize: 12, color: '#9ca3af', marginBottom: 6 }}>Nivel 33 de 36</Text>
       <Text style={[styles.subtitle, { textAlign: 'center' }]}>Terminaste "IA en Movimiento: Autos y Drones". Ahora eres Mobility Innovator.</Text>
       <Text style={{ fontSize: 28, fontWeight: 'bold', color: '#1d4ed8', marginVertical: 12 }}>⭐ {xp} XP</Text>
       <TouchableOpacity style={styles.finishBtn} onPress={handleFinish}><Text style={{ color: '#fff', fontWeight: 'bold' }}>Volver al mapa</Text></TouchableOpacity>

@@ -313,6 +313,7 @@ export default function World6Level4({ navigation: propsNavigation, setAllowBack
         <View style={styles.completeContainer}>
           <View style={styles.completeIcon}><Text style={styles.iconEmoji}>🌍</Text></View>
           {tt('¡Nivel 34 completado!')}
+          <Text style={{ fontSize: 12, color: '#9ca3af', marginBottom: 6 }}>Nivel 34 de 36</Text>
           {sub('Terminaste "IA y Tu Planeta: El Futuro que Vas a Heredar". Ahora eres Planet Guardian.')}
           <Text style={styles.xpBig}>⭐ {xp} XP ganados</Text>
           {btn('Volver al mapa', finishLevel, false, true)}
@@ -345,7 +346,7 @@ export default function World6Level4({ navigation: propsNavigation, setAllowBack
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.background },
+  screen: { flex: 1, backgroundColor: '#ffffff' },
   bar: { flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
   track: { flex: 1, height: 6, backgroundColor: colors.borderLight, borderRadius: 3, marginHorizontal: 12 },
   fill: { height: '100%', backgroundColor: '#15803d', borderRadius: 3 },

@@ -137,19 +137,18 @@ export default function World6Level5({ navigation: propsNavigation, setAllowBack
 
   const [reflectVal, setReflectVal] = useState('');
 
-  const examSteps = new Set([7, 9, 11, 16, 19, 20]);
-  const isExam = examSteps.has(step);
-  const showBackButton = step > 0 && !isExam;
+  const theorySteps = new Set([0, 1, 3, 5, 6, 8, 10, 12, 13, 15, 18]);
+  const showBackButton = step > 0 && theorySteps.has(step);
   const goToPrevStep = () => setStep(s => s - 1);
 
-  useEffect(() => { setAllowBack?.(!isExam); }, [isExam, setAllowBack]);
+  useEffect(() => { setAllowBack?.(showBackButton); }, [showBackButton]);
   useEffect(() => {
     const bh = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (isExam) { Alert.alert('Actividad en curso', 'No puedes regresar ahora.'); return true; }
+      if (!showBackButton) { Alert.alert('Actividad en curso', 'No puedes regresar ahora.'); return true; }
       return false;
     });
     return () => bh.remove();
-  }, [isExam]);
+  }, [showBackButton]);
 
   useEffect(() => {
     if (step === 7) { setQuizAnswers({}); setQuizChecked(false); }
@@ -382,6 +381,7 @@ export default function World6Level5({ navigation: propsNavigation, setAllowBack
     <View style={{ alignItems: 'center', padding: 20 }}>
       <Text style={{ fontSize: 56 }}>🧬</Text>
       <Text style={[styles.title, { textAlign: 'center' }]}>¡Nivel 35 completado!</Text>
+      <Text style={{ fontSize: 12, color: '#9ca3af', marginBottom: 6 }}>Nivel 35 de 36</Text>
       <Text style={[styles.subtitle, { textAlign: 'center' }]}>Terminaste "IA y Tu Salud: La Medicina que Viene por Ti". Ahora eres BioTech Pioneer.</Text>
       <Text style={{ fontSize: 28, fontWeight: 'bold', color: '#be185d', marginVertical: 12 }}>⭐ {xp} XP</Text>
       <TouchableOpacity style={styles.finishBtn} onPress={handleFinish}><Text style={{ color: '#fff', fontWeight: 'bold' }}>Volver al mapa</Text></TouchableOpacity>
