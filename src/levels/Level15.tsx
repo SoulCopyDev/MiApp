@@ -404,7 +404,7 @@ export default function World3Level3({ navigation: propsNavigation, setAllowBack
     };
     const examples: Record<number, string> = {
       3: 'Ej: "Una joven estudiante corriendo en cámara lenta por un mercado colorido de Lagos, luz cálida de atardecer, 8 segundos, estilo documental"',
-      12: 'Ej: "Un niño en Cartagena ve un mural de mariposas que cobran vida. Estilo realista-mágico. Música de marimba."'
+      12: 'Ej: "Una niña en Ciudad de México ve un mural de mariposas que cobran vida. Estilo realista-mágico. Música de marimba."'
     };
     return (
       <View style={styles.stepContainer}>
@@ -526,14 +526,15 @@ export default function World3Level3({ navigation: propsNavigation, setAllowBack
       <View style={styles.completeIcon}><Text style={styles.iconEmoji}>🎬</Text></View>
       <Text style={styles.completeTitle}>¡Badge desbloqueado!</Text>
       <View style={styles.badgeBox}><Text style={styles.badgeText}>🏅 Film Director</Text></View>
+      <Text style={{ ...typography.bold, fontSize: 13, color: '#fcd34d', marginBottom: 8, opacity: 0.8 }}>Nivel 15 de 36</Text>
       <Text style={styles.completeSub}>¡Completaste el Nivel 15 y el Módulo 3! Ahora entiendes el mundo del video con IA: cómo funciona, quién lo usa, deepfakes, copyright y el futuro del cine.</Text>
       <Text style={styles.xpBig}>⭐ {xp} XP ganados</Text>
       <View style={styles.statsRow}>
         <View style={styles.statItem}><Text style={styles.statNum}>{correctAnswers}</Text><Text style={styles.statLbl}>Correctas</Text></View>
         <View style={styles.statItem}><Text style={styles.statNum}>20</Text><Text style={styles.statLbl}>Módulos</Text></View>
       </View>
-      <View style={{ backgroundColor: '#f8fafc', borderRadius: 10, padding: 11, marginBottom: 14, borderWidth: 1, borderColor: '#e2e8f0', width: '100%' }}>
-        <Text style={{ fontSize: 12, color: '#334155', lineHeight: 20 }}>
+      <View style={{ backgroundColor: '#1a1000', borderRadius: 10, padding: 11, marginBottom: 14, borderWidth: 1, borderColor: '#5a3a00', width: '100%' }}>
+        <Text style={{ fontSize: 12, color: '#fcd34d', lineHeight: 20 }}>
           💻 <Text style={{ fontWeight: '700' }}>Nivel 16: Tu Primera Web con IA{'\n\n'}</Text>
           ¡Prepárate para el Nivel 16! Construirás apps web con herramientas no-code: Lovable, Bolt, Bubble. Aprenderás a describir tus ideas para que la IA las construya.
         </Text>
@@ -601,7 +602,7 @@ export default function World3Level3({ navigation: propsNavigation, setAllowBack
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.background },
+  screen: { flex: 1, backgroundColor: '#0f0800' },
   bar: { flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
   track: { flex: 1, height: 6, backgroundColor: colors.borderLight, borderRadius: 3, marginHorizontal: 12 },
   fill: { height: '100%', backgroundColor: '#f59e0b', borderRadius: 3 },

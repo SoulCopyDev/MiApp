@@ -1,4 +1,5 @@
 // src/levels/World3/Level6.tsx
+import { router } from 'expo-router';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
@@ -391,8 +392,6 @@ export default function World3Level6() {
   const [xp, setXp] = useState(0);
   const [xpToast, setXpToast] = useState<{ amount: number; id: number } | null>(null);
   const [correctCount, setCorrectCount] = useState(0);
-  const [completed, setCompleted] = useState(false);
-
   // Estados para quizzes
   const [quizAnswered, setQuizAnswered] = useState(false);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
@@ -423,6 +422,9 @@ export default function World3Level6() {
 
   // VF
   const [vfAnswers, setVFAnswers] = useState<Record<number, boolean | null>>({});
+
+  const THEORY_STEPS = new Set([0, 1, 4, 8, 12, 16]);
+  const showBackButton = THEORY_STEPS.has(step);
 
   // Resetear estados al cambiar de módulo
   useEffect(() => {
@@ -485,7 +487,7 @@ export default function World3Level6() {
     if (xp >= 230) stars = 3;
     else if (xp >= 170) stars = 2;
     completeLevel(18, stars, xp);
-    setCompleted(true);
+    router.back();
   };
 
   // ── RENDERIZADORES POR TIPO ──────────────────────────────
@@ -842,6 +844,7 @@ export default function World3Level6() {
       <Text style={styles.completionIcon}>🔗</Text>
       <Text style={styles.completionTitle}>¡Mundo 3 completado!</Text>
       <Text style={styles.completionBadge}>🏅 Multimodal Explorer</Text>
+      <Text style={styles.levelIndicator}>Nivel 18 de 36</Text>
       <View style={styles.worldBadge}>
         <Text style={styles.worldBadgeIcon}>🎨</Text>
         <Text style={styles.worldBadgeTitle}>Insignia: Creador Multimodal</Text>
@@ -870,14 +873,6 @@ export default function World3Level6() {
       </TouchableOpacity>
     </View>
   );
-
-  if (completed) {
-    return (
-      <View style={styles.screen}>
-        <Text style={styles.thanksText}>¡Gracias por jugar! Redirigiendo...</Text>
-      </View>
-    );
-  }
 
   const currentMod = MODULES[step];
   if (!currentMod) return null;
@@ -916,9 +911,9 @@ export default function World3Level6() {
       {currentMod.type !== 'completion' && (
         <View style={styles.navButtons}>
           <TouchableOpacity
-            style={[styles.navBtn, step === 0 && styles.navBtnHidden]}
+            style={[styles.navBtn, !showBackButton && styles.navBtnHidden]}
             onPress={handlePrev}
-            disabled={step === 0}
+            disabled={!showBackButton}
           >
             <Text style={styles.navBtnText}>← Anterior</Text>
           </TouchableOpacity>
@@ -1102,6 +1097,7 @@ const styles = StyleSheet.create({
   completionIcon: { fontSize: 60, marginBottom: 10 },
   completionTitle: { ...typography.heading1, fontSize: 26, color: '#d946ef', textAlign: 'center' },
   completionBadge: { ...typography.heading3, fontSize: 22, color: '#f0abfc', marginVertical: 6 },
+  levelIndicator: { ...typography.bold, fontSize: 13, color: '#f0abfc', marginBottom: 8, opacity: 0.8 },
   worldBadge: {
     backgroundColor: '#2a0040',
     borderRadius: 16,

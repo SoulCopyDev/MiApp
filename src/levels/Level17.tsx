@@ -526,14 +526,15 @@ export default function World3Level5({ navigation: propsNavigation, setAllowBack
       <View style={styles.completeIcon}><Text style={styles.iconEmoji}>📊</Text></View>
       <Text style={styles.completeTitle}>¡Badge desbloqueado!</Text>
       <View style={styles.badgeBox}><Text style={styles.badgeText}>🏅 Data Detective</Text></View>
+      <Text style={{ ...typography.bold, fontSize: 13, color: '#a5b4fc', marginBottom: 8, opacity: 0.8 }}>Nivel 17 de 36</Text>
       <Text style={styles.completeSub}>¡Nivel 17 completado! Ahora sabes cómo la IA analiza datos, conoces NotebookLM, sabes elegir la gráfica correcta y puedes detectar cuando los datos te quieren engañar.</Text>
       <Text style={styles.xpBig}>⭐ {xp} XP ganados</Text>
       <View style={styles.statsRow}>
         <View style={styles.statItem}><Text style={styles.statNum}>{correctCount}</Text><Text style={styles.statLbl}>Correctas</Text></View>
         <View style={styles.statItem}><Text style={styles.statNum}>20</Text><Text style={styles.statLbl}>Módulos</Text></View>
       </View>
-      <View style={{ backgroundColor: '#f8fafc', borderRadius: 10, padding: 11, marginBottom: 14, borderWidth: 1, borderColor: '#e2e8f0', width: '100%' }}>
-        <Text style={{ fontSize: 12, color: '#334155', lineHeight: 20 }}>
+      <View style={{ backgroundColor: '#050520', borderRadius: 10, padding: 11, marginBottom: 14, borderWidth: 1, borderColor: '#1e1e7a', width: '100%' }}>
+        <Text style={{ fontSize: 12, color: '#a5b4fc', lineHeight: 20 }}>
           🔗 <Text style={{ fontWeight: '700' }}>Nivel 18: IA Multimodal{'\n\n'}</Text>
           El nivel final del Mundo 3. Combinarás imagen, audio, video, web y datos en flujos completos. Al terminar serás un Creador Multimodal.
         </Text>
@@ -602,7 +603,7 @@ export default function World3Level5({ navigation: propsNavigation, setAllowBack
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.background },
+  screen: { flex: 1, backgroundColor: '#02020f' },
   bar: { flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
   track: { flex: 1, height: 6, backgroundColor: colors.borderLight, borderRadius: 3, marginHorizontal: 12 },
   fill: { height: '100%', backgroundColor: '#6366f1', borderRadius: 3 },

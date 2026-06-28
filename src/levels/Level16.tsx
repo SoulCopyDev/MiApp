@@ -1,4 +1,5 @@
 // src/levels/World3/Level4.tsx
+import { router } from 'expo-router';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
@@ -395,8 +396,6 @@ export default function World3Level4() {
   const [xp, setXp] = useState(0);
   const [xpToast, setXpToast] = useState<{ amount: number; id: number } | null>(null);
   const [correctCount, setCorrectCount] = useState(0);
-  const [completed, setCompleted] = useState(false);
-
   // Estados para quizzes
   const [quizAnswered, setQuizAnswered] = useState(false);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
@@ -427,6 +426,9 @@ export default function World3Level4() {
 
   // VF
   const [vfAnswers, setVFAnswers] = useState<Record<number, boolean | null>>({});
+
+  const THEORY_STEPS = new Set([0, 1, 4, 7, 10, 14]);
+  const showBackButton = THEORY_STEPS.has(step);
 
   // Resetear estados al cambiar de módulo
   useEffect(() => {
@@ -489,7 +491,7 @@ export default function World3Level4() {
     if (xp >= 220) stars = 3;
     else if (xp >= 160) stars = 2;
     completeLevel(16, stars, xp);
-    setCompleted(true);
+    router.back();
   };
 
   // ── RENDERIZADORES POR TIPO ──────────────────────────────
@@ -847,6 +849,7 @@ export default function World3Level4() {
       <Text style={styles.completionIcon}>💻</Text>
       <Text style={styles.completionTitle}>¡Badge desbloqueado!</Text>
       <Text style={styles.completionBadge}>🏅 Web Builder</Text>
+      <Text style={styles.levelIndicator}>Nivel 16 de 36</Text>
       <Text style={styles.completionText}>
         ¡Nivel 16 completado! Ahora sabes cómo construir apps web con IA, conoces las herramientas no-code y entiendes cómo describir tus ideas para que la IA las construya.
       </Text>
@@ -876,14 +879,6 @@ export default function World3Level4() {
       </TouchableOpacity>
     </View>
   );
-
-  if (completed) {
-    return (
-      <View style={styles.screen}>
-        <Text style={styles.thanksText}>¡Gracias por jugar! Redirigiendo...</Text>
-      </View>
-    );
-  }
 
   const currentMod = MODULES[step];
   if (!currentMod) return null;
@@ -922,9 +917,9 @@ export default function World3Level4() {
       {currentMod.type !== 'completion' && (
         <View style={styles.navButtons}>
           <TouchableOpacity
-            style={[styles.navBtn, step === 0 && styles.navBtnHidden]}
+            style={[styles.navBtn, !showBackButton && styles.navBtnHidden]}
             onPress={handlePrev}
-            disabled={step === 0}
+            disabled={!showBackButton}
           >
             <Text style={styles.navBtnText}>← Anterior</Text>
           </TouchableOpacity>
@@ -1102,6 +1097,7 @@ const styles = StyleSheet.create({
   completionIcon: { fontSize: 60, marginBottom: 10 },
   completionTitle: { ...typography.heading1, fontSize: 26, color: '#84cc16', textAlign: 'center' },
   completionBadge: { ...typography.heading3, fontSize: 22, color: '#f59e0b', marginVertical: 6 },
+  levelIndicator: { ...typography.bold, fontSize: 13, color: '#86a85a', marginBottom: 8, opacity: 0.8 },
   completionText: { ...typography.body, textAlign: 'center', marginBottom: 20, color: '#86a85a' },
   xpGained: { ...typography.heading2, fontSize: 30, color: '#f0fde4', marginBottom: 20 },
   statsRow: { flexDirection: 'row', justifyContent: 'space-around', width: '100%', marginBottom: 20 },
