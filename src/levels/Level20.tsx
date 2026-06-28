@@ -1,4 +1,5 @@
 // src/levels/World4/Level2.tsx
+import { router } from 'expo-router';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
@@ -631,8 +632,6 @@ export default function World4Level2() {
   const [step, setStep] = useState(0);
   const [xp, setXp] = useState(0);
   const [xpToast, setXpToast] = useState<{ amount: number; id: number } | null>(null);
-  const [completed, setCompleted] = useState(false);
-
   // Estados de arrastre
   const [dPlaced, setDPlaced] = useState<Record<string, string>>({});
   const [dSelected, setDSelected] = useState<string | null>(null);
@@ -771,21 +770,16 @@ export default function World4Level2() {
     setStep(s => s + 1);
   };
 
+  const THEORY_STEPS = new Set([0, 1, 2, 4, 6, 7, 8, 11, 15]);
+  const showBackButton = THEORY_STEPS.has(step);
+
   const handlePrev = () => { if (step > 0) setStep(s => s - 1); };
 
   const finishLevel = () => {
     const stars = xp >= 160 ? 3 : xp >= 120 ? 2 : 1;
     completeLevel(20, stars, xp);
-    setCompleted(true);
+    router.back();
   };
-
-  if (completed) {
-    return (
-      <View style={styles.screen}>
-        <Text style={styles.thanksText}>¡Nivel completado! Redirigiendo...</Text>
-      </View>
-    );
-  }
 
   const current = steps[step];
   const progress = Math.round((step / (steps.length - 1)) * 100);
@@ -939,7 +933,7 @@ export default function World4Level2() {
 
       {current.type !== 'completion' && (
         <View style={styles.navButtons}>
-          <TouchableOpacity style={[styles.navBtn, step === 0 && styles.navBtnHidden]} onPress={handlePrev} disabled={step === 0}>
+          <TouchableOpacity style={[styles.navBtn, !showBackButton && styles.navBtnHidden]} onPress={handlePrev} disabled={!showBackButton}>
             <Text style={styles.navBtnText}>← Anterior</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.navBtn} onPress={handleNext}>

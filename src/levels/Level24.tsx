@@ -42,7 +42,7 @@ const pickN = <T,>(arr: T[], n: number): T[] => {
 
 const QUIZ_ARBOL_POOL: QuizPoolItem[] = [
   {
-    q: 'Sofía tiene 13 años. Su profesora le pidió un trabajo sobre las elecciones presidenciales de Colombia del año pasado, citando al menos 5 fuentes periodísticas de medios distintos. Siguiendo el árbol de decisión, ¿qué herramienta es la más apropiada?',
+    q: 'Sofía tiene 13 años. Su profesora le pidió un trabajo sobre las elecciones presidenciales de México del año pasado, citando al menos 5 fuentes periodísticas de medios distintos. Siguiendo el árbol de decisión, ¿qué herramienta es la más apropiada?',
     opts: ['ChatGPT — es la más famosa y conversacional', 'Claude — para escribir cuidado el ensayo final', 'Perplexity — necesita datos verificables con fuentes citables', 'NotebookLM — para estudiar sus apuntes'],
     correct: 2,
     fb: '¡Exacto! Perplexity es la única que cita fuentes reales con links. Para este tipo de tarea académica con requisito de fuentes, es imbatible.',
@@ -570,7 +570,7 @@ export default function World4Level6({ navigation: propsNavigation, setAllowBack
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#ffffff' },
+  screen: { flex: 1, backgroundColor: '#0a0418' },
   progressBar: { flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
   progressTrack: { flex: 1, height: 6, backgroundColor: '#e5e7eb', borderRadius: 3, marginHorizontal: 12 },
   progressFill: { height: '100%', backgroundColor: '#8b5cf6', borderRadius: 3 },
