@@ -661,6 +661,7 @@ export default function World5Level2({ navigation: propsNavigation, setAllowBack
     <View style={{ alignItems: 'center', padding: 20 }}>
       <Text style={{ fontSize: 56 }}>⚡</Text>
       <Text style={[styles.title, { textAlign: 'center' }]}>¡Nivel 26 completado!</Text>
+      <Text style={{ fontSize: 12, color: '#9ca3af', marginBottom: 6 }}>Nivel 26 de 36</Text>
       <Text style={[styles.subtitle, { textAlign: 'center' }]}>Terminaste "Haz que la IA Trabaje Sola". Ahora eres Automation Engineer.</Text>
       <Text style={{ fontSize: 28, fontWeight: 'bold', color: '#0891b2', marginVertical: 12 }}>⭐ {xp} XP</Text>
       <TouchableOpacity style={styles.finishBtn} onPress={handleFinish}><Text style={{ color: '#fff', fontWeight: 'bold' }}>Volver al mapa</Text></TouchableOpacity>

@@ -83,7 +83,7 @@ const VIRAL_REASONS_SORT = [
   "1 · Emoción primero, datos después: sin conexión emocional, no se comparte",
   "2 · Útil + memorable: que sirva HOY y se recuerde mañana",
   "3 · Original auténtico: no copiar tendencias — adaptarlas a tu voz",
-  "4 · Específico, no genérico: 'estudiantes de medicina en Bogotá' > 'estudiantes'",
+  "4 · Específico, no genérico: 'estudiantes de medicina en Santiago' > 'estudiantes'",
   "5 · Llamada a acción clara: ¿qué hago ahora? Si no es obvio, no lo harán",
   "6 · Constancia: 1 viral no construye marca, 50 buenos posts sí"
 ];
@@ -616,6 +616,7 @@ export default function World5Level5({ navigation: propsNavigation, setAllowBack
         <View style={styles.completeContainer}>
           <View style={styles.completeIcon}><Text style={styles.iconEmoji}>📣</Text></View>
           {title('¡Nivel 29 completado!')}
+          <Text style={{ fontSize: 12, color: '#9ca3af', marginBottom: 6 }}>Nivel 29 de 36</Text>
           {sub('Terminaste "Comparte tu Creación con el Mundo". Ahora eres Content Creator.')}
           <Text style={styles.xpBig}>⭐ {xp} XP ganados</Text>
           {btn('Volver al mapa', finishLevel, false, true)}
@@ -648,7 +649,7 @@ export default function World5Level5({ navigation: propsNavigation, setAllowBack
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.background },
+  screen: { flex: 1, backgroundColor: '#ffffff' },
   bar: { flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
   track: { flex: 1, height: 6, backgroundColor: colors.borderLight, borderRadius: 3, marginHorizontal: 12 },
   fill: { height: '100%', backgroundColor: '#0d9488', borderRadius: 3 },
