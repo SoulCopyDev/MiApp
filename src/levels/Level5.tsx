@@ -75,14 +75,14 @@ const PRIVACIDAD_TF_POOL: PrivacidadTFItem[] = [
 ];
 
 const FAKE_POOL: FakeItem[] = [
-  { headline: 'Colombia lanzó su primer satélite al espacio en 2023, el "Libertad 2".', source: 'Fuente: Agencia Espacial Colombiana', isReal: true, explain: 'Real. Colombia lanzó el CubeSat "Libertad 2" en 2023.' },
+  { headline: 'Brasil usa inteligencia artificial para monitorear la deforestación del Amazonas en tiempo real.', source: 'Fuente: INPE - Instituto Nacional de Pesquisas Espaciais', isReal: true, explain: 'Real. El INPE usa IA para detectar deforestación con imágenes satelitales.' },
   { headline: 'El Papa Francisco declaró que la IA es "el mayor milagro tecnológico de la humanidad".', source: 'Fuente: Vatican News, marzo 2024', isReal: false, explain: 'Fabricado. El Papa ha hablado con cautela, no con ese entusiasmo absoluto.' },
   { headline: 'OpenAI alcanzó 100 millones de usuarios en ChatGPT en solo dos meses.', source: 'Fuente: Reuters, febrero 2023', isReal: true, explain: 'Real. Fue la app de consumo de más rápido crecimiento en la historia.' },
   { headline: 'Un juez de EE.UU. fue sancionado por presentar casos inventados por ChatGPT.', source: 'Fuente: NY Times, 2023', isReal: false, explain: 'Fue un ABOGADO, no un juez. Los pequeños cambios de detalle son desinformación común.' },
   { headline: 'Elon Musk demandó a OpenAI alegando que abandonó su misión sin fines de lucro.', source: 'Fuente: Bloomberg, marzo 2024', isReal: true, explain: 'Real. Musk presentó la demanda en marzo 2024.' },
   { headline: 'China prohibió totalmente el uso de ChatGPT para sus ciudadanos en 2024.', source: 'Fuente: CNBC Asia', isReal: false, explain: 'Parcialmente falso. Tiene restricciones pero no prohibición total.' },
   { headline: 'Google DeepMind desarrolló AlphaFold, que predice proteínas y ganó el Nobel de Química.', source: 'Fuente: Nature, octubre 2024', isReal: true, explain: 'Real. Los creadores ganaron el Nobel de Química 2024.' },
-  { headline: 'Una IA generó una vacuna funcional contra el dengue en 48 horas en Medellín.', source: 'Fuente: El Colombiano, 2024', isReal: false, explain: 'Fabricado. La IA acelera diseño pero el proceso completo toma años.' },
+  { headline: 'Una IA generó una vacuna funcional contra el dengue en 48 horas en un laboratorio latinoamericano.', source: 'Fuente: Agencia de Noticias LATAM, 2024', isReal: false, explain: 'Fabricado. La IA acelera el diseño de moléculas pero el proceso completo toma años.' },
 ];
 
 const SORT_SESGO = [
@@ -742,7 +742,7 @@ export default function World1Level5({ navigation: propsNavigation, setAllowBack
     <View>
       <View style={[styles.tag, { backgroundColor: '#ede9fe' }]}><Text style={[styles.tagText, { color: '#5b21b6' }]}>📖 Módulo 12 · Derechos</Text></View>
       <Text style={styles.title}>Los derechos digitales que ya tienes</Text>
-      {['👁️ Derecho a saber si una IA decide sobre ti', '🗑️ Derecho al olvido (Ley 1581 en Colombia)', '🙅 Derecho a no ser perfilado automáticamente', '🏷️ Derecho a saber si hablas con IA o humano'].map((t, i) => (
+      {['👁️ Derecho a saber si una IA decide sobre ti', '🗑️ Derecho al olvido (leyes de protección de datos)', '🙅 Derecho a no ser perfilado automáticamente', '🏷️ Derecho a saber si hablas con IA o humano'].map((t, i) => (
         <View key={i} style={styles.card}><Text style={styles.cardText}>{t}</Text></View>
       ))}
     </View>
@@ -855,13 +855,33 @@ export default function World1Level5({ navigation: propsNavigation, setAllowBack
 
   const renderCompletion = () => (
     <View style={{ alignItems: 'center', padding: 20 }}>
-      <Text style={{ fontSize: 44, marginBottom: 14 }}>🎓</Text>
+      <View style={{ width: 86, height: 86, borderRadius: 43, backgroundColor: '#ede9fe', justifyContent: 'center', alignItems: 'center', marginBottom: 16 }}>
+        <Text style={{ fontSize: 44 }}>🎓</Text>
+      </View>
       <Text style={[styles.title, { textAlign: 'center' }]}>¡Nivel 5 completado!</Text>
       <Text style={[styles.subtitle, { textAlign: 'center' }]}>Terminaste "IA con conciencia". Cerraste el Arco de Fundamentos. Ahora eres un usuario consciente, crítico y ético de la IA.</Text>
       <View style={{ backgroundColor: '#f5f3ff', padding: 12, borderRadius: 12, width: '100%', marginBottom: 14 }}>
         <Text style={{ fontWeight: 'bold', color: '#5b21b6', textAlign: 'center' }}>🏆 ARCO COMPLETADO: Fundamentos de IA</Text>
       </View>
       <Text style={{ fontWeight: 'bold', fontSize: 15, color: '#92400e', marginBottom: 14 }}>⭐ {xp} XP ganados</Text>
+      <View style={styles.skillList}>
+        {[
+          'Sé distinguir usos seguros, dudosos y prohibidos de la IA',
+          'Conozco qué nunca debo compartir con una IA (y por qué)',
+          'Puedo detectar desinformación generada por IA y deepfakes',
+          'Entiendo los sesgos algorítmicos y cómo afectan decisiones reales',
+          'Conozco mis derechos digitales frente a los sistemas de IA',
+          'Tengo un manifiesto ético personal para usar la IA con responsabilidad',
+        ].map((skill, i) => (
+          <View key={i} style={styles.skillRow}>
+            <Text style={styles.skillCheck}>✓</Text>
+            <Text style={styles.skillText}>{skill}</Text>
+          </View>
+        ))}
+      </View>
+      <View style={styles.nextHint}>
+        <Text style={styles.nextHintText}>🛠️ Nivel 6: Tu primer proyecto con IA{'\n\n'}Vas a diseñar y construir tu primer proyecto real con IA: desde la idea hasta el producto. Aprenderás a documentarlo, iterarlo y presentarlo — exactamente como lo haría un profesional.</Text>
+      </View>
       <TouchableOpacity style={styles.finishButton} onPress={handleFinish}>
         <Text style={{ fontWeight: 'bold', color: '#fff' }}>Siguiente nivel →</Text>
       </TouchableOpacity>
@@ -956,7 +976,7 @@ export default function World1Level5({ navigation: propsNavigation, setAllowBack
           <Text style={styles.resultBannerText}>{stepResult.ok ? '✓ ' : '✗ '}{stepResult.msg}</Text>
         </View>
       )}
-      {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} />}
+      {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} bgColor="#ede9fe" textColor="#5b21b6" />}
       <View style={styles.footerRow}>
         {showBackButtonL5 && showNextBtn && (
           <TouchableOpacity style={styles.backButton} onPress={goToPrevStep}>
@@ -983,8 +1003,8 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   progressBar: { flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
   closeBtn: { padding: 4 },
-  progressTrack: { flex: 1, height: 6, backgroundColor: colors.borderLight, borderRadius: 3, marginHorizontal: 12 },
-  progressFill: { height: '100%', backgroundColor: '#7c3aed', borderRadius: 3 },
+  progressTrack: { flex: 1, height: 8, backgroundColor: colors.borderLight, borderRadius: 4, marginHorizontal: 12 },
+  progressFill: { height: '100%', backgroundColor: '#7c3aed', borderRadius: 4 },
   xpText: { ...typography.bold, fontSize: 14, color: '#92400e' },
   scrollView: { flex: 1 },
   scrollContent: { padding: 16, paddingBottom: 40 },
@@ -1023,6 +1043,12 @@ const styles = StyleSheet.create({
   nextButton: { backgroundColor: '#7c3aed', padding: 14, margin: 16, borderRadius: 11, alignItems: 'center' },
   nextButtonText: { ...typography.bold, color: '#fff', fontSize: 15 },
   finishButton: { backgroundColor: '#7c3aed', padding: 14, borderRadius: 11, width: '100%', alignItems: 'center', marginTop: 14 },
+  skillList: { backgroundColor: '#f0fdf4', borderRadius: 12, padding: 13, marginBottom: 14, borderWidth: 1, borderColor: '#a7f3d0', width: '100%' },
+  skillRow: { flexDirection: 'row' as const, alignItems: 'flex-start' as const, gap: 8, marginBottom: 6 },
+  skillCheck: { color: colors.success, fontWeight: '700' as const },
+  skillText: { ...typography.regular, fontSize: 12, color: colors.textPrimary, flex: 1, lineHeight: 18 },
+  nextHint: { backgroundColor: '#f8fafc', borderRadius: 10, padding: 11, borderWidth: 1, borderColor: colors.border, width: '100%', marginBottom: 12 },
+  nextHintText: { ...typography.regular, fontSize: 12, color: colors.textSecondary, lineHeight: 18 },
   resultBanner: { margin: 16, padding: 14, borderRadius: 14, borderWidth: 1 },
   resultBannerOk: { backgroundColor: '#dcfce7', borderColor: colors.success },
   resultBannerErr: { backgroundColor: '#fee2e2', borderColor: colors.error },

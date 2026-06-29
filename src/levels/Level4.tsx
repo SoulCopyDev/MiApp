@@ -467,7 +467,7 @@ export default function World1Level4({ navigation: propsNavigation, setAllowBack
       <Text style={styles.builderLabel}>🦸 Personaje principal</Text>
       <TextInput style={styles.input} placeholder="una científica de 14 años, un robot perdido..." value={storyChar} onChangeText={setStoryChar} />
       <Text style={styles.builderLabel}>🌍 Lugar</Text>
-      <TextInput style={styles.input} placeholder="el metro de Bogotá, una estación espacial..." value={storyPlace} onChangeText={setStoryPlace} />
+      <TextInput style={styles.input} placeholder="el metro de tu ciudad, una estación espacial..." value={storyPlace} onChangeText={setStoryPlace} />
       <Text style={styles.builderLabel}>🌀 Giro final sorpresivo</Text>
       <TextInput style={styles.input} placeholder="resulta que el villano era su mejor amigo..." value={storyTwist} onChangeText={setStoryTwist} />
       {storyGenerated ? (
@@ -739,7 +739,7 @@ export default function World1Level4({ navigation: propsNavigation, setAllowBack
       <Text style={styles.subtitle}>3 prompts que dan resultados decepcionantes — y la razón exacta.</Text>
       {[
         { title: '"Hazme una presentación"', text: 'No dice el tema, la audiencia, el número de slides ni el tono. La IA hace algo genérico inútil.' },
-        { title: '"Dame información sobre Colombia"', text: 'Colombia tiene historia, geografía, economía, cultura... La IA no sabe qué aspecto te interesa.' },
+        { title: '"Dame información sobre mi país"', text: 'Tu país tiene historia, geografía, economía, cultura... La IA no sabe qué aspecto te interesa.' },
         { title: '"Escríbeme algo bonito"', text: '"Bonito" no significa nada para la IA. ¿Poema? ¿Carta? ¿Para quién? ¿Qué emoción?' },
       ].map((item, i) => (
         <View key={i} style={[styles.card, { borderColor: '#fecdd3', backgroundColor: '#fff1f2' }]}>
@@ -1011,7 +1011,9 @@ export default function World1Level4({ navigation: propsNavigation, setAllowBack
 
   const renderCompletion = () => (
     <View style={styles.completeContainer}>
-      <Text style={styles.completeBadgeText}>🚀</Text>
+      <View style={styles.completeBadgeCircle}>
+        <Text style={styles.completeBadgeText}>🚀</Text>
+      </View>
       <Text style={styles.completeTitle}>¡Nivel 4 completado!</Text>
       <Text style={styles.completeSub}>Terminaste "¡Crea algo con IA Hoy!". Hoy no solo aprendiste — creaste. Con texto, con prompts, con intención. Eso es lo que hacen los creadores.</Text>
       <View style={styles.skillList}>
@@ -1076,7 +1078,7 @@ export default function World1Level4({ navigation: propsNavigation, setAllowBack
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {renderContent()}
       </ScrollView>
-      {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} />}
+      {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} bgColor="#d1fae5" textColor="#065f46" />}
       <View style={styles.footerRow}>
         {showBackButton && (
           <TouchableOpacity style={styles.backButton} onPress={goToPrevStep}>
@@ -1097,13 +1099,13 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   progressBar: { flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
   closeBtn: { padding: 4 },
-  progressTrack: { flex: 1, height: 6, backgroundColor: colors.borderLight, borderRadius: 3, marginHorizontal: 12 },
-  progressFill: { height: '100%', backgroundColor: colors.success, borderRadius: 3 },
+  progressTrack: { flex: 1, height: 8, backgroundColor: colors.borderLight, borderRadius: 4, marginHorizontal: 12 },
+  progressFill: { height: '100%', backgroundColor: '#10b981', borderRadius: 4 },
   xpText: { ...typography.bold, fontSize: 14, color: colors.accentDark },
   scrollView: { flex: 1 },
   scrollContent: { padding: 16, paddingBottom: 40 },
   stepContainer: { flex: 1 },
-  tag: { fontSize: 11, fontWeight: '600', color: colors.primary, backgroundColor: '#eef2ff', alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, marginBottom: 12 },
+  tag: { fontSize: 11, fontWeight: '600', color: '#065f46', backgroundColor: '#d1fae5', alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, marginBottom: 12 },
   iconContainer: { width: 60, height: 60, borderRadius: 18, backgroundColor: '#dcfce7', justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
   iconEmoji: { fontSize: 30 },
   title: { ...typography.extraBold, fontSize: 19, color: colors.textPrimary, marginBottom: 6 },
@@ -1147,7 +1149,7 @@ const styles = StyleSheet.create({
   checkButton: { backgroundColor: colors.success, padding: 12, borderRadius: 11, alignItems: 'center', marginTop: 16 },
   checkButtonText: { ...typography.bold, color: '#fff' },
   disabledButton: { opacity: 0.4 },
-  nextButton: { backgroundColor: colors.success, padding: 14, margin: 16, borderRadius: 11, alignItems: 'center' },
+  nextButton: { backgroundColor: '#10b981', padding: 14, margin: 16, borderRadius: 11, alignItems: 'center' },
   nextButtonText: { ...typography.bold, color: '#fff', fontSize: 15 },
   secondaryBtn: { padding: 10, borderRadius: 10, borderWidth: 1.5, borderColor: colors.success, backgroundColor: '#ecfdf5', alignItems: 'center', marginTop: 8 },
   secondaryBtnText: { ...typography.bold, fontSize: 12, color: '#065f46' },
@@ -1184,7 +1186,8 @@ const styles = StyleSheet.create({
   tfBtnFalse: { borderColor: colors.error, backgroundColor: '#fff1f2' },
   galleryNum: { fontSize: 10, fontWeight: '700', color: colors.success, textTransform: 'uppercase', marginBottom: 6 },
   completeContainer: { alignItems: 'center', padding: 20 },
-  completeBadgeText: { fontSize: 44, marginBottom: 14 },
+  completeBadgeCircle: { width: 86, height: 86, borderRadius: 43, backgroundColor: '#a7f3d0', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
+  completeBadgeText: { fontSize: 44 },
   completeTitle: { ...typography.extraBold, fontSize: 21, color: colors.textPrimary, marginBottom: 6 },
   completeSub: { ...typography.regular, fontSize: 12, color: colors.textSecondary, textAlign: 'center', lineHeight: 1.7, marginBottom: 16 },
   skillList: { backgroundColor: '#f0fdf4', borderRadius: 12, padding: 13, marginBottom: 14, borderWidth: 1, borderColor: '#a7f3d0', width: '100%' },
@@ -1194,7 +1197,7 @@ const styles = StyleSheet.create({
   nextHint: { backgroundColor: '#f8fafc', borderRadius: 10, padding: 11, borderWidth: 1, borderColor: colors.border, width: '100%', marginBottom: 12 },
   nextHintText: { ...typography.regular, fontSize: 12, color: colors.textSecondary, lineHeight: 18 },
   xpEarnedText: { ...typography.bold, fontSize: 15, color: colors.accentDark, marginBottom: 14 },
-  finishButton: { backgroundColor: colors.primary, padding: 14, borderRadius: 11, width: '100%', alignItems: 'center' },
+  finishButton: { backgroundColor: '#10b981', padding: 14, borderRadius: 11, width: '100%', alignItems: 'center' },
   finishButtonText: { ...typography.bold, color: '#fff' },
   footerRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 16, gap: 8 },
   backButton: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, padding: 14, borderRadius: 11, alignItems: 'center', paddingHorizontal: 20 },

@@ -106,8 +106,8 @@ const QUIZ_POOL: QuizQuestion[] = [
     explain: 'Google Maps usa datos históricos de eventos: sabe que un martes con partido hay 40% más tráfico en ciertas vías. La IA combina múltiples factores, no solo el tráfico actual.'
   },
   {
-    q: 'Una IA fue entrenada solo con votos de personas en Colombia. ¿Qué problema puede tener?',
-    opts: ['Funcionará perfectamente en cualquier país del mundo', 'Solo podrá hacer predicciones sobre política colombiana', 'Puede ser muy imprecisa cuando la usen en otros países con contextos diferentes', 'La IA aprenderá sola a adaptarse a otros países sin necesitar más entrenamiento'],
+    q: 'Una IA fue entrenada solo con votos de personas de un país. ¿Qué problema tiene al usarla en otro?',
+    opts: ['Funcionará perfectamente en cualquier país del mundo', 'Solo podrá hacer predicciones del país donde fue entrenada', 'Puede ser muy imprecisa cuando la usen en otros países con contextos diferentes', 'La IA aprenderá sola a adaptarse a otros países sin necesitar más entrenamiento'],
     correct: 2,
     explain: 'La IA solo conoce lo que vio durante el entrenamiento. Si aprendió con datos de un solo país, sus predicciones en otros países pueden ser incorrectas. Los datos del entrenamiento definen sus límites.'
   },
@@ -579,7 +579,7 @@ export default function GameLevel1({ navigation: propsNavigation, setAllowBack }
       <Text style={styles.subtitle}>¿Sabías que la IA ya trabaja en hospitales? Aquí una historia real de cómo funciona.</Text>
       <View style={styles.scenarioBox}>
         <Text style={styles.scenarioLabel}>🎬 La situación</Text>
-        <Text style={styles.scenarioText}>Valentina es médica en una clínica de Bogotá. Su trabajo es mirar imágenes médicas llamadas <Text style={{ fontWeight: 'bold' }}>radiografías</Text>. En un día normal, revisa más de 60 de estas imágenes buscando manchas muy pequeñas que podrían indicar que algo no está bien.</Text>
+        <Text style={styles.scenarioText}>Valentina es médica especialista en imágenes diagnósticas. Su trabajo es mirar imágenes médicas llamadas <Text style={{ fontWeight: 'bold' }}>radiografías</Text>. En un día normal, revisa más de 60 de estas imágenes buscando manchas muy pequeñas que podrían indicar que algo no está bien.</Text>
       </View>
       <View style={styles.funBox}>
         <Text style={styles.funText}>🤔 <Text style={{ fontWeight: 'bold' }}>¿Por qué es tan difícil ese trabajo?</Text> Imagina pasar 8 horas mirando imágenes similares buscando detalles del tamaño de una uña. El ojo humano se cansa. Un estudio encontró que los médicos pierden hasta el 22% de su capacidad de concentración en la segunda mitad del día.</Text>
@@ -866,10 +866,29 @@ export default function GameLevel1({ navigation: propsNavigation, setAllowBack }
 
   const renderCompletion = () => (
     <View style={styles.completeContainer}>
-      <Text style={styles.completeBadgeText}>🏅</Text>
+      <View style={styles.completeBadgeCircle}>
+        <Text style={styles.completeBadgeText}>🏅</Text>
+      </View>
       <Text style={styles.completeTitle}>¡Nivel 1 completado!</Text>
       <Text style={styles.completeSub}>Terminaste "Robots vs. Humanos". Ahora entiendes algo que mucha gente confunde: qué puede la IA, por qué puede hacerlo, cómo aprende paso a paso, y en qué los humanos seguimos siendo únicos.</Text>
       <Text style={styles.xpEarnedText}>⭐ {xp} XP ganados en este nivel</Text>
+      <View style={styles.skillList}>
+        {[
+          'Puedo explicar qué es la IA con mis propias palabras y ejemplos reales',
+          'Sé identificar qué hace la IA por dentro de TikTok, Spotify, Maps y otros',
+          'Entiendo los 5 pasos exactos de cómo aprende una IA',
+          'Sé en qué supera la IA a los humanos y en qué los humanos somos irremplazables',
+          'Puedo identificar cuándo la IA puede equivocarse y por qué',
+        ].map((skill, i) => (
+          <View key={i} style={styles.skillRow}>
+            <Text style={styles.skillCheck}>✓</Text>
+            <Text style={styles.skillText}>{skill}</Text>
+          </View>
+        ))}
+      </View>
+      <View style={styles.nextHint}>
+        <Text style={styles.nextHintText}>🚀 Nivel 2: La IA vive en tus apps{'\n\n'}Vas a analizar apps de tu celular e identificar exactamente qué hace la IA en cada una — no en abstracto, sino pantalla por pantalla. Cuando termines, nunca más abrirás una app sin saber quién está operando detrás.</Text>
+      </View>
       <TouchableOpacity style={styles.nextLevelButton} onPress={handleFinish}>
         <Text style={styles.nextLevelText}>Siguiente nivel →</Text>
       </TouchableOpacity>
@@ -917,7 +936,7 @@ export default function GameLevel1({ navigation: propsNavigation, setAllowBack }
           <Text style={styles.resultBannerText}>{stepResult.ok ? '✅ ' : '❌ '}{stepResult.msg}</Text>
         </View>
       )}
-      {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} />}
+      {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} bgColor="#fef9c3" textColor="#92400e" />}
       <View style={styles.footerRow}>
         {showBackButton && (
           <TouchableOpacity style={styles.backButton} onPress={goToPrevStep}>
@@ -939,13 +958,13 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   progressBar: { flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
   closeBtn: { padding: 4 },
-  progressTrack: { flex: 1, height: 6, backgroundColor: colors.borderLight, borderRadius: 3, marginHorizontal: 12 },
-  progressFill: { height: '100%', backgroundColor: colors.success, borderRadius: 3 },
+  progressTrack: { flex: 1, height: 8, backgroundColor: colors.borderLight, borderRadius: 4, marginHorizontal: 12 },
+  progressFill: { height: '100%', backgroundColor: '#6366f1', borderRadius: 4 },
   xpText: { ...typography.bold, fontSize: 14, color: colors.accentDark },
   scrollView: { flex: 1 },
   scrollContent: { padding: 16, paddingBottom: 40 },
   stepContainer: { flex: 1 },
-  tag: { fontSize: 11, fontWeight: '600', color: colors.primary, backgroundColor: '#eef2ff', alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, marginBottom: 12 },
+  tag: { fontSize: 11, fontWeight: '600', color: '#4338ca', backgroundColor: '#e0e7ff', alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, marginBottom: 12 },
   iconContainer: { width: 60, height: 60, borderRadius: 18, backgroundColor: '#eef2ff', justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
   iconEmoji: { fontSize: 30 },
   title: { ...typography.extraBold, fontSize: 19, color: colors.textPrimary, marginBottom: 6 },
@@ -1034,13 +1053,20 @@ const styles = StyleSheet.create({
   textArea: { borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 12, ...typography.regular, fontSize: 13, color: colors.textPrimary, textAlignVertical: 'top', minHeight: 100, backgroundColor: '#fafafa' },
   charCount: { ...typography.regular, fontSize: 11, color: colors.textSecondary, textAlign: 'right', marginTop: 4 },
   completeContainer: { alignItems: 'center', padding: 20 },
-  completeBadgeText: { fontSize: 44, marginBottom: 14 },
+  completeBadgeCircle: { width: 86, height: 86, borderRadius: 43, backgroundColor: '#e0e7ff', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
+  completeBadgeText: { fontSize: 44 },
   completeTitle: { ...typography.extraBold, fontSize: 21, color: colors.textPrimary, marginBottom: 6 },
   completeSub: { ...typography.regular, fontSize: 12, color: colors.textSecondary, textAlign: 'center', lineHeight: 20, marginBottom: 16 },
   xpEarnedText: { ...typography.bold, fontSize: 15, color: colors.accentDark, marginBottom: 14 },
-  nextLevelButton: { backgroundColor: colors.primary, padding: 14, borderRadius: 11, width: '100%', alignItems: 'center' },
+  nextLevelButton: { backgroundColor: '#6366f1', padding: 14, borderRadius: 11, width: '100%', alignItems: 'center' },
   nextLevelText: { ...typography.bold, color: '#fff' },
-  nextButton: { backgroundColor: colors.success, padding: 14, margin: 16, borderRadius: 11, alignItems: 'center' },
+  skillList: { backgroundColor: '#f0fdf4', borderRadius: 12, padding: 13, marginBottom: 14, borderWidth: 1, borderColor: '#a7f3d0', width: '100%' },
+  skillRow: { flexDirection: 'row' as const, alignItems: 'flex-start' as const, gap: 8, marginBottom: 6 },
+  skillCheck: { color: colors.success, fontWeight: '700' as const },
+  skillText: { ...typography.regular, fontSize: 12, color: colors.textPrimary, flex: 1, lineHeight: 18 },
+  nextHint: { backgroundColor: '#f8fafc', borderRadius: 10, padding: 11, borderWidth: 1, borderColor: colors.border, width: '100%', marginBottom: 12 },
+  nextHintText: { ...typography.regular, fontSize: 12, color: colors.textSecondary, lineHeight: 18 },
+  nextButton: { backgroundColor: '#6366f1', padding: 14, margin: 16, borderRadius: 11, alignItems: 'center' },
   nextButtonText: { ...typography.bold, color: '#fff', fontSize: 15 },
   footerRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 16, gap: 8 },
   backButton: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, padding: 14, borderRadius: 11, alignItems: 'center', paddingHorizontal: 20 },

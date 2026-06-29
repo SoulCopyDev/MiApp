@@ -1017,6 +1017,24 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
             <Text style={styles.completeTitle}>¡Nivel 6 completado!</Text>
             <Text style={styles.completeSub}>Tu primera misión real está cumplida. Ya sabes construir proyectos con IA.</Text>
             <Text style={styles.xpEarned}>⭐ {xp} XP ganados</Text>
+            <View style={styles.skillList}>
+              {[
+                'Sé evaluar si una idea de proyecto con IA es viable',
+                'Conozco el método de 5 pasos para diseñar un proyecto con IA',
+                'Puedo crear prompts base usando el formato RPFCR',
+                'Sé iterar y mejorar prompts hasta obtener el resultado esperado',
+                'Sé documentar un proyecto con IA en un README básico',
+                'Aplico el filtro ético antes de lanzar cualquier proyecto',
+              ].map((skill, i) => (
+                <View key={i} style={styles.skillRow}>
+                  <Text style={styles.skillCheck}>✓</Text>
+                  <Text style={styles.skillText}>{skill}</Text>
+                </View>
+              ))}
+            </View>
+            <View style={styles.nextHint}>
+              <Text style={styles.nextHintText}>🎯 Mundo 2: Domina el Prompting (N7–N12){'\n\n'}Vas a dominar el arte de comunicarte con la IA como un profesional. Aprenderás técnicas avanzadas de prompting, cadenas de pensamiento, y cómo construir flujos de trabajo con IA para cualquier tarea.</Text>
+            </View>
             <TouchableOpacity style={styles.primaryBtn} onPress={handleFinish}>
               <Text style={styles.primaryBtnText}>Volver al mapa</Text>
             </TouchableOpacity>
@@ -1055,7 +1073,7 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
           <Text style={styles.resultBannerText}>{stepResult.ok ? '✅ ' : '❌ '}{stepResult.msg}</Text>
         </View>
       )}
-      {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} />}
+      {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} bgColor="#fef3c7" textColor="#92400e" />}
 
       {showNextButton && (
         <View style={[styles.footer, styles.footerRow]}>
@@ -1078,8 +1096,8 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   progressBar: { flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
   closeBtn: { padding: 4 },
-  progressTrack: { flex: 1, height: 6, backgroundColor: colors.borderLight, borderRadius: 3, marginHorizontal: 10 },
-  progressFill: { height: '100%', backgroundColor: colors.success, borderRadius: 3 },
+  progressTrack: { flex: 1, height: 8, backgroundColor: colors.borderLight, borderRadius: 4, marginHorizontal: 10 },
+  progressFill: { height: '100%', backgroundColor: '#d97706', borderRadius: 4 },
   xpCounter: { ...typography.bold, fontSize: 14, color: colors.accentDark },
   body: { flex: 1 },
   bodyContent: { padding: 16, paddingBottom: 30 },
@@ -1101,8 +1119,14 @@ const styles = StyleSheet.create({
   tfFalse: { backgroundColor: '#fff1f2', borderColor: '#ef4444' },
   feedbackGood: { color: '#065f46', fontSize: 12, marginTop: 4 },
   feedbackBad: { color: '#991b1b', fontSize: 12, marginTop: 4 },
-  primaryBtn: { backgroundColor: colors.success, padding: 14, borderRadius: 12, alignItems: 'center', marginTop: 16 },
+  primaryBtn: { backgroundColor: '#d97706', padding: 14, borderRadius: 12, alignItems: 'center', marginTop: 16 },
   primaryBtnText: { ...typography.bold, color: '#fff', fontSize: 15 },
+  skillList: { backgroundColor: '#f0fdf4', borderRadius: 12, padding: 13, marginBottom: 14, borderWidth: 1, borderColor: '#a7f3d0', width: '100%' },
+  skillRow: { flexDirection: 'row' as const, alignItems: 'flex-start' as const, gap: 8, marginBottom: 6 },
+  skillCheck: { color: colors.success, fontWeight: '700' as const },
+  skillText: { ...typography.regular, fontSize: 12, color: colors.textPrimary, flex: 1, lineHeight: 18 },
+  nextHint: { backgroundColor: '#f8fafc', borderRadius: 10, padding: 11, borderWidth: 1, borderColor: colors.border, width: '100%', marginBottom: 12 },
+  nextHintText: { ...typography.regular, fontSize: 12, color: colors.textSecondary, lineHeight: 18 },
   btnDisabled: { opacity: 0.4 },
   chipArea: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, padding: 10, backgroundColor: '#f8fafc', borderRadius: 12, borderWidth: 1, borderColor: '#e2e8f0', marginBottom: 12 },
   chip: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20, borderWidth: 1, borderColor: '#cbd5e1', backgroundColor: '#fff' },
@@ -1148,7 +1172,7 @@ const styles = StyleSheet.create({
   timer: { fontSize: 36, fontWeight: '800', textAlign: 'center', color: '#d97706', marginBottom: 10 },
   charCount: { fontSize: 11, color: '#94a3b8', textAlign: 'right', marginTop: 4 },
   completeContainer: { alignItems: 'center', paddingVertical: 30 },
-  completeBadgeCircle: { width: 86, height: 86, borderRadius: 24, backgroundColor: '#fde68a', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
+  completeBadgeCircle: { width: 86, height: 86, borderRadius: 43, backgroundColor: '#fde68a', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
   completeBadgeIcon: { fontSize: 44 },
   completeTitle: { ...typography.extraBold, fontSize: 22, marginBottom: 8 },
   completeSub: { ...typography.regular, fontSize: 14, color: colors.textSecondary, textAlign: 'center', marginBottom: 16, paddingHorizontal: 10 },
@@ -1158,7 +1182,7 @@ const styles = StyleSheet.create({
   resultBannerErr: { backgroundColor: '#fee2e2', borderColor: colors.error },
   resultBannerText: { ...typography.bold, fontSize: 13, color: colors.textPrimary, lineHeight: 20 },
   footer: { paddingHorizontal: 16, paddingBottom: 16 },
-  nextBtn: { backgroundColor: colors.success, padding: 14, borderRadius: 12, alignItems: 'center' },
+  nextBtn: { backgroundColor: '#d97706', padding: 14, borderRadius: 12, alignItems: 'center' },
   nextBtnText: { ...typography.bold, color: '#fff', fontSize: 15 },
   footerRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingBottom: 16 },
   backButton: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, padding: 14, borderRadius: 12, alignItems: 'center', paddingHorizontal: 20 },
