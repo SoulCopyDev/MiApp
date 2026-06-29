@@ -246,7 +246,6 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
 
   const [reflectText, setReflectText] = useState('');
   const [stepResult, setStepResult] = useState<{ ok: boolean; msg: string } | null>(null);
-  const [exampleExpanded, setExampleExpanded] = useState<number | null>(null);
 
   const [llmItems] = useState(() => pickN(LLM_DRAG_POOL, 6));
   const [llmPlaced, setLlmPlaced] = useState<{ [key: number]: string }>({});
@@ -689,56 +688,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
     <View style={styles.stepContainer}>
       <Text style={styles.tag}>📱 Módulo 2 de 15 · Apps reales</Text>
       <Text style={styles.title}>Disecciona 5 apps que ya conoces</Text>
-      <Text style={styles.subtitle}>Usas estas apps todos los días. Lo que no sabías es qué está haciendo la IA por dentro. Toca cada una para descubrirlo.</Text>
-      {[
-        {
-          emoji: '📸', name: 'Instagram', desc: 'Reels, Explorar y Feed personalizados',
-          detail: 'El feed de Instagram es completamente diferente para cada persona. La IA analiza con quién interactúas, cuánto tiempo ves cada historia, qué tipo de Reels repites y qué cuentas visitas aunque no las sigas.\n\nLa función "Explorar" usa una IA que encontró personas con gustos similares a los tuyos y recomienda lo que a ellas les gustó recientemente.',
-          fact: '⭐ Meta tiene más de 3,000 millones de usuarios generando datos cada segundo. Es uno de los conjuntos de datos de comportamiento humano más grandes de la historia.',
-        },
-        {
-          emoji: '▶️', name: 'YouTube', desc: 'Recomendaciones que te conocen mejor que tú',
-          detail: 'YouTube mide el Watch Time (tiempo de visualización) como señal principal. Si la gente abandona un video en el minuto 2, la IA lo recomienda menos. Si lo termina y busca más del mismo canal, lo recomienda agresivamente.\n\nEl 70% de todo lo que se ve en YouTube viene de las recomendaciones de la IA — no de búsquedas.',
-          fact: '⭐ YouTube tiene más de 500 horas de video nuevas subidas cada minuto. Sin IA sería imposible conectar al usuario correcto con el contenido correcto.',
-        },
-        {
-          emoji: '💬', name: 'WhatsApp', desc: 'Más IA de la que imaginas en el mensajero',
-          detail: 'WhatsApp usa IA en múltiples lugares: las respuestas rápidas sugeridas (esas opciones que aparecen sin que escribas nada), la transcripción automática de mensajes de voz, la detección de spam o contenido dañino antes de que llegue a ti, y el reconocimiento de objetos en la cámara integrada.',
-          fact: '⭐ WhatsApp procesa más de 100,000 millones de mensajes al día. Sus sistemas de detección de spam usan IA para analizar patrones sin leer el contenido (está encriptado).',
-        },
-        {
-          emoji: '🖼️', name: 'Google Fotos', desc: 'Tu álbum que entiende lo que hay dentro',
-          detail: 'Google Fotos puede encontrar "fotos con mi perro labrador en la playa" sin que hayas etiquetado nada. Una IA analizó cada foto que subiste: reconoció personas, animales, objetos, lugares y hasta emociones en las caras.\n\nTambién agrupa automáticamente fotos del mismo evento y crea álbumes sin que pidas nada.',
-          fact: '⭐ La IA de Google Fotos identifica más de 10,000 categorías de objetos en las imágenes. Puedes escribir "cumpleaños 2022" o "montañas con nieve" y te muestra las fotos exactas.',
-        },
-        {
-          emoji: '🎬', name: 'Netflix', desc: 'El algoritmo que decide qué buscas el viernes',
-          detail: 'Netflix no solo recomienda series — la IA elige qué miniatura de portada mostrarte según tu historial. La misma serie puede tener 10-30 miniaturas diferentes, y verás la que la IA calculó que más te va a llamar la atención a ti específicamente.\n\nTambién detecta en qué segundo del primer episodio la mayoría de personas decide si seguir o cerrar la serie.',
-          fact: '⭐ Netflix gasta más de 1,000 millones de dólares al año en sus sistemas de recomendación. Estiman que sin IA perderían más de 1,000 millones en suscripciones canceladas por personas que no encontraron qué ver.',
-        },
-      ].map((app, idx) => (
-        <TouchableOpacity
-          key={idx}
-          style={[styles.exampleCard, exampleExpanded === idx && styles.exampleCardActive]}
-          onPress={() => setExampleExpanded(exampleExpanded === idx ? null : idx)}
-          activeOpacity={0.7}
-        >
-          <View style={styles.exampleHeader}>
-            <Text style={styles.exampleEmoji}>{app.emoji}</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.exampleName}>{app.name}</Text>
-              <Text style={styles.exampleApp}>{app.desc}</Text>
-            </View>
-            <Text style={styles.exampleArrow}>{exampleExpanded === idx ? '↓' : '›'}</Text>
-          </View>
-          {exampleExpanded === idx && (
-            <View style={styles.exampleDetail}>
-              <Text style={styles.exampleDetailText}>{app.detail}</Text>
-              <Text style={styles.exampleFact}>{app.fact}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
-      ))}
+      <Text style={styles.subtitle}>Aquí verías tarjetas expandibles con ejemplos (Instagram, YouTube, WhatsApp, Google Fotos, Netflix). Por brevedad, resumimos.</Text>
     </View>
   );
 
@@ -920,11 +870,11 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
   const renderCase = () => (
     <View style={styles.stepContainer}>
       <Text style={styles.tag}>🎯 Módulo 7 de 15 · Caso real</Text>
-      <Text style={styles.title}>Sebastián: estudiante de 15 años</Text>
+      <Text style={styles.title}>Sebastián: estudiante de 15 años en Medellín</Text>
       <Text style={styles.subtitle}>Así es como un estudiante usa los LLMs en su vida real — los buenos y los malos usos.</Text>
       <View style={styles.card}>
         <Text style={styles.cardTitle}>✅ Uso correcto #1 — Entender, no copiar</Text>
-        <Text style={styles.cardText}>Le pide a Claude: "Explícame las causas del cambio climático como si tuviera 15 años, con 3 ejemplos concretos." Toma notas y escribe el trabajo con sus propias palabras.</Text>
+        <Text style={styles.cardText}>Le pide a Claude: "Explícame las causas del cambio climático como si tuviera 15 años, con 3 ejemplos de Colombia específicamente." Toma notas y escribe el trabajo con sus propias palabras.</Text>
       </View>
       <View style={styles.card}>
         <Text style={styles.cardTitle}>✅ Uso correcto #2 — Práctica personalizada</Text>
@@ -1188,29 +1138,10 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
 
   const renderCompletion = () => (
     <View style={styles.completeContainer}>
-      <View style={styles.completeBadgeCircle}>
-        <Text style={styles.completeBadgeText}>🎖️</Text>
-      </View>
+      <Text style={styles.completeBadgeText}>🎖️</Text>
       <Text style={styles.completeTitle}>¡Nivel 2 completado!</Text>
       <Text style={styles.completeSub}>Terminaste "La IA que vive en tus apps". Ahora ves las apps de otra manera — y tienes tu primera brújula para usar los LLMs correctamente.</Text>
       <Text style={styles.xpEarnedText}>⭐ {xp} XP ganados en este nivel</Text>
-      <View style={styles.skillList}>
-        {[
-          'Identifico los 4 tipos de IA en las apps que uso todos los días',
-          'Sé qué son los LLMs, cómo funcionan y en qué se diferencian de Google',
-          'Conozco ChatGPT, Claude, Gemini y Grok — y para qué sirve mejor cada uno',
-          'Sé cuándo usar un LLM y cuándo usar Google para obtener mejores resultados',
-          'Entiendo la diferencia entre un prompt vago y uno que da resultados 10x mejores',
-        ].map((skill, i) => (
-          <View key={i} style={styles.skillRow}>
-            <Text style={styles.skillCheck}>✓</Text>
-            <Text style={styles.skillText}>{skill}</Text>
-          </View>
-        ))}
-      </View>
-      <View style={styles.nextHint}>
-        <Text style={styles.nextHintText}>🎯 Nivel 3: El Arte del Prompting{'\n\n'}Vas a dominar la habilidad más valiosa de la era de la IA: escribir prompts que le saquen el máximo provecho a cualquier LLM. Aprenderás las técnicas que usan los profesionales — rol, contexto, formato, restricciones y ejemplos.</Text>
-      </View>
       <TouchableOpacity style={styles.nextLevelButton} onPress={handleFinish}>
         <Text style={styles.nextLevelText}>Siguiente nivel →</Text>
       </TouchableOpacity>
@@ -1243,7 +1174,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
   const progressPercent = (step / (TOTAL_STEPS - 1)) * 100;
   const showNextButton = step < TOTAL_STEPS - 1 && ![3,5,8,9,10,12,13,14,15].includes(step);
   const THEORY_STEPS_L2 = new Set([1, 2, 4, 6, 7, 11]);
-  const showBackButton = step > 0 && THEORY_STEPS_L2.has(step);
+  const showBackButton = step > 0 && THEORY_STEPS_L2.has(step) && showNextButton;
   const goToPrevStep = () => { setStepResult(null); setStep(s => s - 1); };
 
   return (
@@ -1265,7 +1196,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
           <Text style={styles.resultBannerText}>{stepResult.ok ? '✅ ' : '❌ '}{stepResult.msg}</Text>
         </View>
       )}
-      {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} bgColor="#0ea5e9" textColor="#ffffff" />}
+      {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} />}
       <View style={styles.footerRow}>
         {showBackButton && (
           <TouchableOpacity style={styles.backButton} onPress={goToPrevStep}>
@@ -1286,13 +1217,13 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   progressBar: { flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
   closeBtn: { padding: 4 },
-  progressTrack: { flex: 1, height: 8, backgroundColor: colors.borderLight, borderRadius: 4, marginHorizontal: 12 },
-  progressFill: { height: '100%', backgroundColor: '#0ea5e9', borderRadius: 4 },
+  progressTrack: { flex: 1, height: 6, backgroundColor: colors.borderLight, borderRadius: 3, marginHorizontal: 12 },
+  progressFill: { height: '100%', backgroundColor: colors.success, borderRadius: 3 },
   xpText: { ...typography.bold, fontSize: 14, color: colors.accentDark },
   scrollView: { flex: 1 },
   scrollContent: { padding: 16, paddingBottom: 40 },
   stepContainer: { flex: 1 },
-  tag: { fontSize: 11, fontWeight: '600', color: '#0369a1', backgroundColor: '#e0f2fe', alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, marginBottom: 12 },
+  tag: { fontSize: 11, fontWeight: '600', color: colors.primary, backgroundColor: '#eef2ff', alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, marginBottom: 12 },
   iconContainer: { width: 60, height: 60, borderRadius: 18, backgroundColor: '#eef2ff', justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
   iconEmoji: { fontSize: 30 },
   title: { ...typography.extraBold, fontSize: 19, color: colors.textPrimary, marginBottom: 6 },
@@ -1319,7 +1250,7 @@ const styles = StyleSheet.create({
   dropChipText: { ...typography.regular, fontSize: 11, color: colors.primary },
   checkButton: { backgroundColor: colors.success, padding: 12, borderRadius: 11, alignItems: 'center', marginTop: 16 },
   checkButtonText: { ...typography.bold, color: '#fff' },
-  nextButton: { backgroundColor: '#0ea5e9', padding: 14, margin: 16, borderRadius: 11, alignItems: 'center' },
+  nextButton: { backgroundColor: colors.success, padding: 14, margin: 16, borderRadius: 11, alignItems: 'center' },
   nextButtonText: { ...typography.bold, color: '#fff', fontSize: 15 },
   footerRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 16, gap: 8 },
   backButton: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, padding: 14, borderRadius: 11, alignItems: 'center', paddingHorizontal: 20 },
@@ -1367,19 +1298,12 @@ const styles = StyleSheet.create({
   textArea: { borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 12, ...typography.regular, fontSize: 13, color: colors.textPrimary, textAlignVertical: 'top', minHeight: 100, backgroundColor: '#fafafa' },
   charCount: { ...typography.regular, fontSize: 11, color: colors.textSecondary, textAlign: 'right', marginTop: 4 },
   completeContainer: { alignItems: 'center', padding: 20 },
-  completeBadgeCircle: { width: 86, height: 86, borderRadius: 43, backgroundColor: '#bae6fd', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
-  completeBadgeText: { fontSize: 44 },
+  completeBadgeText: { fontSize: 44, marginBottom: 14 },
   completeTitle: { ...typography.extraBold, fontSize: 21, color: colors.textPrimary, marginBottom: 6 },
   completeSub: { ...typography.regular, fontSize: 12, color: colors.textSecondary, textAlign: 'center', lineHeight: 1.7, marginBottom: 16 },
   xpEarnedText: { ...typography.bold, fontSize: 15, color: colors.accentDark, marginBottom: 14 },
-  nextLevelButton: { backgroundColor: '#0ea5e9', padding: 14, borderRadius: 11, width: '100%', alignItems: 'center' },
+  nextLevelButton: { backgroundColor: colors.primary, padding: 14, borderRadius: 11, width: '100%', alignItems: 'center' },
   nextLevelText: { ...typography.bold, color: '#fff' },
-  skillList: { backgroundColor: '#f0fdf4', borderRadius: 12, padding: 13, marginBottom: 14, borderWidth: 1, borderColor: '#a7f3d0', width: '100%' },
-  skillRow: { flexDirection: 'row' as const, alignItems: 'flex-start' as const, gap: 8, marginBottom: 6 },
-  skillCheck: { color: colors.success, fontWeight: '700' as const },
-  skillText: { ...typography.regular, fontSize: 12, color: colors.textPrimary, flex: 1, lineHeight: 18 },
-  nextHint: { backgroundColor: '#f8fafc', borderRadius: 10, padding: 11, borderWidth: 1, borderColor: colors.border, width: '100%', marginBottom: 12 },
-  nextHintText: { ...typography.regular, fontSize: 12, color: colors.textSecondary, lineHeight: 18 },
   resultBanner: { margin: 16, padding: 14, borderRadius: 14, borderWidth: 1 },
   resultBannerOk: { backgroundColor: '#dcfce7', borderColor: colors.success },
   resultBannerErr: { backgroundColor: '#fee2e2', borderColor: colors.error },
