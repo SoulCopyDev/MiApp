@@ -240,6 +240,77 @@ export default function GameLevel1({ navigation: propsNavigation, setAllowBack }
     }
   }, [step, matchPairs]);
 
+  // Mirror dragPlaced to a ref so drag handlers always see the latest value
+  const dragPlacedRef = useRef(dragPlaced);
+  useEffect(() => { dragPlacedRef.current = dragPlaced; }, [dragPlaced]);
+
+  // Web-only: attach HTML5 drag & drop listeners directly to DOM nodes (guaranteed to work in RN Web)
+  useEffect(() => {
+    if (Platform.OS !== 'web' || step !== 4) return;
+    const cleanups: (() => void)[] = [];
+
+    const setup = () => {
+      dragItems.forEach((_, idx) => {
+        if (dragPlacedRef.current[idx] !== undefined) return;
+        const el = document.getElementById(`drag-chip-${idx}`);
+        if (!el) return;
+        el.setAttribute('draggable', 'true');
+        (el as HTMLElement).style.cursor = 'grab';
+        const onDragStart = (e: DragEvent) => {
+          dragIdxRef.current = idx;
+          setDragSel(null);
+          if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
+        };
+        const onDragEnd = () => { dragIdxRef.current = null; setDragOverZone(null); };
+        el.addEventListener('dragstart', onDragStart);
+        el.addEventListener('dragend', onDragEnd);
+        cleanups.push(() => {
+          el.removeEventListener('dragstart', onDragStart);
+          el.removeEventListener('dragend', onDragEnd);
+        });
+      });
+
+      (['ai', 'human'] as const).forEach(zone => {
+        const el = document.getElementById(`drop-zone-${zone}`);
+        if (!el) return;
+        const onDragOver = (e: Event) => { e.preventDefault(); setDragOverZone(zone); };
+        const onDragLeave = (e: DragEvent) => {
+          if (!el.contains(e.relatedTarget as Node)) setDragOverZone(null);
+        };
+        const onDrop = (e: Event) => {
+          e.preventDefault();
+          setDragOverZone(null);
+          const idx = dragIdxRef.current;
+          if (idx === null || dragPlacedRef.current[idx] !== undefined) return;
+          const it = dragItems[idx];
+          if (it.correct === zone) {
+            setDragPlaced(prev => ({ ...prev, [idx]: zone }));
+            setStepResult(null);
+          } else {
+            showResult(false, `"${it.text}" no pertenece a esta categoría.`);
+          }
+          dragIdxRef.current = null;
+        };
+        el.addEventListener('dragover', onDragOver);
+        el.addEventListener('dragleave', onDragLeave);
+        el.addEventListener('drop', onDrop);
+        cleanups.push(() => {
+          el.removeEventListener('dragover', onDragOver);
+          el.removeEventListener('dragleave', onDragLeave);
+          el.removeEventListener('drop', onDrop);
+        });
+      });
+    };
+
+    // Small delay to ensure React has finished rendering DOM nodes
+    const timer = setTimeout(setup, 50);
+    return () => {
+      clearTimeout(timer);
+      cleanups.forEach(fn => fn());
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, dragItems, dragPlaced]);
+
   const [xpToast, setXpToast] = useState<{ amount: number; id: number } | null>(null);
   const addXP = (amount: number) => {
     setXp(prev => prev + amount);
@@ -677,119 +748,84 @@ export default function GameLevel1({ navigation: propsNavigation, setAllowBack }
     </View>
   );
 
-  const renderDragDrop = () => {
-    const makeChipDragProps = (idx: number) =>
-      Platform.OS === 'web'
-        ? ({
-            draggable: true,
-            onDragStart: (_e: any) => { dragIdxRef.current = idx; setDragSel(null); },
-            onDragEnd: () => { dragIdxRef.current = null; setDragOverZone(null); },
-          } as any)
-        : {};
-
-    const makeZoneDropProps = (zone: string) =>
-      Platform.OS === 'web'
-        ? ({
-            onDragOver: (e: any) => { e.preventDefault(); setDragOverZone(zone); },
-            onDragLeave: (e: any) => {
-              if (!e.currentTarget.contains(e.relatedTarget)) setDragOverZone(null);
-            },
-            onDrop: (e: any) => {
-              e.preventDefault();
-              setDragOverZone(null);
-              const idx = dragIdxRef.current;
-              if (idx === null || dragPlaced[idx] !== undefined) return;
-              const it = dragItems[idx];
-              if (it.correct === zone) {
-                setDragPlaced(prev => ({ ...prev, [idx]: zone }));
-                setStepResult(null);
-              } else {
-                showResult(false, `"${it.text}" no pertenece a esta categoría.`);
-              }
-              dragIdxRef.current = null;
-            },
-          } as any)
-        : {};
-
-    return (
-      <View style={styles.stepContainer}>
-        <Text style={[styles.tag, styles.tagActivity]}>🧩 Módulo 4 de 10 · Clasificar</Text>
-        <Text style={styles.title}>¿Quién lo hace mejor?</Text>
-        <Text style={styles.subtitle}>Clasifica cada habilidad: ¿la hace mejor la IA o el humano? Arrastra o toca un chip y luego toca la columna.</Text>
-        <View style={styles.chipsPool}>
-          {dragItems.map((item, idx) => {
-            if (dragPlaced[idx] !== undefined) return null;
-            return (
-              <TouchableOpacity
-                key={idx}
-                style={[styles.chip, dragSel === idx && styles.chipSelected]}
-                onPress={() => handleChipPress(idx)}
-                {...makeChipDragProps(idx)}
-              >
-                <Text style={styles.chipText}>{item.text}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-        <View style={styles.dropCols}>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.dropHeader, { backgroundColor: '#dbeafe', color: '#1e40af' }]}>🤖 IA</Text>
+  const renderDragDrop = () => (
+    <View style={styles.stepContainer}>
+      <Text style={[styles.tag, styles.tagActivity]}>🧩 Módulo 4 de 10 · Clasificar</Text>
+      <Text style={styles.title}>¿Quién lo hace mejor?</Text>
+      <Text style={styles.subtitle}>Clasifica cada habilidad: ¿la hace mejor la IA o el humano? Arrastra o toca un chip y luego toca la columna.</Text>
+      <View style={styles.chipsPool}>
+        {dragItems.map((item, idx) => {
+          if (dragPlaced[idx] !== undefined) return null;
+          return (
             <TouchableOpacity
-              style={[styles.dropCol, styles.dropAI, dragOverZone === 'ai' && styles.dropColDragOver]}
-              onPress={() => handleDropZone('ai')}
-              {...makeZoneDropProps('ai')}
+              key={idx}
+              nativeID={`drag-chip-${idx}`}
+              style={[styles.chip, dragSel === idx && styles.chipSelected]}
+              onPress={() => handleChipPress(idx)}
             >
-              <View style={styles.dropChips}>
-                {Object.entries(dragPlaced).map(([idxStr, zone]) => {
-                  if (zone !== 'ai') return null;
-                  const i = parseInt(idxStr);
-                  return (
-                    <TouchableOpacity key={i} style={styles.dropChipAI} onPress={() => handleRemoveChip(i)}>
-                      <Text style={styles.dropChipTextAI}>{dragItems[i].text} ✕</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
+              <Text style={styles.chipText}>{item.text}</Text>
             </TouchableOpacity>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.dropHeader, { backgroundColor: '#dcfce7', color: '#166534' }]}>🧠 Humano</Text>
-            <TouchableOpacity
-              style={[styles.dropCol, styles.dropHuman, dragOverZone === 'human' && styles.dropColDragOver]}
-              onPress={() => handleDropZone('human')}
-              {...makeZoneDropProps('human')}
-            >
-              <View style={styles.dropChips}>
-                {Object.entries(dragPlaced).map(([idxStr, zone]) => {
-                  if (zone !== 'human') return null;
-                  const i = parseInt(idxStr);
-                  return (
-                    <TouchableOpacity key={i} style={styles.dropChipHuman} onPress={() => handleRemoveChip(i)}>
-                      <Text style={styles.dropChipTextHuman}>{dragItems[i].text} ✕</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </TouchableOpacity>
-          </View>
-        </View>
-        {dragOk ? (
-          <TouchableOpacity style={styles.checkButton} onPress={goToNextStep}>
-            <Text style={styles.checkButtonText}>Continuar →</Text>
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity
-            style={[styles.checkButton, Object.keys(dragPlaced).length < dragItems.length && styles.checkButtonDisabled]}
-            onPress={checkDrag}
-            disabled={Object.keys(dragPlaced).length < dragItems.length}
-          >
-            <Text style={styles.checkButtonText}>Verificar clasificación</Text>
-          </TouchableOpacity>
-        )}
-        <Text style={styles.btnNote}>Toca un chip → toca la columna. O arrastralo directamente. 👇</Text>
+          );
+        })}
       </View>
-    );
-  };
+      <View style={styles.dropCols}>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.dropHeader, { backgroundColor: '#dbeafe', color: '#1e40af' }]}>🤖 IA</Text>
+          <TouchableOpacity
+            nativeID="drop-zone-ai"
+            style={[styles.dropCol, styles.dropAI, dragOverZone === 'ai' && styles.dropColDragOver]}
+            onPress={() => handleDropZone('ai')}
+          >
+            <View style={styles.dropChips}>
+              {Object.entries(dragPlaced).map(([idxStr, zone]) => {
+                if (zone !== 'ai') return null;
+                const i = parseInt(idxStr);
+                return (
+                  <TouchableOpacity key={i} style={styles.dropChipAI} onPress={() => handleRemoveChip(i)}>
+                    <Text style={styles.dropChipTextAI}>{dragItems[i].text} ✕</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </TouchableOpacity>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.dropHeader, { backgroundColor: '#dcfce7', color: '#166534' }]}>🧠 Humano</Text>
+          <TouchableOpacity
+            nativeID="drop-zone-human"
+            style={[styles.dropCol, styles.dropHuman, dragOverZone === 'human' && styles.dropColDragOver]}
+            onPress={() => handleDropZone('human')}
+          >
+            <View style={styles.dropChips}>
+              {Object.entries(dragPlaced).map(([idxStr, zone]) => {
+                if (zone !== 'human') return null;
+                const i = parseInt(idxStr);
+                return (
+                  <TouchableOpacity key={i} style={styles.dropChipHuman} onPress={() => handleRemoveChip(i)}>
+                    <Text style={styles.dropChipTextHuman}>{dragItems[i].text} ✕</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </TouchableOpacity>
+        </View>
+      </View>
+      {dragOk ? (
+        <TouchableOpacity style={styles.checkButton} onPress={goToNextStep}>
+          <Text style={styles.checkButtonText}>Continuar →</Text>
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity
+          style={[styles.checkButton, Object.keys(dragPlaced).length < dragItems.length && styles.checkButtonDisabled]}
+          onPress={checkDrag}
+          disabled={Object.keys(dragPlaced).length < dragItems.length}
+        >
+          <Text style={styles.checkButtonText}>Verificar clasificación</Text>
+        </TouchableOpacity>
+      )}
+      <Text style={styles.btnNote}>Toca un chip → toca la columna. O arrastralo directamente. 👇</Text>
+    </View>
+  );
 
   const renderMatching = () => (
     <View style={styles.stepContainer}>
