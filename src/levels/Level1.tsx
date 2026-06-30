@@ -135,11 +135,11 @@ const FILL_POOL: FillItem[] = [
 
 // Texto bold + rest para renderizar con formato
 const SORT_ITEMS = [
-  { bold: '1 · Recopilar datos:', rest: ' Juntar millones de ejemplos (fotos, textos, audios)' },
-  { bold: '2 · Etiquetar:', rest: ' Marcar cuáles son correctos ("esto SÍ es gato, esto NO")' },
-  { bold: '3 · Entrenar:', rest: ' El modelo ve cada ejemplo e intenta predecir el resultado' },
-  { bold: '4 · Corregir:', rest: ' Se le dice si acertó o falló, y ajusta sus números internos' },
-  { bold: '5 · Desplegar:', rest: ' Ya entrenado, puede responder bien a situaciones nuevas' },
+  { bold: 'Recopilar datos:', rest: ' Juntar millones de ejemplos (fotos, textos, audios)' },
+  { bold: 'Etiquetar:', rest: ' Marcar cuáles son correctos ("esto SÍ es gato, esto NO")' },
+  { bold: 'Entrenar:', rest: ' El modelo ve cada ejemplo e intenta predecir el resultado' },
+  { bold: 'Corregir:', rest: ' Se le dice si acertó o falló, y ajusta sus números internos' },
+  { bold: 'Desplegar:', rest: ' Ya entrenado, puede responder bien a situaciones nuevas' },
 ];
 
 const pickN = <T,>(arr: T[], n: number): T[] => {
