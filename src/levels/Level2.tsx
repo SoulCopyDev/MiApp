@@ -858,8 +858,8 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
           </TouchableOpacity>
         </View>
       </View>
-      <TouchableOpacity style={styles.checkButton} onPress={checkDrag3}>
-        <Text style={styles.checkButtonText}>Verificar clasificación</Text>
+      <TouchableOpacity style={[styles.checkButton, drag3Ok && { backgroundColor: '#0ea5e9' }]} onPress={drag3Ok ? goToNextStep : checkDrag3}>
+        <Text style={styles.checkButtonText}>{drag3Ok ? 'Continuar →' : 'Verificar clasificación'}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -949,6 +949,11 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
           ))}
         </View>
       </View>
+      {matchDone === matchPairs.length && (
+        <TouchableOpacity style={[styles.checkButton, { backgroundColor: '#0ea5e9', marginTop: 12 }]} onPress={goToNextStep}>
+          <Text style={styles.checkButtonText}>Continuar →</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 
@@ -1067,8 +1072,8 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
           )}
         </View>
       ))}
-      <TouchableOpacity style={styles.checkButton} onPress={checkQuiz}>
-        <Text style={styles.checkButtonText}>Comprobar respuestas</Text>
+      <TouchableOpacity style={[styles.checkButton, quizChecked && { backgroundColor: '#0ea5e9' }]} onPress={quizChecked ? goToNextStep : checkQuiz}>
+        <Text style={styles.checkButtonText}>{quizChecked ? 'Continuar →' : 'Comprobar respuestas'}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -1097,8 +1102,8 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
           </View>
         </View>
       ))}
-      <TouchableOpacity style={styles.checkButton} onPress={checkSort}>
-        <Text style={styles.checkButtonText}>Verificar orden</Text>
+      <TouchableOpacity style={[styles.checkButton, sortOk && { backgroundColor: '#0ea5e9' }]} onPress={sortOk ? goToNextStep : checkSort}>
+        <Text style={styles.checkButtonText}>{sortOk ? 'Continuar →' : 'Verificar orden'}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -1126,8 +1131,8 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
           )}
         </View>
       ))}
-      <TouchableOpacity style={styles.checkButton} onPress={checkTF}>
-        <Text style={styles.checkButtonText}>Comprobar</Text>
+      <TouchableOpacity style={[styles.checkButton, tfChecked && { backgroundColor: '#0ea5e9' }]} onPress={tfChecked ? goToNextStep : checkTF}>
+        <Text style={styles.checkButtonText}>{tfChecked ? 'Continuar →' : 'Comprobar'}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -1265,8 +1270,8 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
           ) : null)}
         </View>
       </TouchableOpacity>
-      <TouchableOpacity style={styles.checkButton} onPress={checkLLMDrag}>
-        <Text style={styles.checkButtonText}>Verificar asignación</Text>
+      <TouchableOpacity style={[styles.checkButton, llmOk && { backgroundColor: '#0ea5e9' }]} onPress={llmOk ? goToNextStep : checkLLMDrag}>
+        <Text style={styles.checkButtonText}>{llmOk ? 'Continuar →' : 'Verificar asignación'}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -1301,8 +1306,8 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
             </TouchableOpacity>
           ))}
         </View>
-        <TouchableOpacity style={styles.checkButton} onPress={checkFill}>
-          <Text style={styles.checkButtonText}>Verificar respuesta</Text>
+        <TouchableOpacity style={[styles.checkButton, fillChecked && { backgroundColor: '#0ea5e9' }]} onPress={fillChecked ? goToNextStep : checkFill}>
+          <Text style={styles.checkButtonText}>{fillChecked ? 'Continuar →' : 'Verificar respuesta'}</Text>
         </TouchableOpacity>
         <View style={[styles.highlightBox, { borderLeftColor: '#8b5cf6', backgroundColor: '#faf5ff', marginTop: 14 }]}>
           <Text style={[styles.highlightText, { color: '#5b21b6' }]}>
@@ -1355,6 +1360,9 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
       <View style={styles.highlightBoxBlue}>
         <Text style={styles.highlightTextBlue}><Text style={styles.bold}>💡 Lo que vas a aprender en el Nivel 3:</Text> El arte del prompting completo — cómo darle rol, contexto, formato y restricciones a un LLM para obtener exactamente lo que necesitas.</Text>
       </View>
+      <TouchableOpacity style={[styles.checkButton, promptsChecked && { backgroundColor: '#0ea5e9' }]} onPress={promptsChecked ? goToNextStep : checkPrompts}>
+        <Text style={styles.checkButtonText}>{promptsChecked ? 'Continuar →' : 'Comprobar elecciones'}</Text>
+      </TouchableOpacity>
     </View>
   );
 
@@ -1386,7 +1394,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
         <Text style={styles.highlightTextGreen}>✅ <Text style={styles.bold}>Esta reflexión queda en tu portafolio IA Explorer.</Text> La habilidad de saber qué herramienta usar para qué tarea es lo que separa a los usuarios avanzados de IA de los principiantes.</Text>
       </View>
       <TouchableOpacity style={styles.checkButton} onPress={checkReflect}>
-        <Text style={styles.checkButtonText}>Enviar reflexión</Text>
+        <Text style={styles.checkButtonText}>Enviar reflexión →</Text>
       </TouchableOpacity>
     </View>
   );
@@ -1449,6 +1457,13 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
 
   const progressPercent = (step / (TOTAL_STEPS - 1)) * 100;
   const showNextButton = step < TOTAL_STEPS - 1 && ![3, 5, 8, 9, 10, 12, 13, 14, 15].includes(step);
+  const getNextLabel = (s: number): string => {
+    if (s === 0) return '¡Empecemos! 🚀';
+    if ([1, 4, 11].includes(s)) return 'Entendido →';
+    if (s === 2) return '¡Las vi todas! →';
+    if (s === 6) return 'Entendido, sigamos →';
+    return 'Continuar →';
+  };
   const THEORY_STEPS_L2 = new Set([1, 2, 4, 6, 7, 11]);
   const showBackButton = step > 0 && THEORY_STEPS_L2.has(step) && showNextButton;
   const goToPrevStep = () => { setStepResult(null); setStep(s => s - 1); };
@@ -1488,7 +1503,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
         )}
         {showNextButton && (
           <TouchableOpacity style={[styles.nextButton, showBackButton && styles.nextButtonFlex]} onPress={goToNextStep}>
-            <Text style={styles.nextButtonText}>Continuar →</Text>
+            <Text style={styles.nextButtonText}>{getNextLabel(step)}</Text>
           </TouchableOpacity>
         )}
       </View>
