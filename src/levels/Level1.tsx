@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -171,6 +171,8 @@ export default function GameLevel1({ navigation: propsNavigation, setAllowBack }
   const [dragSel, setDragSel] = useState<number | null>(null);
   const [dragAttempts, setDragAttempts] = useState(0);
   const [dragOk, setDragOk] = useState(false);
+  const dragIdxRef = useRef<number | null>(null);
+  const [dragOverZone, setDragOverZone] = useState<string | null>(null);
 
   const [matchLeft, setMatchLeft] = useState<number | null>(null);
   const [matchDone, setMatchDone] = useState(0);
@@ -616,6 +618,7 @@ export default function GameLevel1({ navigation: propsNavigation, setAllowBack }
     </View>
   );
 
+  
   const renderCase = () => (
     <View style={styles.stepContainer}>
       <Text style={[styles.tag, styles.tagCase]}>🏥 Módulo 3 de 10 · Caso real</Text>
@@ -674,71 +677,119 @@ export default function GameLevel1({ navigation: propsNavigation, setAllowBack }
     </View>
   );
 
-  const renderDragDrop = () => (
-    <View style={styles.stepContainer}>
-      <Text style={[styles.tag, styles.tagActivity]}>🧩 Módulo 4 de 10 · Clasificar</Text>
-      <Text style={styles.title}>¿Quién lo hace mejor?</Text>
-      <Text style={styles.subtitle}>Clasifica cada habilidad: ¿la hace mejor la IA o el humano? Arrastra o toca un chip y luego toca la columna.</Text>
-      <View style={styles.chipsPool}>
-        {dragItems.map((item, idx) => {
-          if (dragPlaced[idx] !== undefined) return null;
-          return (
-            <TouchableOpacity key={idx} style={[styles.chip, dragSel === idx && styles.chipSelected]} onPress={() => handleChipPress(idx)}>
-              <Text style={styles.chipText}>{item.text}</Text>
+  const renderDragDrop = () => {
+    const makeChipDragProps = (idx: number) =>
+      Platform.OS === 'web'
+        ? ({
+            draggable: true,
+            onDragStart: (_e: any) => { dragIdxRef.current = idx; setDragSel(null); },
+            onDragEnd: () => { dragIdxRef.current = null; setDragOverZone(null); },
+          } as any)
+        : {};
+
+    const makeZoneDropProps = (zone: string) =>
+      Platform.OS === 'web'
+        ? ({
+            onDragOver: (e: any) => { e.preventDefault(); setDragOverZone(zone); },
+            onDragLeave: (e: any) => {
+              if (!e.currentTarget.contains(e.relatedTarget)) setDragOverZone(null);
+            },
+            onDrop: (e: any) => {
+              e.preventDefault();
+              setDragOverZone(null);
+              const idx = dragIdxRef.current;
+              if (idx === null || dragPlaced[idx] !== undefined) return;
+              const it = dragItems[idx];
+              if (it.correct === zone) {
+                setDragPlaced(prev => ({ ...prev, [idx]: zone }));
+                setStepResult(null);
+              } else {
+                showResult(false, `"${it.text}" no pertenece a esta categoría.`);
+              }
+              dragIdxRef.current = null;
+            },
+          } as any)
+        : {};
+
+    return (
+      <View style={styles.stepContainer}>
+        <Text style={[styles.tag, styles.tagActivity]}>🧩 Módulo 4 de 10 · Clasificar</Text>
+        <Text style={styles.title}>¿Quién lo hace mejor?</Text>
+        <Text style={styles.subtitle}>Clasifica cada habilidad: ¿la hace mejor la IA o el humano? Arrastra o toca un chip y luego toca la columna.</Text>
+        <View style={styles.chipsPool}>
+          {dragItems.map((item, idx) => {
+            if (dragPlaced[idx] !== undefined) return null;
+            return (
+              <TouchableOpacity
+                key={idx}
+                style={[styles.chip, dragSel === idx && styles.chipSelected]}
+                onPress={() => handleChipPress(idx)}
+                {...makeChipDragProps(idx)}
+              >
+                <Text style={styles.chipText}>{item.text}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+        <View style={styles.dropCols}>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.dropHeader, { backgroundColor: '#dbeafe', color: '#1e40af' }]}>🤖 IA</Text>
+            <TouchableOpacity
+              style={[styles.dropCol, styles.dropAI, dragOverZone === 'ai' && styles.dropColDragOver]}
+              onPress={() => handleDropZone('ai')}
+              {...makeZoneDropProps('ai')}
+            >
+              <View style={styles.dropChips}>
+                {Object.entries(dragPlaced).map(([idxStr, zone]) => {
+                  if (zone !== 'ai') return null;
+                  const i = parseInt(idxStr);
+                  return (
+                    <TouchableOpacity key={i} style={styles.dropChipAI} onPress={() => handleRemoveChip(i)}>
+                      <Text style={styles.dropChipTextAI}>{dragItems[i].text} ✕</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
             </TouchableOpacity>
-          );
-        })}
-      </View>
-      <View style={styles.dropCols}>
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.dropHeader, { backgroundColor: '#dbeafe', color: '#1e40af' }]}>🤖 IA</Text>
-          <TouchableOpacity style={[styles.dropCol, styles.dropAI]} onPress={() => handleDropZone('ai')}>
-            <View style={styles.dropChips}>
-              {Object.entries(dragPlaced).map(([idx, zone]) => {
-                if (zone !== 'ai') return null;
-                const i = parseInt(idx);
-                return (
-                  <TouchableOpacity key={i} style={styles.dropChip} onPress={() => handleRemoveChip(i)}>
-                    <Text style={styles.dropChipText}>{dragItems[i].text} ✕</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </TouchableOpacity>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.dropHeader, { backgroundColor: '#dcfce7', color: '#166534' }]}>🧠 Humano</Text>
+            <TouchableOpacity
+              style={[styles.dropCol, styles.dropHuman, dragOverZone === 'human' && styles.dropColDragOver]}
+              onPress={() => handleDropZone('human')}
+              {...makeZoneDropProps('human')}
+            >
+              <View style={styles.dropChips}>
+                {Object.entries(dragPlaced).map(([idxStr, zone]) => {
+                  if (zone !== 'human') return null;
+                  const i = parseInt(idxStr);
+                  return (
+                    <TouchableOpacity key={i} style={styles.dropChipHuman} onPress={() => handleRemoveChip(i)}>
+                      <Text style={styles.dropChipTextHuman}>{dragItems[i].text} ✕</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </TouchableOpacity>
+          </View>
         </View>
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.dropHeader, { backgroundColor: '#dcfce7', color: '#166534' }]}>🧠 Humano</Text>
-          <TouchableOpacity style={[styles.dropCol, styles.dropHuman]} onPress={() => handleDropZone('human')}>
-            <View style={styles.dropChips}>
-              {Object.entries(dragPlaced).map(([idx, zone]) => {
-                if (zone !== 'human') return null;
-                const i = parseInt(idx);
-                return (
-                  <TouchableOpacity key={i} style={styles.dropChip} onPress={() => handleRemoveChip(i)}>
-                    <Text style={styles.dropChipText}>{dragItems[i].text} ✕</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+        {dragOk ? (
+          <TouchableOpacity style={styles.checkButton} onPress={goToNextStep}>
+            <Text style={styles.checkButtonText}>Continuar →</Text>
           </TouchableOpacity>
-        </View>
+        ) : (
+          <TouchableOpacity
+            style={[styles.checkButton, Object.keys(dragPlaced).length < dragItems.length && styles.checkButtonDisabled]}
+            onPress={checkDrag}
+            disabled={Object.keys(dragPlaced).length < dragItems.length}
+          >
+            <Text style={styles.checkButtonText}>Verificar clasificación</Text>
+          </TouchableOpacity>
+        )}
+        <Text style={styles.btnNote}>Toca un chip → toca la columna. O arrastralo directamente. 👇</Text>
       </View>
-      {dragOk ? (
-        <TouchableOpacity style={styles.checkButton} onPress={goToNextStep}>
-          <Text style={styles.checkButtonText}>Continuar →</Text>
-        </TouchableOpacity>
-      ) : (
-        <TouchableOpacity
-          style={[styles.checkButton, Object.keys(dragPlaced).length < dragItems.length && styles.checkButtonDisabled]}
-          onPress={checkDrag}
-          disabled={Object.keys(dragPlaced).length < dragItems.length}
-        >
-          <Text style={styles.checkButtonText}>Verificar clasificación</Text>
-        </TouchableOpacity>
-      )}
-      <Text style={styles.btnNote}>Toca un chip → toca la columna. O arrastralo directamente. 👇</Text>
-    </View>
-  );
+    );
+  };
 
   const renderMatching = () => (
     <View style={styles.stepContainer}>
@@ -1273,17 +1324,22 @@ const styles = StyleSheet.create({
 
   // Drag & Drop
   chipsPool: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, backgroundColor: '#f9fafb', padding: 10, borderRadius: 14, borderWidth: 1, borderColor: '#e5e7eb', minHeight: 54, marginBottom: 10 },
-  chip: { paddingHorizontal: 13, paddingVertical: 8, borderRadius: 20, backgroundColor: '#ffffff', borderWidth: 1.5, borderColor: '#d1d5db', minHeight: 44, justifyContent: 'center' },
+  chip: { paddingHorizontal: 13, paddingVertical: 8, borderRadius: 20, backgroundColor: '#ffffff', borderWidth: 1.5, borderColor: '#d1d5db', minHeight: 44, justifyContent: 'center', ...Platform.select({ web: { cursor: 'grab' as any } }) },
   chipSelected: { backgroundColor: '#eef2ff', borderColor: '#6366f1' },
   chipText: { ...typography.regular, fontSize: 12, color: '#374151', lineHeight: 17 },
   dropCols: { flexDirection: 'row', gap: 8, marginBottom: 8 },
   dropCol: { flex: 1, borderWidth: 2, borderStyle: 'dashed', borderColor: '#d1d5db', borderRadius: 12, padding: 8, minHeight: 110 },
   dropAI: { backgroundColor: '#f0f7ff' },
   dropHuman: { backgroundColor: '#f0fdf4' },
+  dropColDragOver: { borderStyle: 'solid', borderColor: '#6366f1', backgroundColor: '#eef2ff' },
   dropHeader: { ...typography.bold, fontSize: 11, textAlign: 'center', marginBottom: 7, padding: 5, borderRadius: 7 },
   dropChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, minHeight: 40 },
   dropChip: { backgroundColor: '#dbeafe', paddingHorizontal: 8, paddingVertical: 5, borderRadius: 14, minHeight: 34, justifyContent: 'center' },
   dropChipText: { ...typography.regular, fontSize: 11, color: '#1e40af', lineHeight: 16 },
+  dropChipAI: { backgroundColor: '#dbeafe', paddingHorizontal: 8, paddingVertical: 5, borderRadius: 14, minHeight: 34, justifyContent: 'center' },
+  dropChipTextAI: { ...typography.regular, fontSize: 11, color: '#1e40af', lineHeight: 16 },
+  dropChipHuman: { backgroundColor: '#dcfce7', paddingHorizontal: 8, paddingVertical: 5, borderRadius: 14, minHeight: 34, justifyContent: 'center' },
+  dropChipTextHuman: { ...typography.regular, fontSize: 11, color: '#166534', lineHeight: 16 },
 
   // Matching
   instructionCard: { backgroundColor: '#eff6ff', borderRadius: 10, padding: 11, marginBottom: 10, borderWidth: 1, borderColor: '#bfdbfe' },
