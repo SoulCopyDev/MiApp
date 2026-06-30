@@ -40,5 +40,3 @@ yarn-error.*
 /ios
 /android
 .vercel
-
-.claude-local 

@@ -29,7 +29,7 @@ type Sprint2Item = { roto: string; correcto: string };
 // ---------- Pools ----------
 const DD_ERRORES: DragItem[] = [
   { text: 'Escribe sobre el futuro', cat: 'rol' },
-  { text: 'Dame info sobre el tema', cat: 'ctx' },
+  { text: 'Dame info sobre Colombia', cat: 'ctx' },
   { text: 'Explícame cómo funciona', cat: 'ctx' },
   { text: 'Responde como si fueras algo malo', cat: 'rol' },
   { text: 'Haz una presentación de 10 slides con todo', cat: 'fmt' },

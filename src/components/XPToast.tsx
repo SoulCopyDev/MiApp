@@ -5,11 +5,9 @@ import { typography } from '../theme';
 interface Props {
   amount: number;
   onHide: () => void;
-  bgColor?: string;
-  textColor?: string;
 }
 
-export default function XPToast({ amount, onHide, bgColor = '#1e293b', textColor = '#fbbf24' }: Props) {
+export default function XPToast({ amount, onHide }: Props) {
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(16)).current;
 
@@ -27,8 +25,8 @@ export default function XPToast({ amount, onHide, bgColor = '#1e293b', textColor
   }, []);
 
   return (
-    <Animated.View style={[styles.toast, { opacity, transform: [{ translateY }], backgroundColor: bgColor }]}>
-      <Text style={[styles.text, { color: textColor }]}>+{amount} XP ✨</Text>
+    <Animated.View style={[styles.toast, { opacity, transform: [{ translateY }] }]}>
+      <Text style={styles.text}>+{amount} XP ✨</Text>
     </Animated.View>
   );
 }
