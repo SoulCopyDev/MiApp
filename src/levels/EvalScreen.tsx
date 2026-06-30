@@ -1,7 +1,9 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, Platform } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { colors } from '../theme';
+import { useBreakpoint } from '../hooks/useBreakpoint';
+import WebSidebar from '../components/WebSidebar';
 
 import Eval1 from './eval/Eval1';
 import Eval2 from './eval/Eval2';
@@ -24,11 +26,24 @@ const EVAL_COMPONENTS: Record<string, React.ComponentType<any>> = {
 export default function EvalScreen() {
   const { worldId } = useLocalSearchParams<{ worldId: string }>();
   const Component = EVAL_COMPONENTS[worldId];
+  const breakpoint = useBreakpoint();
+  const isWebDesktop = Platform.OS === 'web' && breakpoint !== 'mobile';
 
   if (!Component) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }}>
         <Text>Evaluación no disponible: {worldId}</Text>
+      </View>
+    );
+  }
+
+  if (isWebDesktop) {
+    return (
+      <View style={{ flex: 1, flexDirection: 'row', backgroundColor: colors.background }}>
+        <WebSidebar />
+        <View style={{ flex: 1, overflow: 'hidden' }}>
+          <Component />
+        </View>
       </View>
     );
   }
