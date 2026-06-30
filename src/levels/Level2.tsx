@@ -601,45 +601,75 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
 
   const renderIntro = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.tag}>Nivel 2 · 15 módulos</Text>
+      <Text style={[styles.tag, styles.tagIntro]}>Nivel 2 · 15 módulos</Text>
       <View style={styles.iconContainer}><Text style={styles.iconEmoji}>📱</Text></View>
       <Text style={styles.title}>La IA que vive en tus apps</Text>
       <Text style={styles.subtitle}>Usas decenas de apps todos los días. Pero, ¿sabías que la IA está operando en todas ellas? Hoy vas a diseccionarlas, entender cómo funcionan por dentro, y conocer las herramientas de IA que van a cambiar la manera en que estudias y creas.</Text>
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>📚 Qué vas a aprender</Text>
-        <Text style={styles.cardText}>Cómo decide la IA qué mostrarte · 4 tipos de IA que ya usas · Qué son los LLMs y cómo funcionan · ChatGPT, Claude, Gemini y Grok comparados · Cuándo usar un LLM vs Google · Cómo escribir un buen prompt</Text>
+      <View style={[styles.card, styles.cardSky]}>
+        <View style={styles.cardRow}>
+          <View style={[styles.cardIcon, { backgroundColor: '#bae6fd' }]}><Text style={styles.cardIconText}>📚</Text></View>
+          <View style={styles.cardContent}>
+            <Text style={styles.cardTitle}>Qué vas a aprender</Text>
+            <Text style={styles.cardText}>Cómo decide la IA qué mostrarte · 4 tipos de IA que ya usas · Qué son los LLMs y cómo funcionan · ChatGPT, Claude, Gemini y Grok comparados · Cuándo usar un LLM vs Google · Cómo escribir un buen prompt</Text>
+          </View>
+        </View>
       </View>
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>⚡ Lo nuevo en este nivel</Text>
-        <Text style={styles.cardText}>Tienes tu <Text style={styles.bold}>primer contacto real con los LLMs</Text> como herramientas de estudio. Al terminar sabrás cuándo y cómo usarlos correctamente — sin depender de ellos ciegamente.</Text>
+      <View style={[styles.card, styles.cardGreen]}>
+        <View style={styles.cardRow}>
+          <View style={[styles.cardIcon, { backgroundColor: '#bbf7d0' }]}><Text style={styles.cardIconText}>⚡</Text></View>
+          <View style={styles.cardContent}>
+            <Text style={styles.cardTitle}>Lo nuevo en este nivel</Text>
+            <Text style={styles.cardText}>Tienes tu <Text style={styles.bold}>primer contacto real con los LLMs</Text> como herramientas de estudio. Al terminar sabrás cuándo y cómo usarlos correctamente — sin depender de ellos ciegamente.</Text>
+          </View>
+        </View>
       </View>
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>🎮 15 módulos · hasta 160 XP</Text>
-        <Text style={styles.cardText}>Teoría · Apps reales · Caso de vida real · Clasificar · Conectar · Quiz · Ordenar · V/F · Qué LLM usar · Vocabulario clave · Comparar prompts · Reflexión</Text>
+      <View style={[styles.card, styles.cardAmber]}>
+        <View style={styles.cardRow}>
+          <View style={[styles.cardIcon, { backgroundColor: '#fde68a' }]}><Text style={styles.cardIconText}>🎮</Text></View>
+          <View style={styles.cardContent}>
+            <Text style={styles.cardTitle}>15 módulos · hasta 160 XP</Text>
+            <Text style={styles.cardText}>Teoría · Apps reales · Caso de vida real · Clasificar · Conectar · Quiz · Ordenar · V/F · Qué LLM usar · Vocabulario clave · Comparar prompts · Reflexión</Text>
+          </View>
+        </View>
       </View>
     </View>
   );
 
   const renderTheory1 = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.tag}>📖 Módulo 1 de 15 · Teoría</Text>
+      <Text style={[styles.tag, styles.tagTheory]}>📖 Módulo 1 de 15 · Teoría</Text>
       <Text style={styles.title}>¿Cómo decide la IA qué mostrarte?</Text>
       <Text style={styles.bodyText}>Abres Instagram. En milisegundos ves una publicación que te engancha al instante. No fue casualidad, ni suerte, ni un humano eligiéndola para ti. <Text style={styles.bold}>Una IA tomó esa decisión en menos de 100 milisegundos</Text>, basándose en miles de datos que tiene sobre ti.</Text>
       <View style={styles.highlightBox}>
         <Text style={styles.highlightText}><Text style={styles.bold}>❌ El mito más común:</Text> "Las redes sociales me muestran lo que está de moda." — Falso. Te muestran lo que la IA calcula que <Text style={styles.italic}>a ti específicamente</Text> te va a enganchar más tiempo. El algoritmo no busca lo mejor — busca lo más adictivo para ti.</Text>
       </View>
       <Text style={styles.sectionTitle}>¿Qué datos usa la IA para decidir?</Text>
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>👁️ Datos de comportamiento</Text>
-        <Text style={styles.cardText}>Cuántos segundos exactos viste algo, si lo repetiste, si pausaste, a qué hora del día lo hiciste, si compartiste o solo cerraste.</Text>
+      <View style={[styles.card, styles.cardSky]}>
+        <View style={styles.cardRow}>
+          <View style={[styles.cardIcon, { backgroundColor: '#bae6fd' }]}><Text style={styles.cardIconText}>👁️</Text></View>
+          <View style={styles.cardContent}>
+            <Text style={styles.cardTitle}>Datos de comportamiento</Text>
+            <Text style={styles.cardText}>Cuántos segundos exactos viste algo, si lo repetiste, si pausaste, a qué hora del día lo hiciste, si compartiste o solo cerraste.</Text>
+          </View>
+        </View>
       </View>
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>👥 Datos de personas similares a ti</Text>
-        <Text style={styles.cardText}>La IA encontró millones de usuarios con patrones parecidos a los tuyos. Lo que a ellos les gustó... probablemente te va a gustar a ti también.</Text>
+      <View style={[styles.card, styles.cardGreen]}>
+        <View style={styles.cardRow}>
+          <View style={[styles.cardIcon, { backgroundColor: '#bbf7d0' }]}><Text style={styles.cardIconText}>👥</Text></View>
+          <View style={styles.cardContent}>
+            <Text style={styles.cardTitle}>Datos de personas similares a ti</Text>
+            <Text style={styles.cardText}>La IA encontró millones de usuarios con patrones parecidos a los tuyos. Lo que a ellos les gustó... probablemente te va a gustar a ti también.</Text>
+          </View>
+        </View>
       </View>
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>📍 Datos de contexto</Text>
-        <Text style={styles.cardText}>Tu ubicación, qué dispositivo usas, qué hora es, si estás en WiFi o datos móviles. El mismo usuario recibe contenido diferente a las 7am que a las 11pm.</Text>
+      <View style={[styles.card, styles.cardAmber]}>
+        <View style={styles.cardRow}>
+          <View style={[styles.cardIcon, { backgroundColor: '#fde68a' }]}><Text style={styles.cardIconText}>📍</Text></View>
+          <View style={styles.cardContent}>
+            <Text style={styles.cardTitle}>Datos de contexto</Text>
+            <Text style={styles.cardText}>Tu ubicación, qué dispositivo usas, qué hora es, si estás en WiFi o datos móviles. El mismo usuario recibe contenido diferente a las 7am que a las 11pm.</Text>
+          </View>
+        </View>
       </View>
       <Text style={styles.sectionTitle}>El problema de la "burbuja de filtro"</Text>
       <Text style={styles.bodyText}>Cuando la IA solo te muestra contenido que le "gustó" a tu versión pasada, crea una burbuja. Ves las mismas ideas, las mismas personas, los mismos puntos de vista. El mundo parece más simple de lo que es. <Text style={styles.bold}>Saber esto te da poder para salir de la burbuja</Text> — busca activamente perspectivas diferentes.</Text>
@@ -651,9 +681,9 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
 
   const renderExamples = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.tag}>📱 Módulo 2 de 15 · Apps reales</Text>
+      <Text style={[styles.tag, styles.tagExample]}>📱 Módulo 2 de 15 · Apps reales</Text>
       <Text style={styles.title}>Disecciona 5 apps que ya conoces</Text>
-      <Text style={styles.subtitle}>Toca cada tarjeta y descubre qué tipo de IA está corriendo en las apps que más usas.</Text>
+      <Text style={styles.subtitle}>Abre cada tarjeta y descubre qué tipo de IA está corriendo en las apps que más usas.</Text>
 
       {/* Instagram */}
       <TouchableOpacity style={styles.exCard} onPress={() => setOpenAppCard(openAppCard === 0 ? null : 0)} activeOpacity={0.8}>
@@ -754,7 +784,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
 
   const renderDrag3 = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.tag}>🧩 Módulo 3 de 15 · Clasificar</Text>
+      <Text style={[styles.tag, styles.tagActivity]}>🧩 Módulo 3 de 15 · Clasificar</Text>
       <Text style={styles.title}>¿Qué tipo de IA es esta?</Text>
       <Text style={styles.subtitle}>Clasifica cada función en su tipo de IA correcto. Toca un chip y luego la columna.</Text>
       <View style={styles.hintCard}>
@@ -771,46 +801,62 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
         })}
       </View>
       <View style={styles.dropCols}>
-        <TouchableOpacity style={[styles.dropCol, styles.dropAI]} onPress={() => handleDropZone3('rec')}>
-          <Text style={styles.dropHeader}>🟢 Recomendación</Text>
-          <View style={styles.dropChips}>
-            {Object.entries(drag3Placed).map(([idx, zone]) => zone === 'rec' ? (
-              <TouchableOpacity key={idx} style={styles.dropChip} onPress={() => handleRemoveChip3(parseInt(idx))}>
-                <Text style={styles.dropChipText}>{drag3Items[parseInt(idx)].text} ✕</Text>
-              </TouchableOpacity>
-            ) : null)}
+        <View style={{ flex: 1, minWidth: '45%' }}>
+          <View style={[styles.llmDropHeaderBox, { backgroundColor: '#dcfce7' }]}>
+            <Text style={[styles.llmDropHeaderText, { color: '#166534' }]}>🟢 Recomendación</Text>
           </View>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.dropCol, styles.dropAI]} onPress={() => handleDropZone3('vis')}>
-          <Text style={styles.dropHeader}>🟣 Visión</Text>
-          <View style={styles.dropChips}>
-            {Object.entries(drag3Placed).map(([idx, zone]) => zone === 'vis' ? (
-              <TouchableOpacity key={idx} style={styles.dropChip} onPress={() => handleRemoveChip3(parseInt(idx))}>
-                <Text style={styles.dropChipText}>{drag3Items[parseInt(idx)].text} ✕</Text>
-              </TouchableOpacity>
-            ) : null)}
+          <TouchableOpacity style={[styles.dropCol, { backgroundColor: '#fafafa' }]} onPress={() => handleDropZone3('rec')}>
+            <View style={styles.dropChips}>
+              {Object.entries(drag3Placed).map(([idx, zone]) => zone === 'rec' ? (
+                <TouchableOpacity key={idx} style={[styles.dropChip, { backgroundColor: '#dcfce7' }]} onPress={() => handleRemoveChip3(parseInt(idx))}>
+                  <Text style={[styles.dropChipText, { color: '#166534' }]}>{drag3Items[parseInt(idx)].text} ✕</Text>
+                </TouchableOpacity>
+              ) : null)}
+            </View>
+          </TouchableOpacity>
+        </View>
+        <View style={{ flex: 1, minWidth: '45%' }}>
+          <View style={[styles.llmDropHeaderBox, { backgroundColor: '#ede9fe' }]}>
+            <Text style={[styles.llmDropHeaderText, { color: '#5b21b6' }]}>🟣 Visión</Text>
           </View>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.dropCol, styles.dropAI]} onPress={() => handleDropZone3('nlp')}>
-          <Text style={styles.dropHeader}>🔵 Lenguaje</Text>
-          <View style={styles.dropChips}>
-            {Object.entries(drag3Placed).map(([idx, zone]) => zone === 'nlp' ? (
-              <TouchableOpacity key={idx} style={styles.dropChip} onPress={() => handleRemoveChip3(parseInt(idx))}>
-                <Text style={styles.dropChipText}>{drag3Items[parseInt(idx)].text} ✕</Text>
-              </TouchableOpacity>
-            ) : null)}
+          <TouchableOpacity style={[styles.dropCol, { backgroundColor: '#fafafa' }]} onPress={() => handleDropZone3('vis')}>
+            <View style={styles.dropChips}>
+              {Object.entries(drag3Placed).map(([idx, zone]) => zone === 'vis' ? (
+                <TouchableOpacity key={idx} style={[styles.dropChip, { backgroundColor: '#ede9fe' }]} onPress={() => handleRemoveChip3(parseInt(idx))}>
+                  <Text style={[styles.dropChipText, { color: '#5b21b6' }]}>{drag3Items[parseInt(idx)].text} ✕</Text>
+                </TouchableOpacity>
+              ) : null)}
+            </View>
+          </TouchableOpacity>
+        </View>
+        <View style={{ flex: 1, minWidth: '45%' }}>
+          <View style={[styles.llmDropHeaderBox, { backgroundColor: '#dbeafe' }]}>
+            <Text style={[styles.llmDropHeaderText, { color: '#1e40af' }]}>🔵 Lenguaje</Text>
           </View>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.dropCol, styles.dropAI]} onPress={() => handleDropZone3('gen')}>
-          <Text style={styles.dropHeader}>🟡 Generativa</Text>
-          <View style={styles.dropChips}>
-            {Object.entries(drag3Placed).map(([idx, zone]) => zone === 'gen' ? (
-              <TouchableOpacity key={idx} style={styles.dropChip} onPress={() => handleRemoveChip3(parseInt(idx))}>
-                <Text style={styles.dropChipText}>{drag3Items[parseInt(idx)].text} ✕</Text>
-              </TouchableOpacity>
-            ) : null)}
+          <TouchableOpacity style={[styles.dropCol, { backgroundColor: '#fafafa' }]} onPress={() => handleDropZone3('nlp')}>
+            <View style={styles.dropChips}>
+              {Object.entries(drag3Placed).map(([idx, zone]) => zone === 'nlp' ? (
+                <TouchableOpacity key={idx} style={[styles.dropChip, { backgroundColor: '#dbeafe' }]} onPress={() => handleRemoveChip3(parseInt(idx))}>
+                  <Text style={[styles.dropChipText, { color: '#1e40af' }]}>{drag3Items[parseInt(idx)].text} ✕</Text>
+                </TouchableOpacity>
+              ) : null)}
+            </View>
+          </TouchableOpacity>
+        </View>
+        <View style={{ flex: 1, minWidth: '45%' }}>
+          <View style={[styles.llmDropHeaderBox, { backgroundColor: '#fef3c7' }]}>
+            <Text style={[styles.llmDropHeaderText, { color: '#92400e' }]}>🟡 Generativa</Text>
           </View>
-        </TouchableOpacity>
+          <TouchableOpacity style={[styles.dropCol, { backgroundColor: '#fafafa' }]} onPress={() => handleDropZone3('gen')}>
+            <View style={styles.dropChips}>
+              {Object.entries(drag3Placed).map(([idx, zone]) => zone === 'gen' ? (
+                <TouchableOpacity key={idx} style={[styles.dropChip, { backgroundColor: '#fef3c7' }]} onPress={() => handleRemoveChip3(parseInt(idx))}>
+                  <Text style={[styles.dropChipText, { color: '#92400e' }]}>{drag3Items[parseInt(idx)].text} ✕</Text>
+                </TouchableOpacity>
+              ) : null)}
+            </View>
+          </TouchableOpacity>
+        </View>
       </View>
       <TouchableOpacity style={styles.checkButton} onPress={checkDrag3}>
         <Text style={styles.checkButtonText}>Verificar clasificación</Text>
@@ -820,24 +866,44 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
 
   const renderTheory2 = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.tag}>📖 Módulo 4 de 15 · Tipos de IA</Text>
+      <Text style={[styles.tag, styles.tagTheory]}>📖 Módulo 4 de 15 · Tipos de IA</Text>
       <Text style={styles.title}>Los 4 tipos de IA que ya usas</Text>
       <Text style={styles.subtitle}>Ahora que los clasificaste, veamos cada tipo con más detalle.</Text>
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>🟢 IA de Recomendación</Text>
-        <Text style={styles.cardText}>Predice qué contenido, producto o persona te va a gustar. <Text style={styles.bold}>Apps:</Text> TikTok, YouTube, Spotify, Netflix, Amazon, Instagram. <Text style={styles.italic}>Técnica detrás:</Text> filtrado colaborativo — encuentra usuarios similares a ti y copia sus preferencias.</Text>
+      <View style={[styles.card, styles.cardGreen]}>
+        <View style={styles.cardRow}>
+          <View style={[styles.cardIcon, { backgroundColor: '#bbf7d0' }]}><Text style={{ fontSize: 22 }}>🟢</Text></View>
+          <View style={styles.cardContent}>
+            <Text style={styles.cardTitle}>IA de Recomendación</Text>
+            <Text style={styles.cardText}>Predice qué contenido, producto o persona te va a gustar. <Text style={styles.bold}>Apps:</Text> TikTok, YouTube, Spotify, Netflix, Amazon, Instagram. <Text style={styles.italic}>Técnica detrás:</Text> filtrado colaborativo — encuentra usuarios similares a ti y copia sus preferencias.</Text>
+          </View>
+        </View>
       </View>
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>🟣 IA de Visión por Computadora</Text>
-        <Text style={styles.cardText}>Analiza y entiende imágenes y video. <Text style={styles.bold}>Apps:</Text> Face ID, Google Fotos, modo retrato, Google Lens, filtros de Snapchat. <Text style={styles.italic}>Técnica detrás:</Text> redes neuronales que detectan bordes, formas y patrones en millones de píxeles.</Text>
+      <View style={[styles.card, styles.cardPurple]}>
+        <View style={styles.cardRow}>
+          <View style={[styles.cardIcon, { backgroundColor: '#e9d5ff' }]}><Text style={{ fontSize: 22 }}>🟣</Text></View>
+          <View style={styles.cardContent}>
+            <Text style={styles.cardTitle}>IA de Visión por Computadora</Text>
+            <Text style={styles.cardText}>Analiza y entiende imágenes y video. <Text style={styles.bold}>Apps:</Text> Face ID, Google Fotos, modo retrato, Google Lens, filtros de Snapchat. <Text style={styles.italic}>Técnica detrás:</Text> redes neuronales que detectan bordes, formas y patrones en millones de píxeles.</Text>
+          </View>
+        </View>
       </View>
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>🔵 IA de Procesamiento de Lenguaje (NLP)</Text>
-        <Text style={styles.cardText}>Lee, entiende y genera texto. <Text style={styles.bold}>Apps:</Text> ChatGPT, Claude, Google Translate, autocorrector, Siri, Alexa. <Text style={styles.italic}>Técnica detrás:</Text> Modelos de Lenguaje (LLMs) que predicen qué texto es más probable según el contexto.</Text>
+      <View style={[styles.card, styles.cardSky]}>
+        <View style={styles.cardRow}>
+          <View style={[styles.cardIcon, { backgroundColor: '#bae6fd' }]}><Text style={{ fontSize: 22 }}>🔵</Text></View>
+          <View style={styles.cardContent}>
+            <Text style={styles.cardTitle}>IA de Procesamiento de Lenguaje (NLP)</Text>
+            <Text style={styles.cardText}>Lee, entiende y genera texto. <Text style={styles.bold}>Apps:</Text> ChatGPT, Claude, Google Translate, autocorrector, Siri, Alexa. <Text style={styles.italic}>Técnica detrás:</Text> Modelos de Lenguaje (LLMs) que predicen qué texto es más probable según el contexto.</Text>
+          </View>
+        </View>
       </View>
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>🟡 IA Generativa (GenAI)</Text>
-        <Text style={styles.cardText}>Crea contenido nuevo: texto, imágenes, música, video, código. <Text style={styles.bold}>Apps:</Text> ChatGPT, Claude, Gemini, DALL·E, Midjourney, Suno, ElevenLabs. <Text style={styles.italic}>Técnica detrás:</Text> modelos que aprendieron los patrones de millones de creaciones humanas y los combinan de formas nuevas.</Text>
+      <View style={[styles.card, styles.cardAmber]}>
+        <View style={styles.cardRow}>
+          <View style={[styles.cardIcon, { backgroundColor: '#fde68a' }]}><Text style={{ fontSize: 22 }}>🟡</Text></View>
+          <View style={styles.cardContent}>
+            <Text style={styles.cardTitle}>IA Generativa (GenAI)</Text>
+            <Text style={styles.cardText}>Crea contenido nuevo: texto, imágenes, música, video, código. <Text style={styles.bold}>Apps:</Text> ChatGPT, Claude, Gemini, DALL·E, Midjourney, Suno, ElevenLabs. <Text style={styles.italic}>Técnica detrás:</Text> modelos que aprendieron los patrones de millones de creaciones humanas y los combinan de formas nuevas.</Text>
+          </View>
+        </View>
       </View>
       <View style={styles.highlightBoxBlue}>
         <Text style={styles.highlightTextBlue}><Text style={styles.bold}>💡 Muchas apps usan varios tipos a la vez:</Text> TikTok usa recomendación + visión (analiza el video) + lenguaje (lee los captions). Los tipos de IA no son mutuamente excluyentes — las apps más poderosas combinan varios.</Text>
@@ -847,11 +913,11 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
 
   const renderMatching = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.tag}>🔗 Módulo 5 de 15 · Conectar</Text>
+      <Text style={[styles.tag, styles.tagMatch]}>🔗 Módulo 5 de 15 · Conectar</Text>
       <Text style={styles.title}>App + tipo de IA</Text>
       <Text style={styles.subtitle}>Conecta cada app con la descripción exacta de la IA que usa.</Text>
-      <View style={styles.hintCard}>
-        <Text style={styles.hintCardText}>① Toca la tarjeta <Text style={styles.bold}>izquierda</Text> → ② Toca la <Text style={styles.bold}>derecha</Text> que la explica → Si conectas bien, ambas se vuelven ✅</Text>
+      <View style={[styles.card, styles.cardSky]}>
+        <Text style={styles.cardText}>① Toca la tarjeta <Text style={styles.bold}>azul</Text> (izquierda) → ② Toca la <Text style={styles.bold}>verde</Text> (derecha) que la explica → Si conectas bien, ambas se vuelven ✅</Text>
       </View>
       <View style={styles.matchColLabels}>
         <Text style={styles.matchColLabel}>App</Text>
@@ -866,7 +932,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
               onPress={() => handleLeftClick(leftIdx)}
               disabled={matchedLeft.has(leftIdx)}
             >
-              <Text style={styles.matchText}>{pair.left}</Text>
+              <Text style={[styles.matchText, { color: '#0369a1' }]}>{pair.left}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -878,7 +944,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
               onPress={() => handleRightClick(rightIdx)}
               disabled={matchedRight.has(rightIdx)}
             >
-              <Text style={styles.matchText}>{rightText}</Text>
+              <Text style={[styles.matchText, { color: '#166534' }]}>{rightText}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -888,12 +954,14 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
 
   const renderTheoryLLM = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.tag}>📖 Módulo 6 de 15 · LLMs</Text>
+      <Text style={[styles.tag, styles.tagTheory]}>📖 Módulo 6 de 15 · LLMs</Text>
       <Text style={styles.title}>¿Qué son los Modelos de Lenguaje (LLMs)?</Text>
       <Text style={styles.bodyText}>LLM significa <Text style={styles.bold}>Large Language Model</Text> — Modelo de Lenguaje Grande. Son el tipo de IA detrás de ChatGPT, Claude, Gemini y Grok. Para entender qué son, primero hay que entender en qué se diferencian de Google.</Text>
       <View style={styles.vsGrid}>
         <View style={[styles.vsCol, { backgroundColor: '#fff7ed' }]}>
-          <Text style={styles.vsHeader}>🔍 Google Search</Text>
+          <View style={{ backgroundColor: '#fed7aa', paddingVertical: 4, paddingHorizontal: 6, borderRadius: 7, marginBottom: 8, alignItems: 'center' }}>
+            <Text style={[styles.vsHeader, { color: '#9a3412', marginBottom: 0 }]}>🔍 Google Search</Text>
+          </View>
           <Text style={styles.vsItem}>Busca páginas que ya existen</Text>
           <Text style={styles.vsItem}>Devuelve links, tú lees</Text>
           <Text style={styles.vsItem}>Información en tiempo real</Text>
@@ -901,7 +969,9 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
           <Text style={styles.vsItem}>Ideal para: datos actuales, noticias, precios</Text>
         </View>
         <View style={[styles.vsCol, { backgroundColor: '#f0f9ff' }]}>
-          <Text style={styles.vsHeader}>🤖 LLM (ChatGPT, Claude...)</Text>
+          <View style={{ backgroundColor: '#bae6fd', paddingVertical: 4, paddingHorizontal: 6, borderRadius: 7, marginBottom: 8, alignItems: 'center' }}>
+            <Text style={[styles.vsHeader, { color: '#0369a1', marginBottom: 0 }]}>🤖 LLM (ChatGPT, Claude...)</Text>
+          </View>
           <Text style={styles.vsItem}>Genera texto nuevo en respuesta</Text>
           <Text style={styles.vsItem}>Conversa contigo directamente</Text>
           <Text style={styles.vsItem}>Conocimiento hasta cierta fecha</Text>
@@ -922,28 +992,48 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
 
   const renderCase = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.tag}>🎯 Módulo 7 de 15 · Caso real</Text>
+      <Text style={[styles.tag, styles.tagCase]}>🎯 Módulo 7 de 15 · Caso real</Text>
       <Text style={styles.title}>Sebastián: estudiante de 15 años en Medellín</Text>
       <Text style={styles.subtitle}>Así es como un estudiante usa los LLMs en su vida real — los buenos y los malos usos.</Text>
       <View style={styles.scenarioBox}>
         <Text style={styles.scenarioLabel}>🎬 LA SITUACIÓN</Text>
         <Text style={styles.scenarioText}>Sebastián tiene un trabajo para ciencias sociales sobre el cambio climático, un examen de álgebra en dos días, y quiere aprender inglés más rápido. Tiene acceso a ChatGPT, Claude y Gemini. ¿Cómo los usa — y cómo no debería usarlos?</Text>
       </View>
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>✅ Uso correcto #1 — Entender, no copiar</Text>
-        <Text style={styles.cardText}>Le pide a Claude: <Text style={styles.italic}>"Explícame las causas del cambio climático como si tuviera 15 años, con 3 ejemplos de Colombia específicamente."</Text> Toma notas y escribe el trabajo con sus propias palabras. <Text style={styles.bold}>El LLM fue su tutor, no su escritor.</Text></Text>
+      <View style={[styles.card, styles.cardGreen]}>
+        <View style={styles.cardRow}>
+          <View style={[styles.cardIcon, { backgroundColor: '#bbf7d0' }]}><Text style={styles.cardIconText}>✅</Text></View>
+          <View style={styles.cardContent}>
+            <Text style={styles.cardTitle}>Uso correcto #1 — Entender, no copiar</Text>
+            <Text style={styles.cardText}>Le pide a Claude: <Text style={styles.italic}>"Explícame las causas del cambio climático como si tuviera 15 años, con 3 ejemplos de Colombia específicamente."</Text> Toma notas y escribe el trabajo con sus propias palabras. <Text style={styles.bold}>El LLM fue su tutor, no su escritor.</Text></Text>
+          </View>
+        </View>
       </View>
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>✅ Uso correcto #2 — Práctica personalizada</Text>
-        <Text style={styles.cardText}>Le pide a ChatGPT: <Text style={styles.italic}>"Dame 10 ejercicios de ecuaciones cuadráticas de menor a mayor dificultad, y explícame paso a paso los que me cuesten más trabajo."</Text> <Text style={styles.bold}>El LLM fue su profesor particular gratuito disponible 24/7.</Text></Text>
+      <View style={[styles.card, styles.cardGreen]}>
+        <View style={styles.cardRow}>
+          <View style={[styles.cardIcon, { backgroundColor: '#bbf7d0' }]}><Text style={styles.cardIconText}>✅</Text></View>
+          <View style={styles.cardContent}>
+            <Text style={styles.cardTitle}>Uso correcto #2 — Práctica personalizada</Text>
+            <Text style={styles.cardText}>Le pide a ChatGPT: <Text style={styles.italic}>"Dame 10 ejercicios de ecuaciones cuadráticas de menor a mayor dificultad, y explícame paso a paso los que me cuesten más trabajo."</Text> <Text style={styles.bold}>El LLM fue su profesor particular gratuito disponible 24/7.</Text></Text>
+          </View>
+        </View>
       </View>
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>✅ Uso correcto #3 — Práctica de idiomas</Text>
-        <Text style={styles.cardText}>Conversa con ChatGPT en inglés sobre temas que le interesan (fútbol, música). Cuando comete un error, le pide que lo corrija y explique por qué. <Text style={styles.bold}>Un nativo de inglés disponible 24/7, gratis, infinitamente paciente.</Text></Text>
+      <View style={[styles.card, styles.cardGreen]}>
+        <View style={styles.cardRow}>
+          <View style={[styles.cardIcon, { backgroundColor: '#bbf7d0' }]}><Text style={styles.cardIconText}>✅</Text></View>
+          <View style={styles.cardContent}>
+            <Text style={styles.cardTitle}>Uso correcto #3 — Práctica de idiomas</Text>
+            <Text style={styles.cardText}>Conversa con ChatGPT en inglés sobre temas que le interesan (fútbol, música). Cuando comete un error, le pide que lo corrija y explique por qué. <Text style={styles.bold}>Un nativo de inglés disponible 24/7, gratis, infinitamente paciente.</Text></Text>
+          </View>
+        </View>
       </View>
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>❌ Mal uso — Copiar y entregar</Text>
-        <Text style={styles.cardText}>Le pide a ChatGPT que escriba el trabajo completo y lo entrega tal cual. Resultado: <Text style={styles.bold}>no aprendió nada, su escritura no mejoró, y si el profesor usa un detector de IA lo descubren.</Text> El LLM lo dejó más atrás, no más adelante.</Text>
+      <View style={[styles.card, styles.cardRed]}>
+        <View style={styles.cardRow}>
+          <View style={[styles.cardIcon, { backgroundColor: '#fecdd3' }]}><Text style={styles.cardIconText}>❌</Text></View>
+          <View style={styles.cardContent}>
+            <Text style={styles.cardTitle}>Mal uso — Copiar y entregar</Text>
+            <Text style={styles.cardText}>Le pide a ChatGPT que escriba el trabajo completo y lo entrega tal cual. Resultado: <Text style={styles.bold}>no aprendió nada, su escritura no mejoró, y si el profesor usa un detector de IA lo descubren.</Text> El LLM lo dejó más atrás, no más adelante.</Text>
+          </View>
+        </View>
       </View>
       <View style={styles.highlightBoxBlue}>
         <Text style={styles.highlightTextBlue}><Text style={styles.bold}>💡 La diferencia que importa:</Text> Un LLM usado como <Text style={styles.italic}>tutor</Text> te hace más inteligente. Un LLM usado como <Text style={styles.italic}>reemplazo</Text> te hace más dependiente. La habilidad de usar LLMs correctamente es una de las más valiosas del siglo XXI — y estás aprendiendo a desarrollarla ahora.</Text>
@@ -953,7 +1043,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
 
   const renderQuiz = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.tag}>❓ Módulo 8 de 15 · Quiz</Text>
+      <Text style={[styles.tag, styles.tagQuiz]}>❓ Módulo 8 de 15 · Quiz</Text>
       <Text style={styles.title}>¿Buscador o LLM? ¿Cuándo usar cuál?</Text>
       <Text style={styles.subtitle}>Cada situación requiere la herramienta correcta. Piensa antes de elegir.</Text>
       {quizQuestions.map((q, qIdx) => (
@@ -985,7 +1075,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
 
   const renderSort = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.tag}>↕️ Módulo 9 de 15 · Ordenar</Text>
+      <Text style={[styles.tag, styles.tagSort]}>↕️ Módulo 9 de 15 · Ordenar</Text>
       <Text style={styles.title}>El camino de tu pregunta en un LLM</Text>
       <Text style={styles.subtitle}>Estos son los 5 pasos que ocurren desde que escribes hasta que aparece la respuesta. Están mezclados — ponlos en orden con ▲▼.</Text>
       <View style={styles.hintCard}>
@@ -1015,7 +1105,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
 
   const renderTF = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.tag}>✅ Módulo 10 de 15 · Verdadero o Falso</Text>
+      <Text style={[styles.tag, styles.tagVF]}>✅ Módulo 10 de 15 · Verdadero o Falso</Text>
       <Text style={styles.title}>Mitos y realidades de los LLMs</Text>
       <Text style={styles.subtitle}>Muchas ideas sobre los LLMs son falsas. Separa los mitos de la realidad.</Text>
       {tfItems.map((item, idx) => (
@@ -1044,24 +1134,68 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
 
   const renderLLMCompare = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.tag}>📖 Módulo 11 de 15 · Los 4 LLMs</Text>
+      <Text style={[styles.tag, styles.tagTheory]}>📖 Módulo 11 de 15 · Los 4 LLMs</Text>
       <Text style={styles.title}>ChatGPT, Claude, Gemini y Grok</Text>
       <Text style={styles.subtitle}>No todos los LLMs son iguales. Cada uno tiene fortalezas distintas. Conocerlos te permite elegir el correcto para cada tarea.</Text>
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>💬 ChatGPT <Text style={styles.badgeGpt}>OpenAI</Text></Text>
-        <Text style={styles.cardText}>El más popular y conocido. Muy versátil — sirve para casi todo. Tiene versión gratuita (GPT-3.5) y de pago (GPT-4o). Puede generar imágenes con DALL·E integrado.</Text>
+      {/* ChatGPT */}
+      <View style={[styles.llmCard, { borderColor: '#10a37f40', backgroundColor: '#f0fdf4' }]}>
+        <View style={[styles.llmLogo, { backgroundColor: '#10a37f20' }]}>
+          <Text style={[styles.llmLogoText, { color: '#10a37f' }]}>💬</Text>
+        </View>
+        <View style={styles.llmInfo}>
+          <Text style={styles.llmModelName}>ChatGPT <Text style={styles.badgeGpt}>OpenAI</Text></Text>
+          <Text style={styles.llmDesc}>El más popular y conocido. Muy versátil — sirve para casi todo. Tiene versión gratuita (GPT-3.5) y de pago (GPT-4o). Puede generar imágenes con DALL·E integrado.</Text>
+          <View style={styles.llmTagsRow}>
+            <Text style={[styles.llmTag, { backgroundColor: '#d1fae5', color: '#065f46' }]}>✅ Versátil</Text>
+            <Text style={[styles.llmTag, { backgroundColor: '#d1fae5', color: '#065f46' }]}>✅ Genera imágenes</Text>
+            <Text style={[styles.llmTag, { backgroundColor: '#fef3c7', color: '#92400e' }]}>⚠️ Puede alucinar</Text>
+          </View>
+        </View>
       </View>
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>🌟 Claude <Text style={styles.badgeClaude}>Anthropic</Text></Text>
-        <Text style={styles.cardText}>Diseñado para ser honesto, seguro y útil. Excelente para textos muy largos (lee documentos de 200+ páginas), análisis profundos y razonamiento complejo. Muy bueno con instrucciones detalladas.</Text>
+      {/* Claude */}
+      <View style={[styles.llmCard, { borderColor: '#d4714040', backgroundColor: '#fffbeb' }]}>
+        <View style={[styles.llmLogo, { backgroundColor: '#d4714020' }]}>
+          <Text style={[styles.llmLogoText, { color: '#c85f2a' }]}>🌟</Text>
+        </View>
+        <View style={styles.llmInfo}>
+          <Text style={styles.llmModelName}>Claude <Text style={styles.badgeClaude}>Anthropic</Text></Text>
+          <Text style={styles.llmDesc}>Diseñado para ser honesto, seguro y útil. Excelente para textos muy largos (lee documentos de 200+ páginas), análisis profundos y razonamiento complejo. Muy bueno con instrucciones detalladas.</Text>
+          <View style={styles.llmTagsRow}>
+            <Text style={[styles.llmTag, { backgroundColor: '#fef3c7', color: '#92400e' }]}>✅ Textos largos</Text>
+            <Text style={[styles.llmTag, { backgroundColor: '#fef3c7', color: '#92400e' }]}>✅ Análisis</Text>
+            <Text style={[styles.llmTag, { backgroundColor: '#fef3c7', color: '#92400e' }]}>✅ Más honesto</Text>
+          </View>
+        </View>
       </View>
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>✦ Gemini <Text style={styles.badgeGemini}>Google</Text></Text>
-        <Text style={styles.cardText}>Integrado con todo el ecosistema de Google (Gmail, Docs, YouTube, Maps). Puede acceder a información actualizada de Google. Ideal para tareas que combinan búsqueda + generación.</Text>
+      {/* Gemini */}
+      <View style={[styles.llmCard, { borderColor: '#4285f440', backgroundColor: '#eff6ff' }]}>
+        <View style={[styles.llmLogo, { backgroundColor: '#4285f420' }]}>
+          <Text style={[styles.llmLogoText, { color: '#1a73e8' }]}>✦</Text>
+        </View>
+        <View style={styles.llmInfo}>
+          <Text style={styles.llmModelName}>Gemini <Text style={styles.badgeGemini}>Google</Text></Text>
+          <Text style={styles.llmDesc}>Integrado con todo el ecosistema de Google (Gmail, Docs, YouTube, Maps). Puede acceder a información actualizada de Google. Ideal para tareas que combinan búsqueda + generación.</Text>
+          <View style={styles.llmTagsRow}>
+            <Text style={[styles.llmTag, { backgroundColor: '#dbeafe', color: '#1e40af' }]}>✅ Info actualizada</Text>
+            <Text style={[styles.llmTag, { backgroundColor: '#dbeafe', color: '#1e40af' }]}>✅ Con Google</Text>
+            <Text style={[styles.llmTag, { backgroundColor: '#dbeafe', color: '#1e40af' }]}>✅ Multimodal</Text>
+          </View>
+        </View>
       </View>
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>𝕏 Grok <Text style={styles.badgeGrok}>xAI / X</Text></Text>
-        <Text style={styles.cardText}>Creado por xAI (Elon Musk). Integrado con X (antes Twitter) y tiene acceso a información en tiempo real de esa plataforma. Tiene un estilo más directo y menos filtros que otros modelos.</Text>
+      {/* Grok */}
+      <View style={[styles.llmCard, { borderColor: '#1d9bf040', backgroundColor: '#f0f9ff' }]}>
+        <View style={[styles.llmLogo, { backgroundColor: '#1d9bf020' }]}>
+          <Text style={[styles.llmLogoText, { color: '#1d9bf0' }]}>𝕏</Text>
+        </View>
+        <View style={styles.llmInfo}>
+          <Text style={styles.llmModelName}>Grok <Text style={styles.badgeGrok}>xAI / X</Text></Text>
+          <Text style={styles.llmDesc}>Creado por xAI (Elon Musk). Integrado con X (antes Twitter) y tiene acceso a información en tiempo real de esa plataforma. Tiene un estilo más directo y menos filtros que otros modelos.</Text>
+          <View style={styles.llmTagsRow}>
+            <Text style={[styles.llmTag, { backgroundColor: '#e0f2fe', color: '#0369a1' }]}>✅ Tiempo real en X</Text>
+            <Text style={[styles.llmTag, { backgroundColor: '#e0f2fe', color: '#0369a1' }]}>✅ Directo</Text>
+            <Text style={[styles.llmTag, { backgroundColor: '#fff1f2', color: '#991b1b' }]}>⚠️ Menos filtros</Text>
+          </View>
+        </View>
       </View>
       <View style={styles.highlightBoxGreen}>
         <Text style={styles.highlightTextGreen}><Text style={styles.bold}>💡 Para empezar:</Text> Si eres nuevo usando LLMs, empieza con ChatGPT (gratis, versátil) o Gemini (gratis, integrado con Google). En el Nivel 3 aprenderás a escribir prompts poderosos para cualquiera de ellos.</Text>
@@ -1071,11 +1205,11 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
 
   const renderLLMDrag = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.tag}>🧩 Módulo 12 de 15 · ¿Qué LLM usarías?</Text>
+      <Text style={[styles.tag, styles.tagActivity]}>🧩 Módulo 12 de 15 · ¿Qué LLM usarías?</Text>
       <Text style={styles.title}>Asigna la herramienta correcta</Text>
       <Text style={styles.subtitle}>Basándote en lo que aprendiste, ¿qué LLM usarías para cada tarea?</Text>
-      <View style={styles.hintCard}>
-        <Text style={styles.hintCardText}>🟡 <Text style={styles.bold}>Claude:</Text> textos largos, análisis · 🟢 <Text style={styles.bold}>ChatGPT:</Text> generación, código · 🔵 <Text style={styles.bold}>Gemini:</Text> info actualizada, Google</Text>
+      <View style={[styles.card, { backgroundColor: '#f8fafc', borderColor: '#e2e8f0' }]}>
+        <Text style={[styles.cardText, { fontSize: 11 }]}>🟡 <Text style={styles.bold}>Claude:</Text> textos largos, análisis · 🟢 <Text style={styles.bold}>ChatGPT:</Text> generación, código · 🔵 <Text style={styles.bold}>Gemini:</Text> info actualizada, Google</Text>
       </View>
       <View style={styles.chipsPool}>
         {llmItems.map((item, idx) => {
@@ -1087,38 +1221,50 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
           );
         })}
       </View>
-      <View style={styles.dropCols}>
-        <TouchableOpacity style={[styles.dropCol, styles.dropAI]} onPress={() => handleDropZoneLLM('claude')}>
-          <Text style={styles.dropHeader}>🟡 Claude</Text>
-          <View style={styles.dropChips}>
-            {Object.entries(llmPlaced).map(([idx, zone]) => zone === 'claude' ? (
-              <TouchableOpacity key={idx} style={styles.dropChip} onPress={() => handleRemoveChipLLM(parseInt(idx))}>
-                <Text style={styles.dropChipText}>{llmItems[parseInt(idx)].text} ✕</Text>
-              </TouchableOpacity>
-            ) : null)}
+      {/* Claude + ChatGPT side by side */}
+      <View style={styles.dropColsRow}>
+        <View style={styles.dropColWrap}>
+          <View style={[styles.llmDropHeaderBox, { backgroundColor: '#fef3c7' }]}>
+            <Text style={[styles.llmDropHeaderText, { color: '#92400e' }]}>🟡 Claude</Text>
           </View>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.dropCol, styles.dropAI]} onPress={() => handleDropZoneLLM('chatgpt')}>
-          <Text style={styles.dropHeader}>🟢 ChatGPT</Text>
-          <View style={styles.dropChips}>
-            {Object.entries(llmPlaced).map(([idx, zone]) => zone === 'chatgpt' ? (
-              <TouchableOpacity key={idx} style={styles.dropChip} onPress={() => handleRemoveChipLLM(parseInt(idx))}>
-                <Text style={styles.dropChipText}>{llmItems[parseInt(idx)].text} ✕</Text>
-              </TouchableOpacity>
-            ) : null)}
+          <TouchableOpacity style={[styles.dropCol, { borderColor: '#fde68a', backgroundColor: '#fffbeb', flex: 0 }]} onPress={() => handleDropZoneLLM('claude')}>
+            <View style={styles.dropChips}>
+              {Object.entries(llmPlaced).map(([idx, zone]) => zone === 'claude' ? (
+                <TouchableOpacity key={idx} style={[styles.dropChip, { backgroundColor: '#fde68a40' }]} onPress={() => handleRemoveChipLLM(parseInt(idx))}>
+                  <Text style={[styles.dropChipText, { color: '#92400e' }]}>{llmItems[parseInt(idx)].text} ✕</Text>
+                </TouchableOpacity>
+              ) : null)}
+            </View>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.dropColWrap}>
+          <View style={[styles.llmDropHeaderBox, { backgroundColor: '#d1fae5' }]}>
+            <Text style={[styles.llmDropHeaderText, { color: '#065f46' }]}>🟢 ChatGPT</Text>
           </View>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.dropCol, styles.dropAI]} onPress={() => handleDropZoneLLM('gemini')}>
-          <Text style={styles.dropHeader}>🔵 Gemini</Text>
-          <View style={styles.dropChips}>
-            {Object.entries(llmPlaced).map(([idx, zone]) => zone === 'gemini' ? (
-              <TouchableOpacity key={idx} style={styles.dropChip} onPress={() => handleRemoveChipLLM(parseInt(idx))}>
-                <Text style={styles.dropChipText}>{llmItems[parseInt(idx)].text} ✕</Text>
-              </TouchableOpacity>
-            ) : null)}
-          </View>
-        </TouchableOpacity>
+          <TouchableOpacity style={[styles.dropCol, { borderColor: '#6ee7b7', backgroundColor: '#f0fdf4', flex: 0 }]} onPress={() => handleDropZoneLLM('chatgpt')}>
+            <View style={styles.dropChips}>
+              {Object.entries(llmPlaced).map(([idx, zone]) => zone === 'chatgpt' ? (
+                <TouchableOpacity key={idx} style={[styles.dropChip, { backgroundColor: '#d1fae560' }]} onPress={() => handleRemoveChipLLM(parseInt(idx))}>
+                  <Text style={[styles.dropChipText, { color: '#065f46' }]}>{llmItems[parseInt(idx)].text} ✕</Text>
+                </TouchableOpacity>
+              ) : null)}
+            </View>
+          </TouchableOpacity>
+        </View>
       </View>
+      {/* Gemini - full width */}
+      <View style={[styles.llmDropHeaderBox, { backgroundColor: '#dbeafe' }]}>
+        <Text style={[styles.llmDropHeaderText, { color: '#1e40af' }]}>🔵 Gemini</Text>
+      </View>
+      <TouchableOpacity style={[styles.dropCol, { borderColor: '#93c5fd', backgroundColor: '#eff6ff' }]} onPress={() => handleDropZoneLLM('gemini')}>
+        <View style={styles.dropChips}>
+          {Object.entries(llmPlaced).map(([idx, zone]) => zone === 'gemini' ? (
+            <TouchableOpacity key={idx} style={[styles.dropChip, { backgroundColor: '#dbeafe60' }]} onPress={() => handleRemoveChipLLM(parseInt(idx))}>
+              <Text style={[styles.dropChipText, { color: '#1e40af' }]}>{llmItems[parseInt(idx)].text} ✕</Text>
+            </TouchableOpacity>
+          ) : null)}
+        </View>
+      </TouchableOpacity>
       <TouchableOpacity style={styles.checkButton} onPress={checkLLMDrag}>
         <Text style={styles.checkButtonText}>Verificar asignación</Text>
       </TouchableOpacity>
@@ -1129,7 +1275,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
     const parts = fillItem.sentence.split('<b>___</b>');
     return (
       <View style={styles.stepContainer}>
-        <Text style={styles.tag}>💬 Módulo 13 de 15 · Vocabulario IA</Text>
+        <Text style={[styles.tag, styles.tagVocab]}>💬 Módulo 13 de 15 · Vocabulario IA</Text>
         <Text style={styles.title}>El vocabulario que necesitas</Text>
         <Text style={styles.subtitle}>Los expertos en IA usan términos específicos. Aprende el más importante de este nivel.</Text>
         <View style={[styles.card, { backgroundColor: '#faf5ff', borderColor: '#e9d5ff' }]}>
@@ -1174,7 +1320,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
 
   const renderPromptCompare = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.tag}>🔍 Módulo 14 de 15 · Prompts</Text>
+      <Text style={[styles.tag, styles.tagPrompt]}>🔍 Módulo 14 de 15 · Prompts</Text>
       <Text style={styles.title}>¿Cuál prompt es mejor?</Text>
       <Text style={styles.subtitle}>Para la misma tarea, un buen prompt da resultados 10x mejores que uno vago. ¿Puedes identificar cuál es cuál?</Text>
       <View style={styles.hintCard}>
@@ -1214,12 +1360,17 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
 
   const renderReflect = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.tag}>✍️ Reflexión final · +15 XP</Text>
+      <Text style={[styles.tag, styles.tagReflect]}>✍️ Reflexión final · +15 XP</Text>
       <Text style={styles.title}>¿Cómo vas a usar esto a partir de hoy?</Text>
       <Text style={styles.subtitle}>Este nivel te presentó los LLMs como herramientas de aprendizaje reales.</Text>
-      <View style={[styles.card, { backgroundColor: '#faf5ff', borderColor: '#e9d5ff' }]}>
-        <Text style={styles.cardTitle}>🤔 Tu reflexión de cierre</Text>
-        <Text style={styles.cardText}>Piensa en dos cosas concretas:{'\n\n'}<Text style={styles.bold}>1. Una app que usas todos los días y que vas a usar diferente ahora que sabes cómo funciona la IA por dentro.</Text>{'\n\n'}<Text style={styles.bold}>2. Una tarea de estudio o de la vida real donde vas a usar un LLM esta semana — y cómo lo vas a usar correctamente.</Text></Text>
+      <View style={[styles.card, styles.cardPurple]}>
+        <View style={styles.cardRow}>
+          <View style={[styles.cardIcon, { backgroundColor: '#e9d5ff' }]}><Text style={styles.cardIconText}>🤔</Text></View>
+          <View style={styles.cardContent}>
+            <Text style={styles.cardTitle}>Tu reflexión de cierre</Text>
+            <Text style={styles.cardText}>Piensa en dos cosas concretas:{'\n\n'}<Text style={styles.bold}>1. Una app que usas todos los días y que vas a usar diferente ahora que sabes cómo funciona la IA por dentro.</Text>{'\n\n'}<Text style={styles.bold}>2. Una tarea de estudio o de la vida real donde vas a usar un LLM esta semana — y cómo lo vas a usar correctamente.</Text></Text>
+          </View>
+        </View>
       </View>
       <TextInput
         style={styles.textArea}
@@ -1242,10 +1393,14 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
 
   const renderCompletion = () => (
     <View style={styles.completeContainer}>
-      <Text style={styles.completeBadgeText}>🎖️</Text>
+      <View style={styles.completeBadgeContainer}>
+        <Text style={styles.completeBadgeText}>🎖️</Text>
+      </View>
       <Text style={styles.completeTitle}>¡Nivel 2 completado!</Text>
       <Text style={styles.completeSub}>Terminaste "La IA que vive en tus apps". Ahora ves las apps de otra manera — y tienes tu primera brújula para usar los LLMs correctamente.</Text>
-      <Text style={styles.xpEarnedText}>⭐ {xp} XP ganados en este nivel</Text>
+      <View style={styles.xpEarnedChip}>
+        <Text style={styles.xpEarnedChipText}>⭐ {xp} XP ganados en este nivel</Text>
+      </View>
       <View style={styles.skillsList}>
         {[
           'Identifico los 4 tipos de IA en las apps que uso todos los días',
@@ -1347,13 +1502,25 @@ const styles = StyleSheet.create({
   closeBtn: { padding: 4 },
   progressWrap: { flex: 1, marginHorizontal: 12 },
   progressTrack: { height: 6, backgroundColor: colors.borderLight, borderRadius: 3 },
-  progressFill: { height: '100%', backgroundColor: colors.success, borderRadius: 3 },
+  progressFill: { height: '100%', backgroundColor: '#0ea5e9', borderRadius: 3 },
   progLabel: { fontSize: 10, color: colors.textSecondary, marginTop: 3 },
   xpText: { ...typography.bold, fontSize: 14, color: colors.accentDark },
   scrollView: { flex: 1 },
   scrollContent: { padding: 16, paddingBottom: 40 },
   stepContainer: { flex: 1 },
-  tag: { fontSize: 11, fontWeight: '600', color: colors.primary, backgroundColor: '#eef2ff', alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, marginBottom: 12 },
+  tag: { fontSize: 11, fontWeight: '700', alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, marginBottom: 12, letterSpacing: 0.4 },
+  tagIntro: { backgroundColor: '#e0f2fe', color: '#0369a1' },
+  tagTheory: { backgroundColor: '#dcfce7', color: '#166534' },
+  tagExample: { backgroundColor: '#fff7ed', color: '#9a3412' },
+  tagCase: { backgroundColor: '#fdf4ff', color: '#7e22ce' },
+  tagActivity: { backgroundColor: '#eff6ff', color: '#1e40af' },
+  tagQuiz: { backgroundColor: '#fef3c7', color: '#92400e' },
+  tagReflect: { backgroundColor: '#f1f5f9', color: '#475569' },
+  tagVocab: { backgroundColor: '#ecfdf5', color: '#065f46' },
+  tagVF: { backgroundColor: '#fef9ee', color: '#92400e' },
+  tagMatch: { backgroundColor: '#eef2ff', color: '#3730a3' },
+  tagSort: { backgroundColor: '#f5f3ff', color: '#5b21b6' },
+  tagPrompt: { backgroundColor: '#fff1f2', color: '#9f1239' },
   iconContainer: { width: 60, height: 60, borderRadius: 18, backgroundColor: '#eef2ff', justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
   iconEmoji: { fontSize: 30 },
   title: { ...typography.extraBold, fontSize: 19, color: colors.textPrimary, marginBottom: 6 },
@@ -1365,6 +1532,15 @@ const styles = StyleSheet.create({
   card: { backgroundColor: colors.surface, borderRadius: 14, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: colors.border },
   cardTitle: { ...typography.bold, fontSize: 13, color: colors.textPrimary, marginBottom: 6 },
   cardText: { ...typography.regular, fontSize: 13, color: colors.textSecondary, lineHeight: 20 },
+  cardSky: { backgroundColor: '#f0f9ff', borderColor: '#bae6fd' },
+  cardGreen: { backgroundColor: '#f0fdf4', borderColor: '#bbf7d0' },
+  cardAmber: { backgroundColor: '#fffbeb', borderColor: '#fde68a' },
+  cardPurple: { backgroundColor: '#faf5ff', borderColor: '#e9d5ff' },
+  cardRed: { backgroundColor: '#fff1f2', borderColor: '#fecdd3' },
+  cardRow: { flexDirection: 'row' as const, gap: 11, alignItems: 'flex-start' as const },
+  cardIcon: { width: 36, height: 36, borderRadius: 10, justifyContent: 'center' as const, alignItems: 'center' as const, flexShrink: 0 },
+  cardIconText: { fontSize: 19 },
+  cardContent: { flex: 1 },
   hintCard: { backgroundColor: colors.surfaceVariant, borderRadius: 12, padding: 11, marginBottom: 10, borderWidth: 1, borderColor: colors.border },
   hintCardText: { ...typography.regular, fontSize: 12, color: colors.textSecondary, lineHeight: 18 },
   highlightBox: { borderLeftWidth: 3, borderLeftColor: colors.error, padding: 11, backgroundColor: '#fff1f2', marginVertical: 10, borderRadius: 4 },
@@ -1393,6 +1569,20 @@ const styles = StyleSheet.create({
   scenarioBox: { backgroundColor: '#fffbeb', borderWidth: 1, borderColor: '#fde68a', borderRadius: 13, padding: 13, marginBottom: 12 },
   scenarioLabel: { fontSize: 9, fontWeight: '700', color: '#92400e', letterSpacing: 0.8, marginBottom: 7, textTransform: 'uppercase' },
   scenarioText: { ...typography.regular, fontSize: 12, color: colors.textPrimary, lineHeight: 19 },
+  // LLM card layout (module 11)
+  llmCard: { borderRadius: 12, padding: 11, borderWidth: 1.5, borderColor: '#e2e8f0', marginBottom: 7, flexDirection: 'row' as const, gap: 10, alignItems: 'flex-start' as const },
+  llmLogo: { width: 38, height: 38, borderRadius: 10, justifyContent: 'center' as const, alignItems: 'center' as const, flexShrink: 0 },
+  llmLogoText: { fontSize: 20, fontWeight: '900' as const },
+  llmInfo: { flex: 1 },
+  llmModelName: { ...typography.bold, fontSize: 12, color: '#0f172a', marginBottom: 2 },
+  llmDesc: { ...typography.regular, fontSize: 11, color: '#64748b', lineHeight: 17 },
+  llmTagsRow: { flexDirection: 'row' as const, flexWrap: 'wrap' as const, gap: 4, marginTop: 5 },
+  llmTag: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6, fontSize: 10, fontWeight: '600' as const },
+  // LLM drag column layout
+  llmDropHeaderBox: { paddingHorizontal: 7, paddingVertical: 4, borderRadius: 7, marginBottom: 5 },
+  llmDropHeaderText: { fontSize: 10, fontWeight: '700' as const },
+  dropColsRow: { flexDirection: 'row' as const, gap: 8, marginBottom: 8 },
+  dropColWrap: { flex: 1 },
   // Drag
   chipsPool: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, backgroundColor: colors.surfaceVariant, padding: 10, borderRadius: 12, borderWidth: 1, borderColor: colors.border, minHeight: 60 },
   chip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.borderLight },
@@ -1413,10 +1603,10 @@ const styles = StyleSheet.create({
   matchColumns: { flexDirection: 'row', gap: 12, marginTop: 4 },
   matchLeftColumn: { flex: 1, gap: 8 },
   matchRightColumn: { flex: 1, gap: 8 },
-  matchLeftCard: { backgroundColor: '#eff6ff', padding: 12, borderRadius: 10, borderWidth: 1, borderColor: '#bfdbfe', minHeight: 60, justifyContent: 'center' },
-  matchRightCard: { backgroundColor: '#fdf4ff', padding: 12, borderRadius: 10, borderWidth: 1, borderColor: '#e9d5ff', minHeight: 60, justifyContent: 'center' },
-  matchSelected: { borderColor: colors.primary, borderWidth: 2 },
-  matchMatched: { backgroundColor: '#dcfce7', borderColor: colors.success },
+  matchLeftCard: { backgroundColor: '#f0f9ff', padding: 12, borderRadius: 10, borderWidth: 1.5, borderColor: '#bae6fd', minHeight: 60, justifyContent: 'center' },
+  matchRightCard: { backgroundColor: '#f0fdf4', padding: 12, borderRadius: 10, borderWidth: 1.5, borderColor: '#bbf7d0', minHeight: 60, justifyContent: 'center' },
+  matchSelected: { borderColor: '#0ea5e9', borderWidth: 2, backgroundColor: '#e0f2fe' },
+  matchMatched: { backgroundColor: '#dcfce7', borderColor: '#10b981' },
   matchText: { ...typography.regular, fontSize: 12, color: colors.textPrimary, textAlign: 'center' },
   // VS grid
   vsGrid: { flexDirection: 'row', gap: 8, marginVertical: 12 },
@@ -1432,7 +1622,7 @@ const styles = StyleSheet.create({
   quizOptText: { flex: 1, ...typography.regular, fontSize: 13, color: colors.textPrimary },
   // Sort
   sortItem: { flexDirection: 'row', alignItems: 'center', padding: 11, backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.border, marginBottom: 8 },
-  sortNum: { width: 26, height: 26, borderRadius: 13, backgroundColor: colors.primary, color: '#fff', textAlign: 'center', lineHeight: 26, ...typography.bold, fontSize: 11, marginRight: 9 },
+  sortNum: { width: 26, height: 26, borderRadius: 13, backgroundColor: '#0ea5e9', color: '#fff', textAlign: 'center', lineHeight: 26, ...typography.bold, fontSize: 11, marginRight: 9 },
   sortText: { flex: 1, ...typography.regular, fontSize: 12, color: colors.textPrimary },
   sortArrows: { flexDirection: 'column', gap: 3 },
   sortBtn: { width: 28, height: 26, borderRadius: 7, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, justifyContent: 'center', alignItems: 'center' },
@@ -1468,7 +1658,7 @@ const styles = StyleSheet.create({
   charCount: { ...typography.regular, fontSize: 11, color: colors.textSecondary, textAlign: 'right', marginTop: 4, marginBottom: 10 },
   // Completion
   completeContainer: { alignItems: 'center', padding: 20 },
-  completeBadgeText: { fontSize: 44, marginBottom: 14 },
+  completeBadgeText: { fontSize: 44 },
   completeTitle: { ...typography.extraBold, fontSize: 21, color: colors.textPrimary, marginBottom: 6 },
   completeSub: { ...typography.regular, fontSize: 12, color: colors.textSecondary, textAlign: 'center', lineHeight: 20, marginBottom: 14 },
   xpEarnedText: { ...typography.bold, fontSize: 15, color: colors.accentDark, marginBottom: 14 },
@@ -1478,7 +1668,10 @@ const styles = StyleSheet.create({
   skillText: { flex: 1, ...typography.regular, fontSize: 11, color: '#166534', lineHeight: 17 },
   nextHint: { width: '100%', padding: 13, backgroundColor: colors.surfaceVariant, borderRadius: 10, marginBottom: 14, borderWidth: 1, borderColor: colors.border },
   nextHintText: { ...typography.regular, fontSize: 12, color: colors.textPrimary, lineHeight: 19 },
-  nextLevelButton: { backgroundColor: colors.primary, padding: 14, borderRadius: 11, width: '100%', alignItems: 'center' },
+  completeBadgeContainer: { width: 86, height: 86, borderRadius: 24, backgroundColor: '#bae6fd', justifyContent: 'center', alignItems: 'center', marginBottom: 14 },
+  xpEarnedChip: { flexDirection: 'row' as const, alignItems: 'center' as const, justifyContent: 'center' as const, paddingVertical: 11, paddingHorizontal: 20, backgroundColor: '#fef9c3', borderRadius: 12, marginBottom: 14, borderWidth: 1, borderColor: '#fcd34d', width: '100%' as const },
+  xpEarnedChipText: { ...typography.bold, fontSize: 15, color: '#92400e' },
+  nextLevelButton: { backgroundColor: '#0ea5e9', padding: 14, borderRadius: 11, width: '100%', alignItems: 'center' },
   nextLevelText: { ...typography.bold, color: '#fff' },
   // Result banner
   resultBanner: { margin: 16, padding: 14, borderRadius: 14, borderWidth: 1 },
@@ -1487,7 +1680,7 @@ const styles = StyleSheet.create({
   resultBannerText: { ...typography.bold, fontSize: 13, color: colors.textPrimary, lineHeight: 20 },
   // Footer
   footerRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 16, gap: 8 },
-  nextButton: { backgroundColor: colors.success, padding: 14, margin: 16, borderRadius: 11, alignItems: 'center' },
+  nextButton: { backgroundColor: '#0ea5e9', padding: 14, margin: 16, borderRadius: 11, alignItems: 'center' },
   nextButtonText: { ...typography.bold, color: '#fff', fontSize: 15 },
   nextButtonFlex: { flex: 1, margin: 0 },
   backButton: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, padding: 14, borderRadius: 11, alignItems: 'center', paddingHorizontal: 20 },
