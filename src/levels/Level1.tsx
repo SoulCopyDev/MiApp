@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -53,11 +53,11 @@ const DRAG_POOL: DragItem[] = [
 const MATCH_POOL: MatchPair[] = [
   { left: 'Spotify predice qué canción te va a gustar mañana', right: 'Comparó tu historial con 600M de usuarios parecidos a ti' },
   { left: 'Tu cámara desenfoca el fondo en modo retrato', right: 'Una IA entrenada con millones de fotos detecta los bordes de tu cuerpo' },
-  { left: 'ChatGPT escribe texto en perfecto español', right: 'Predice qué palabra es más probable que siga, millones de veces' },
+  { left: 'ChatGPT escribe texto en perfecto español', right: 'Aprendió los patrones de escritura de millones de textos en tu idioma' },
   { left: 'Google Maps predice el trancón antes de que empiece', right: 'Analizó años de datos GPS de millones de conductores en esa ruta' },
   { left: 'YouTube sabe exactamente cuándo te vas a aburrir de un video', right: 'Midió el segundo exacto donde millones de personas abandonan videos similares' },
   { left: 'Face ID te desbloquea en la oscuridad', right: 'Usa puntos de luz infrarrojos invisibles para mapear tu cara en 3D' },
-  { left: 'Tu celular corrige automáticamente lo que escribes', right: 'Aprendió los patrones de escritura de millones de textos en tu idioma' },
+  { left: 'Tu celular corrige automáticamente lo que escribes', right: 'Predice qué palabra es más probable que siga, millones de veces' },
   { left: 'Netflix sabe qué serie vas a ver después', right: 'Encontró usuarios con historial de series idéntico al tuyo y copió sus elecciones' },
 ];
 
@@ -135,11 +135,11 @@ const FILL_POOL: FillItem[] = [
 
 // Texto bold + rest para renderizar con formato
 const SORT_ITEMS = [
-  { bold: '1 · Recopilar datos:', rest: ' Juntar millones de ejemplos (fotos, textos, audios)' },
-  { bold: '2 · Etiquetar:', rest: ' Marcar cuáles son correctos ("esto SÍ es gato, esto NO")' },
-  { bold: '3 · Entrenar:', rest: ' El modelo ve cada ejemplo e intenta predecir el resultado' },
-  { bold: '4 · Corregir:', rest: ' Se le dice si acertó o falló, y ajusta sus números internos' },
-  { bold: '5 · Desplegar:', rest: ' Ya entrenado, puede responder bien a situaciones nuevas' },
+  { bold: 'Recopilar datos:', rest: ' Juntar millones de ejemplos (fotos, textos, audios)' },
+  { bold: 'Etiquetar:', rest: ' Marcar cuáles son correctos ("esto SÍ es gato, esto NO")' },
+  { bold: 'Entrenar:', rest: ' El modelo ve cada ejemplo e intenta predecir el resultado' },
+  { bold: 'Corregir:', rest: ' Se le dice si acertó o falló, y ajusta sus números internos' },
+  { bold: 'Desplegar:', rest: ' Ya entrenado, puede responder bien a situaciones nuevas' },
 ];
 
 const pickN = <T,>(arr: T[], n: number): T[] => {
@@ -171,6 +171,8 @@ export default function GameLevel1({ navigation: propsNavigation, setAllowBack }
   const [dragSel, setDragSel] = useState<number | null>(null);
   const [dragAttempts, setDragAttempts] = useState(0);
   const [dragOk, setDragOk] = useState(false);
+  const dragIdxRef = useRef<number | null>(null);
+  const [dragOverZone, setDragOverZone] = useState<string | null>(null);
 
   const [matchLeft, setMatchLeft] = useState<number | null>(null);
   const [matchDone, setMatchDone] = useState(0);
@@ -237,6 +239,77 @@ export default function GameLevel1({ navigation: propsNavigation, setAllowBack }
       setSortItemFeedback({});
     }
   }, [step, matchPairs]);
+
+  // Mirror dragPlaced to a ref so drag handlers always see the latest value
+  const dragPlacedRef = useRef(dragPlaced);
+  useEffect(() => { dragPlacedRef.current = dragPlaced; }, [dragPlaced]);
+
+  // Web-only: attach HTML5 drag & drop listeners directly to DOM nodes (guaranteed to work in RN Web)
+  useEffect(() => {
+    if (Platform.OS !== 'web' || step !== 4) return;
+    const cleanups: (() => void)[] = [];
+
+    const setup = () => {
+      dragItems.forEach((_, idx) => {
+        if (dragPlacedRef.current[idx] !== undefined) return;
+        const el = document.getElementById(`drag-chip-${idx}`);
+        if (!el) return;
+        el.setAttribute('draggable', 'true');
+        (el as HTMLElement).style.cursor = 'grab';
+        const onDragStart = (e: DragEvent) => {
+          dragIdxRef.current = idx;
+          setDragSel(null);
+          if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
+        };
+        const onDragEnd = () => { dragIdxRef.current = null; setDragOverZone(null); };
+        el.addEventListener('dragstart', onDragStart);
+        el.addEventListener('dragend', onDragEnd);
+        cleanups.push(() => {
+          el.removeEventListener('dragstart', onDragStart);
+          el.removeEventListener('dragend', onDragEnd);
+        });
+      });
+
+      (['ai', 'human'] as const).forEach(zone => {
+        const el = document.getElementById(`drop-zone-${zone}`);
+        if (!el) return;
+        const onDragOver = (e: Event) => { e.preventDefault(); setDragOverZone(zone); };
+        const onDragLeave = (e: DragEvent) => {
+          if (!el.contains(e.relatedTarget as Node)) setDragOverZone(null);
+        };
+        const onDrop = (e: Event) => {
+          e.preventDefault();
+          setDragOverZone(null);
+          const idx = dragIdxRef.current;
+          if (idx === null || dragPlacedRef.current[idx] !== undefined) return;
+          const it = dragItems[idx];
+          if (it.correct === zone) {
+            setDragPlaced(prev => ({ ...prev, [idx]: zone }));
+            setStepResult(null);
+          } else {
+            showResult(false, `"${it.text}" no pertenece a esta categoría.`);
+          }
+          dragIdxRef.current = null;
+        };
+        el.addEventListener('dragover', onDragOver);
+        el.addEventListener('dragleave', onDragLeave);
+        el.addEventListener('drop', onDrop);
+        cleanups.push(() => {
+          el.removeEventListener('dragover', onDragOver);
+          el.removeEventListener('dragleave', onDragLeave);
+          el.removeEventListener('drop', onDrop);
+        });
+      });
+    };
+
+    // Small delay to ensure React has finished rendering DOM nodes
+    const timer = setTimeout(setup, 50);
+    return () => {
+      clearTimeout(timer);
+      cleanups.forEach(fn => fn());
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, dragItems, dragPlaced]);
 
   const [xpToast, setXpToast] = useState<{ amount: number; id: number } | null>(null);
   const addXP = (amount: number) => {
@@ -616,6 +689,7 @@ export default function GameLevel1({ navigation: propsNavigation, setAllowBack }
     </View>
   );
 
+  
   const renderCase = () => (
     <View style={styles.stepContainer}>
       <Text style={[styles.tag, styles.tagCase]}>🏥 Módulo 3 de 10 · Caso real</Text>
@@ -683,7 +757,12 @@ export default function GameLevel1({ navigation: propsNavigation, setAllowBack }
         {dragItems.map((item, idx) => {
           if (dragPlaced[idx] !== undefined) return null;
           return (
-            <TouchableOpacity key={idx} style={[styles.chip, dragSel === idx && styles.chipSelected]} onPress={() => handleChipPress(idx)}>
+            <TouchableOpacity
+              key={idx}
+              nativeID={`drag-chip-${idx}`}
+              style={[styles.chip, dragSel === idx && styles.chipSelected]}
+              onPress={() => handleChipPress(idx)}
+            >
               <Text style={styles.chipText}>{item.text}</Text>
             </TouchableOpacity>
           );
@@ -692,14 +771,18 @@ export default function GameLevel1({ navigation: propsNavigation, setAllowBack }
       <View style={styles.dropCols}>
         <View style={{ flex: 1 }}>
           <Text style={[styles.dropHeader, { backgroundColor: '#dbeafe', color: '#1e40af' }]}>🤖 IA</Text>
-          <TouchableOpacity style={[styles.dropCol, styles.dropAI]} onPress={() => handleDropZone('ai')}>
+          <TouchableOpacity
+            nativeID="drop-zone-ai"
+            style={[styles.dropCol, styles.dropAI, dragOverZone === 'ai' && styles.dropColDragOver]}
+            onPress={() => handleDropZone('ai')}
+          >
             <View style={styles.dropChips}>
-              {Object.entries(dragPlaced).map(([idx, zone]) => {
+              {Object.entries(dragPlaced).map(([idxStr, zone]) => {
                 if (zone !== 'ai') return null;
-                const i = parseInt(idx);
+                const i = parseInt(idxStr);
                 return (
-                  <TouchableOpacity key={i} style={styles.dropChip} onPress={() => handleRemoveChip(i)}>
-                    <Text style={styles.dropChipText}>{dragItems[i].text} ✕</Text>
+                  <TouchableOpacity key={i} style={styles.dropChipAI} onPress={() => handleRemoveChip(i)}>
+                    <Text style={styles.dropChipTextAI}>{dragItems[i].text} ✕</Text>
                   </TouchableOpacity>
                 );
               })}
@@ -708,14 +791,18 @@ export default function GameLevel1({ navigation: propsNavigation, setAllowBack }
         </View>
         <View style={{ flex: 1 }}>
           <Text style={[styles.dropHeader, { backgroundColor: '#dcfce7', color: '#166534' }]}>🧠 Humano</Text>
-          <TouchableOpacity style={[styles.dropCol, styles.dropHuman]} onPress={() => handleDropZone('human')}>
+          <TouchableOpacity
+            nativeID="drop-zone-human"
+            style={[styles.dropCol, styles.dropHuman, dragOverZone === 'human' && styles.dropColDragOver]}
+            onPress={() => handleDropZone('human')}
+          >
             <View style={styles.dropChips}>
-              {Object.entries(dragPlaced).map(([idx, zone]) => {
+              {Object.entries(dragPlaced).map(([idxStr, zone]) => {
                 if (zone !== 'human') return null;
-                const i = parseInt(idx);
+                const i = parseInt(idxStr);
                 return (
-                  <TouchableOpacity key={i} style={styles.dropChip} onPress={() => handleRemoveChip(i)}>
-                    <Text style={styles.dropChipText}>{dragItems[i].text} ✕</Text>
+                  <TouchableOpacity key={i} style={styles.dropChipHuman} onPress={() => handleRemoveChip(i)}>
+                    <Text style={styles.dropChipTextHuman}>{dragItems[i].text} ✕</Text>
                   </TouchableOpacity>
                 );
               })}
@@ -1068,6 +1155,7 @@ export default function GameLevel1({ navigation: propsNavigation, setAllowBack }
           multiline
           numberOfLines={6}
           placeholder="Ejemplo: Uso YouTube todos los días y ahora entiendo que la IA analiza exactamente cuántos segundos veo cada video para decidir qué recomendar. Antes no pensaba en eso. Ahora voy a notar cuando la IA me esté jalando hacia cierto tipo de contenido..."
+          placeholderTextColor="#b8bcc0"
           value={reflectText}
           onChangeText={setReflectText}
         />
@@ -1273,17 +1361,22 @@ const styles = StyleSheet.create({
 
   // Drag & Drop
   chipsPool: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, backgroundColor: '#f9fafb', padding: 10, borderRadius: 14, borderWidth: 1, borderColor: '#e5e7eb', minHeight: 54, marginBottom: 10 },
-  chip: { paddingHorizontal: 13, paddingVertical: 8, borderRadius: 20, backgroundColor: '#ffffff', borderWidth: 1.5, borderColor: '#d1d5db', minHeight: 44, justifyContent: 'center' },
+  chip: { paddingHorizontal: 13, paddingVertical: 8, borderRadius: 20, backgroundColor: '#ffffff', borderWidth: 1.5, borderColor: '#d1d5db', minHeight: 44, justifyContent: 'center', ...Platform.select({ web: { cursor: 'grab' as any } }) },
   chipSelected: { backgroundColor: '#eef2ff', borderColor: '#6366f1' },
   chipText: { ...typography.regular, fontSize: 12, color: '#374151', lineHeight: 17 },
   dropCols: { flexDirection: 'row', gap: 8, marginBottom: 8 },
   dropCol: { flex: 1, borderWidth: 2, borderStyle: 'dashed', borderColor: '#d1d5db', borderRadius: 12, padding: 8, minHeight: 110 },
   dropAI: { backgroundColor: '#f0f7ff' },
   dropHuman: { backgroundColor: '#f0fdf4' },
+  dropColDragOver: { borderStyle: 'solid', borderColor: '#6366f1', backgroundColor: '#eef2ff' },
   dropHeader: { ...typography.bold, fontSize: 11, textAlign: 'center', marginBottom: 7, padding: 5, borderRadius: 7 },
   dropChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, minHeight: 40 },
   dropChip: { backgroundColor: '#dbeafe', paddingHorizontal: 8, paddingVertical: 5, borderRadius: 14, minHeight: 34, justifyContent: 'center' },
   dropChipText: { ...typography.regular, fontSize: 11, color: '#1e40af', lineHeight: 16 },
+  dropChipAI: { backgroundColor: '#dbeafe', paddingHorizontal: 8, paddingVertical: 5, borderRadius: 14, minHeight: 34, justifyContent: 'center' },
+  dropChipTextAI: { ...typography.regular, fontSize: 11, color: '#1e40af', lineHeight: 16 },
+  dropChipHuman: { backgroundColor: '#dcfce7', paddingHorizontal: 8, paddingVertical: 5, borderRadius: 14, minHeight: 34, justifyContent: 'center' },
+  dropChipTextHuman: { ...typography.regular, fontSize: 11, color: '#166534', lineHeight: 16 },
 
   // Matching
   instructionCard: { backgroundColor: '#eff6ff', borderRadius: 10, padding: 11, marginBottom: 10, borderWidth: 1, borderColor: '#bfdbfe' },

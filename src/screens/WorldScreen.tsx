@@ -5,6 +5,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useGameStore, coordsToGlobalN } from '../store/gameStore';
 import { colors, typography } from '../theme';
 import { useBreakpoint } from '../hooks/useBreakpoint';
+import WebSidebar from '../components/WebSidebar';
 
 export default function WorldScreen() {
   const { worldId: worldIdParam } = useLocalSearchParams<{ worldId: string }>();
@@ -66,6 +67,9 @@ export default function WorldScreen() {
     const progressPct    = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
     return (
+      <View style={{ flex: 1, flexDirection: 'row', backgroundColor: colors.background }}>
+        <WebSidebar />
+        <View style={{ flex: 1, overflow: 'hidden' }}>
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false} contentContainerStyle={styles.desktopScroll}>
         {/* Web header con back button */}
         <View style={styles.desktopHeader}>
@@ -180,6 +184,8 @@ export default function WorldScreen() {
           })}
         </View>
       </ScrollView>
+        </View>
+      </View>
     );
   }
 

@@ -1,7 +1,9 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, Platform } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { colors } from '../theme';
+import { useBreakpoint } from '../hooks/useBreakpoint';
+import WebSidebar from '../components/WebSidebar';
 
 import Level1 from './Level1';
 import Level2 from './Level2';
@@ -53,11 +55,24 @@ export default function LevelScreen() {
   const { N } = useLocalSearchParams<{ N: string }>();
   const n = Number(N);
   const Component = LEVEL_COMPONENTS[n];
+  const breakpoint = useBreakpoint();
+  const isWebDesktop = Platform.OS === 'web' && breakpoint !== 'mobile';
 
   if (!Component) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }}>
         <Text>Nivel N{n} no disponible aún.</Text>
+      </View>
+    );
+  }
+
+  if (isWebDesktop) {
+    return (
+      <View style={{ flex: 1, flexDirection: 'row', backgroundColor: colors.background }}>
+        <WebSidebar />
+        <View style={{ flex: 1, overflow: 'hidden' }}>
+          <Component />
+        </View>
       </View>
     );
   }
