@@ -1155,6 +1155,7 @@ export default function GameLevel1({ navigation: propsNavigation, setAllowBack }
           multiline
           numberOfLines={6}
           placeholder="Ejemplo: Uso YouTube todos los días y ahora entiendo que la IA analiza exactamente cuántos segundos veo cada video para decidir qué recomendar. Antes no pensaba en eso. Ahora voy a notar cuando la IA me esté jalando hacia cierto tipo de contenido..."
+          placeholderTextColor="#b8bcc0"
           value={reflectText}
           onChangeText={setReflectText}
         />
