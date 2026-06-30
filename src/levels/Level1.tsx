@@ -53,11 +53,11 @@ const DRAG_POOL: DragItem[] = [
 const MATCH_POOL: MatchPair[] = [
   { left: 'Spotify predice qué canción te va a gustar mañana', right: 'Comparó tu historial con 600M de usuarios parecidos a ti' },
   { left: 'Tu cámara desenfoca el fondo en modo retrato', right: 'Una IA entrenada con millones de fotos detecta los bordes de tu cuerpo' },
-  { left: 'ChatGPT escribe texto en perfecto español', right: 'Predice qué palabra es más probable que siga, millones de veces' },
+  { left: 'ChatGPT escribe texto en perfecto español', right: 'Aprendió los patrones de escritura de millones de textos en tu idioma' },
   { left: 'Google Maps predice el trancón antes de que empiece', right: 'Analizó años de datos GPS de millones de conductores en esa ruta' },
   { left: 'YouTube sabe exactamente cuándo te vas a aburrir de un video', right: 'Midió el segundo exacto donde millones de personas abandonan videos similares' },
   { left: 'Face ID te desbloquea en la oscuridad', right: 'Usa puntos de luz infrarrojos invisibles para mapear tu cara en 3D' },
-  { left: 'Tu celular corrige automáticamente lo que escribes', right: 'Aprendió los patrones de escritura de millones de textos en tu idioma' },
+  { left: 'Tu celular corrige automáticamente lo que escribes', right: 'Predice qué palabra es más probable que siga, millones de veces' },
   { left: 'Netflix sabe qué serie vas a ver después', right: 'Encontró usuarios con historial de series idéntico al tuyo y copió sus elecciones' },
 ];
 
