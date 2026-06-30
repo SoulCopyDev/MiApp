@@ -687,7 +687,7 @@ export default function World2Level4({ navigation: propsNavigation, setAllowBack
             </Text>
           </View>
           <Text style={{ fontSize: 10, color: '#94a3b8', marginBottom: 8 }}>Nivel 10 de 36 completado · Mundo 2 — Domina el Prompting</Text>
-          {btn('Volver al mapa', finish)}
+          {btn('Siguiente nivel →', finish)}
         </View>
       );
       default: return null;
@@ -706,7 +706,7 @@ export default function World2Level4({ navigation: propsNavigation, setAllowBack
         <Text style={styles.xpChip}>{xp} XP</Text>
       </View>
       <ScrollView contentContainerStyle={styles.scrollContent}>{renderStep()}</ScrollView>
-      {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} />}
+      {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} bgColor="#10b981" textColor="#fff" />}
     </View>
   );
 }
@@ -714,13 +714,13 @@ export default function World2Level4({ navigation: propsNavigation, setAllowBack
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   bar: { flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
-  track: { flex: 1, height: 6, backgroundColor: colors.borderLight, borderRadius: 3, marginHorizontal: 12 },
-  fill: { height: '100%', backgroundColor: colors.success, borderRadius: 3 },
+  track: { flex: 1, height: 8, backgroundColor: colors.borderLight, borderRadius: 4, marginHorizontal: 12 },
+  fill: { height: '100%', backgroundColor: '#10b981', borderRadius: 4 },
   xpChip: { ...typography.bold, fontSize: 14, color: colors.accentDark },
   scrollContent: { padding: 16, paddingBottom: 40 },
   stepContainer: { flex: 1 },
   tag: { fontSize: 11, fontWeight: '600', color: '#065f46', backgroundColor: '#d1fae5', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, marginBottom: 12 },
-  iconCircle: { width: 64, height: 64, borderRadius: 20, backgroundColor: '#fef3c7', justifyContent: 'center', alignItems: 'center', marginBottom: 14, alignSelf: 'center' },
+  iconCircle: { width: 64, height: 64, borderRadius: 20, backgroundColor: '#ecfdf5', justifyContent: 'center', alignItems: 'center', marginBottom: 14, alignSelf: 'center' },
   iconEmoji: { fontSize: 32 },
   title: { ...typography.extraBold, fontSize: 19, color: colors.textPrimary, marginBottom: 8, textAlign: 'center' },
   subtitle: { ...typography.regular, fontSize: 13, color: colors.textSecondary, marginBottom: 14, lineHeight: 18, textAlign: 'center' },
@@ -763,7 +763,7 @@ const styles = StyleSheet.create({
   compareText: { fontSize: 11, color: '#334155', lineHeight: 16 },
   charCount: { fontSize: 11, color: '#94a3b8', textAlign: 'right', marginTop: 4 },
   completeContainer: { alignItems: 'center', padding: 20 },
-  completeIcon: { width: 86, height: 86, borderRadius: 24, backgroundColor: '#fef9c3', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
+  completeIcon: { width: 86, height: 86, borderRadius: 24, backgroundColor: '#a7f3d0', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
   completeTitle: { ...typography.extraBold, fontSize: 21 },
   completeSub: { ...typography.regular, textAlign: 'center', marginVertical: 8 },
   xpBig: { ...typography.bold, fontSize: 18, color: colors.accentDark, marginBottom: 16 },

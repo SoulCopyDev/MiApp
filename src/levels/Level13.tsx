@@ -1,4 +1,5 @@
 // src/levels/World3/Level1.tsx
+import { router } from 'expo-router';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
@@ -299,7 +300,7 @@ const MODULES = [
           El mundo de los libros está siendo transformado por la IA. Algunos ejemplos reales:{'\n\n'}
           🇩🇪 <Bold>Alemania:</Bold> La editorial Carlsen publicó en 2023 uno de los primeros libros infantiles con ilustraciones generadas con IA.{'\n'}
           🇺🇸 <Bold>EE.UU.:</Bold> Amazon KDP recibe miles de libros por semana con portadas e ilustraciones generadas con IA.{'\n'}
-          🇨🇴 <Bold>Colombia:</Bold> Algunas agencias de publicidad ya usan DALL-E y Midjourney para crear campañas visuales completas en horas, no semanas.
+          🌎 <Bold>Latinoamérica:</Bold> Agencias de publicidad en México, Argentina y Chile ya usan DALL-E y Midjourney para crear campañas visuales completas en horas, no semanas.
         </BodyText>
         <InfoBox>
           <Bold>El debate:</Bold> ¿Los ilustradores humanos están en peligro? Muchos expertos creen que la IA será una herramienta que complementa a los artistas, no que los reemplaza. ¡Los artistas que saben usar IA serán los más valiosos!
@@ -376,8 +377,6 @@ export default function World3Level1() {
   const [xp, setXp] = useState(0);
   const [xpToast, setXpToast] = useState<{ amount: number; id: number } | null>(null);
   const [correctCount, setCorrectCount] = useState(0);
-  const [completed, setCompleted] = useState(false);
-
   // Estados para quizzes
   const [quizAnswered, setQuizAnswered] = useState(false);
   const [quizResult, setQuizResult] = useState<'correct' | 'wrong' | null>(null);
@@ -482,12 +481,11 @@ export default function World3Level1() {
   };
 
   const finishLevel = () => {
-    // Calcular estrellas según XP
     let stars = 1;
     if (xp >= 200) stars = 3;
     else if (xp >= 150) stars = 2;
     completeLevel(13, stars, xp);
-    setCompleted(true);
+    router.back();
   };
 
   // ── RENDERIZADORES POR TIPO ──────────────────────────────
@@ -935,6 +933,7 @@ export default function World3Level1() {
       <Text style={styles.completionIcon}>🎨</Text>
       <Text style={styles.completionTitle}>¡Badge desbloqueado!</Text>
       <Text style={styles.completionBadge}>🏅 AI Artist</Text>
+      <Text style={styles.levelIndicator}>Nivel 13 de 36</Text>
       <Text style={styles.completionText}>
         ¡Completaste el Nivel 13! Ahora sabes crear prompts de imagen, conoces los estilos artísticos y entiendes cómo funciona la IA generativa visual.
       </Text>
@@ -953,8 +952,8 @@ export default function World3Level1() {
           <Text style={styles.statLbl}>Próximo</Text>
         </View>
       </View>
-      <View style={{ backgroundColor: '#f8fafc', borderRadius: 10, padding: 11, marginBottom: 14, borderWidth: 1, borderColor: '#e2e8f0', width: '100%' }}>
-        <Text style={{ fontSize: 12, color: '#334155', lineHeight: 20 }}>
+      <View style={{ backgroundColor: '#2d1a42', borderRadius: 10, padding: 11, marginBottom: 14, borderWidth: 1, borderColor: '#3d2a5a', width: '100%' }}>
+        <Text style={{ fontSize: 12, color: '#f472b6', lineHeight: 20 }}>
           🎵 <Text style={{ fontWeight: '700' }}>Nivel 14: IA y Audio{'\n\n'}</Text>
           Ahora que dominas las imágenes, vas a explorar el sonido: voces sintéticas, clonación de voz, música generativa con Suno y Udio, y los riesgos que conlleva esta tecnología.
         </Text>
@@ -966,14 +965,6 @@ export default function World3Level1() {
   );
 
   // ── RENDERIZADO PRINCIPAL ─────────────────────────────────
-  if (completed) {
-    return (
-      <View style={styles.screen}>
-        <Text style={styles.thanksText}>¡Gracias por jugar! Redirigiendo...</Text>
-      </View>
-    );
-  }
-
   const currentMod = MODULES[step];
   if (!currentMod) return null;
 
@@ -985,7 +976,7 @@ export default function World3Level1() {
       <View style={styles.header}>
         <Text style={styles.levelBadge}>Nivel 13 · 21 módulos</Text>
         <Text style={styles.levelTitle}>
-          IA que <Text style={{ color: colors.primary }}>Dibuja</Text>
+          IA que <Text style={{ color: '#e91e8c' }}>Dibuja</Text>
         </Text>
         <Text style={styles.subtitle}>Genera imágenes con palabras</Text>
         <View style={styles.progressBar}>
@@ -1060,7 +1051,7 @@ const InfoBox = ({ children }: { children: any }) => (
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#0f0a1a',
   },
   container: {
     padding: 16,
@@ -1073,47 +1064,47 @@ const styles = StyleSheet.create({
   levelBadge: {
     ...typography.bold,
     fontSize: 13,
-    color: colors.primary,
+    color: '#e91e8c',
     marginBottom: 8,
   },
   levelTitle: {
     ...typography.heading1,
     fontSize: 28,
-    color: colors.textPrimary,
+    color: '#fce7f3',
     textAlign: 'center',
   },
   subtitle: {
     ...typography.body,
-    color: colors.textSecondary,
+    color: '#f472b6',
     marginTop: 4,
     marginBottom: 16,
   },
   progressBar: {
     width: '100%',
     height: 6,
-    backgroundColor: colors.borderLight,
+    backgroundColor: '#3d2a5a',
     borderRadius: 3,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    backgroundColor: colors.primary,
+    backgroundColor: '#e91e8c',
     borderRadius: 3,
   },
   progressLabel: {
     ...typography.caption,
-    color: colors.textSecondary,
+    color: '#f472b6',
     marginTop: 6,
   },
   moduleCard: {
-    backgroundColor: colors.surface,
+    backgroundColor: '#231535',
     borderRadius: 16,
     padding: 20,
     borderWidth: 1,
-    borderColor: colors.borderLight,
-    shadowColor: colors.shadow,
+    borderColor: '#3d2a5a',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.3,
     elevation: 2,
   },
   moduleType: {
@@ -1126,30 +1117,30 @@ const styles = StyleSheet.create({
     fontSize: 11,
     textTransform: 'uppercase',
     letterSpacing: 1,
-    color: colors.primary,
+    color: '#e91e8c',
     marginLeft: 6,
   },
   moduleTitle: {
     ...typography.heading3,
     fontSize: 20,
-    color: colors.textPrimary,
+    color: '#fce7f3',
     marginBottom: 16,
   },
   bodyText: {
     ...typography.body,
     fontSize: 15,
     lineHeight: 24,
-    color: colors.textSecondary,
+    color: '#f472b6',
     marginBottom: 12,
   },
   bold: {
     fontWeight: '700',
-    color: colors.textPrimary,
+    color: '#fce7f3',
   },
   infoBox: {
-    backgroundColor: colors.surfaceVariant,
+    backgroundColor: '#2d1a42',
     borderLeftWidth: 4,
-    borderLeftColor: colors.primary,
+    borderLeftColor: '#e91e8c',
     borderRadius: 8,
     padding: 14,
     marginBottom: 16,
@@ -1158,17 +1149,17 @@ const styles = StyleSheet.create({
     ...typography.body,
     fontSize: 14,
     lineHeight: 22,
-    color: colors.textSecondary,
+    color: '#f472b6',
   },
   // Quiz
   option: {
     flexDirection: 'row',
-    backgroundColor: colors.surfaceVariant,
+    backgroundColor: '#2d1a42',
     padding: 14,
     borderRadius: 12,
     marginBottom: 10,
     borderWidth: 2,
-    borderColor: colors.borderLight,
+    borderColor: '#3d2a5a',
     alignItems: 'center',
   },
   optionIcon: {
@@ -1178,15 +1169,15 @@ const styles = StyleSheet.create({
   optionText: {
     flex: 1,
     ...typography.body,
-    color: colors.textPrimary,
+    color: '#fce7f3',
   },
   optionCorrect: {
-    borderColor: colors.success,
-    backgroundColor: '#e6f7e6',
+    borderColor: '#22c55e',
+    backgroundColor: '#14532d',
   },
   optionWrong: {
-    borderColor: colors.error,
-    backgroundColor: '#fde0e0',
+    borderColor: '#ef4444',
+    backgroundColor: '#450a0a',
   },
   feedback: {
     marginTop: 14,
@@ -1194,19 +1185,19 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   feedbackOk: {
-    backgroundColor: '#e6f7e6',
+    backgroundColor: '#14532d',
     borderWidth: 1,
-    borderColor: colors.success,
+    borderColor: '#22c55e',
   },
   feedbackFail: {
-    backgroundColor: '#fde0e0',
+    backgroundColor: '#450a0a',
     borderWidth: 1,
-    borderColor: colors.error,
+    borderColor: '#ef4444',
   },
   feedbackText: {
     ...typography.body,
     fontSize: 14,
-    color: colors.textPrimary,
+    color: '#fce7f3',
   },
   // Matching
   matchGrid: {
@@ -1218,40 +1209,40 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
   },
   matchItem: {
-    backgroundColor: colors.surfaceVariant,
+    backgroundColor: '#2d1a42',
     padding: 12,
     borderRadius: 10,
     marginBottom: 8,
     borderWidth: 2,
-    borderColor: colors.borderLight,
+    borderColor: '#3d2a5a',
     alignItems: 'center',
   },
   matchItemSelected: {
-    borderColor: colors.primary,
-    backgroundColor: '#e8eaf6',
+    borderColor: '#e91e8c',
+    backgroundColor: '#3d2a5a',
   },
   matchItemMatched: {
-    borderColor: colors.success,
-    backgroundColor: '#e6f7e6',
+    borderColor: '#22c55e',
+    backgroundColor: '#14532d',
   },
   matchItemSelectable: {
-    borderColor: colors.primary,
+    borderColor: '#e91e8c',
   },
   // Builder
   builderInput: {
-    backgroundColor: colors.background,
+    backgroundColor: '#1a0d2a',
     borderWidth: 2,
-    borderColor: colors.borderLight,
+    borderColor: '#3d2a5a',
     borderRadius: 12,
     padding: 14,
     fontSize: 15,
-    color: colors.textPrimary,
+    color: '#fce7f3',
     minHeight: 100,
     marginVertical: 10,
     textAlignVertical: 'top',
   },
   btn: {
-    backgroundColor: colors.primary,
+    backgroundColor: '#e91e8c',
     padding: 14,
     borderRadius: 12,
     alignItems: 'center',
@@ -1267,9 +1258,9 @@ const styles = StyleSheet.create({
   },
   // Word builder
   sentenceBox: {
-    backgroundColor: colors.background,
+    backgroundColor: '#1a0d2a',
     borderWidth: 2,
-    borderColor: colors.borderLight,
+    borderColor: '#3d2a5a',
     borderRadius: 12,
     padding: 14,
     minHeight: 50,
@@ -1279,25 +1270,25 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   builtChip: {
-    backgroundColor: colors.surfaceVariant,
+    backgroundColor: '#2d1a42',
     borderWidth: 1,
-    borderColor: colors.borderLight,
+    borderColor: '#3d2a5a',
     borderRadius: 6,
     paddingVertical: 4,
     paddingHorizontal: 10,
     margin: 2,
     fontSize: 14,
-    color: colors.textSecondary,
+    color: '#f472b6',
   },
   wordPool: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     padding: 12,
-    backgroundColor: colors.surfaceVariant,
+    backgroundColor: '#2d1a42',
     borderRadius: 12,
   },
   wordChip: {
-    backgroundColor: colors.primaryLight,
+    backgroundColor: '#3d2a5a',
     borderRadius: 8,
     paddingVertical: 6,
     paddingHorizontal: 14,
@@ -1307,11 +1298,11 @@ const styles = StyleSheet.create({
     opacity: 0.3,
   },
   wordChipText: {
-    color: colors.primary,
+    color: '#e91e8c',
     fontWeight: '600',
   },
   wordChipTextUsed: {
-    color: colors.textDisabled,
+    color: '#6d4a7a',
   },
   // Drag drop
   classifyRow: {
@@ -1330,16 +1321,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: colors.borderLight,
-    backgroundColor: colors.surfaceVariant,
+    borderColor: '#3d2a5a',
+    backgroundColor: '#2d1a42',
   },
   classifyBtnAllowed: {
-    borderColor: colors.success,
-    backgroundColor: '#e6f7e6',
+    borderColor: '#22c55e',
+    backgroundColor: '#14532d',
   },
   classifyBtnProblem: {
-    borderColor: colors.error,
-    backgroundColor: '#fde0e0',
+    borderColor: '#ef4444',
+    backgroundColor: '#450a0a',
   },
   classifyBtnText: {
     ...typography.bold,
@@ -1347,7 +1338,7 @@ const styles = StyleSheet.create({
   },
   // Sprint
   sprintBox: {
-    backgroundColor: '#ede7f6',
+    backgroundColor: '#2d1a42',
     borderRadius: 16,
     padding: 20,
     alignItems: 'center',
@@ -1357,24 +1348,25 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 10,
     ...typography.body,
+    color: '#f472b6',
   },
   timerText: {
     fontSize: 36,
     fontWeight: '800',
-    color: colors.primary,
+    color: '#e91e8c',
     fontVariant: ['tabular-nums'],
     marginBottom: 12,
   },
   timerWarning: {
-    color: colors.accent,
+    color: '#f59e0b',
   },
   timerDanger: {
-    color: colors.error,
+    color: '#ef4444',
   },
   // VF & Classify3
   vfItem: {
     marginBottom: 16,
-    backgroundColor: colors.surfaceVariant,
+    backgroundColor: '#2d1a42',
     borderRadius: 12,
     padding: 14,
   },
@@ -1382,6 +1374,7 @@ const styles = StyleSheet.create({
     ...typography.body,
     fontWeight: '600',
     marginBottom: 10,
+    color: '#fce7f3',
   },
   vfButtons: {
     flexDirection: 'row',
@@ -1392,17 +1385,17 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: colors.borderLight,
+    borderColor: '#3d2a5a',
     alignItems: 'center',
-    backgroundColor: colors.background,
+    backgroundColor: '#231535',
   },
   vfBtnCorrect: {
-    borderColor: colors.success,
-    backgroundColor: '#e6f7e6',
+    borderColor: '#22c55e',
+    backgroundColor: '#14532d',
   },
   vfBtnWrong: {
-    borderColor: colors.error,
-    backgroundColor: '#fde0e0',
+    borderColor: '#ef4444',
+    backgroundColor: '#450a0a',
   },
   vfBtnText: {
     ...typography.bold,
@@ -1420,25 +1413,32 @@ const styles = StyleSheet.create({
   completionTitle: {
     ...typography.heading1,
     fontSize: 26,
-    color: colors.primary,
+    color: '#e91e8c',
     textAlign: 'center',
   },
   completionBadge: {
     ...typography.heading3,
     fontSize: 22,
-    color: colors.accent,
+    color: '#f472b6',
     marginVertical: 6,
+  },
+  levelIndicator: {
+    ...typography.bold,
+    fontSize: 13,
+    color: '#f472b6',
+    marginBottom: 8,
+    opacity: 0.8,
   },
   completionText: {
     ...typography.body,
     textAlign: 'center',
     marginBottom: 20,
-    color: colors.textSecondary,
+    color: '#f472b6',
   },
   xpGained: {
     ...typography.heading2,
     fontSize: 30,
-    color: colors.textPrimary,
+    color: '#fce7f3',
     marginBottom: 20,
   },
   statsRow: {
@@ -1449,7 +1449,7 @@ const styles = StyleSheet.create({
   },
   statItem: {
     alignItems: 'center',
-    backgroundColor: colors.surfaceVariant,
+    backgroundColor: '#2d1a42',
     borderRadius: 12,
     padding: 12,
     flex: 1,
@@ -1458,11 +1458,11 @@ const styles = StyleSheet.create({
   statNum: {
     ...typography.heading3,
     fontSize: 20,
-    color: colors.primary,
+    color: '#e91e8c',
   },
   statLbl: {
     ...typography.caption,
-    color: colors.textSecondary,
+    color: '#f472b6',
   },
   navButtons: {
     flexDirection: 'row',
@@ -1472,17 +1472,17 @@ const styles = StyleSheet.create({
   navBtn: {
     paddingVertical: 12,
     paddingHorizontal: 20,
-    backgroundColor: colors.surfaceVariant,
+    backgroundColor: '#2d1a42',
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: colors.borderLight,
+    borderColor: '#3d2a5a',
   },
   navBtnHidden: {
     opacity: 0,
   },
   navBtnText: {
     ...typography.bold,
-    color: colors.textPrimary,
+    color: '#fce7f3',
   },
   thanksText: {
     ...typography.heading2,

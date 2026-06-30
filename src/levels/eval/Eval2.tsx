@@ -481,7 +481,7 @@ export default function World2Level7({ navigation: propsNavigation, setAllowBack
         <Text style={styles.xpChip}>{xp} XP</Text>
       </View>
       <ScrollView contentContainerStyle={styles.scrollContent}>{stepContent()}</ScrollView>
-      {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} />}
+      {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} bgColor="#0d9488" textColor="#fff" />}
     </View>
   );
 }
@@ -489,8 +489,8 @@ export default function World2Level7({ navigation: propsNavigation, setAllowBack
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   bar: { flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
-  progressTrack: { flex: 1, height: 6, backgroundColor: colors.borderLight, borderRadius: 3, marginHorizontal: 12 },
-  progressFill: { height: '100%', backgroundColor: colors.success, borderRadius: 3 },
+  progressTrack: { flex: 1, height: 8, backgroundColor: colors.borderLight, borderRadius: 4, marginHorizontal: 12 },
+  progressFill: { height: '100%', backgroundColor: '#14b8a6', borderRadius: 4 },
   xpChip: { ...typography.bold, fontSize: 14, color: colors.accentDark },
   scrollContent: { padding: 16, paddingBottom: 40 },
   stepContainer: { flex: 1 },
@@ -546,7 +546,7 @@ const styles = StyleSheet.create({
   badgeNameBox: { backgroundColor: '#f0fdfa', borderWidth: 2, borderColor: '#5eead4', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 8, marginBottom: 12 },
   badgeName: { fontSize: 15, fontWeight: '700', color: '#0f766e' },
   badgeDesc: { ...typography.regular, textAlign: 'center', marginBottom: 16, color: colors.textSecondary },
-  iconCircle: { width: 80, height: 80, borderRadius: 24, backgroundColor: '#ccfbf1', justifyContent: 'center', alignItems: 'center', marginBottom: 14, alignSelf: 'center' },
+  iconCircle: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#ccfbf1', justifyContent: 'center', alignItems: 'center', marginBottom: 14, alignSelf: 'center' },
   iconEmoji: { fontSize: 42 },
   bold: { fontWeight: '700' },
 });

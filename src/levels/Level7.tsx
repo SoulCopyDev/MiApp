@@ -745,7 +745,9 @@ export default function World2Level1({ navigation: propsNavigation, setAllowBack
 
   const renderCompletion = () => (
     <View style={{ alignItems: 'center', padding: 20 }}>
-      <Text style={{ fontSize: 44, marginBottom: 14 }}>✍️</Text>
+      <View style={{ width: 86, height: 86, borderRadius: 24, backgroundColor: '#fecdd3', justifyContent: 'center', alignItems: 'center', marginBottom: 14 }}>
+        <Text style={{ fontSize: 44 }}>✍️</Text>
+      </View>
       <Text style={[styles.title, { textAlign: 'center' }]}>¡Nivel 7 completado!</Text>
       <Text style={[styles.subtitle, { textAlign: 'center', marginBottom: 14 }]}>Terminaste "Prompting como un profesional". ¡Ahora tienes 5 trucos avanzados que muy poca gente conoce! Eso te hace un usuario experto de IA.</Text>
       <View style={{ backgroundColor: '#fef9c3', borderRadius: 12, padding: 11, marginBottom: 14, borderWidth: 1, borderColor: '#fcd34d', width: '100%' }}>
@@ -773,7 +775,7 @@ export default function World2Level1({ navigation: propsNavigation, setAllowBack
         </Text>
       </View>
       <Text style={{ fontSize: 10, color: '#94a3b8', marginBottom: 8 }}>Nivel 7 de 36 completado · Mundo 2 — Domina el Prompting</Text>
-      <TouchableOpacity style={styles.finishButton} onPress={handleFinish}><Text style={{ fontWeight: 'bold', color: '#fff' }}>Volver al mapa</Text></TouchableOpacity>
+      <TouchableOpacity style={styles.finishButton} onPress={handleFinish}><Text style={{ fontWeight: 'bold', color: '#fff' }}>Siguiente nivel →</Text></TouchableOpacity>
     </View>
   );
 
@@ -863,7 +865,7 @@ export default function World2Level1({ navigation: propsNavigation, setAllowBack
           </View>
         )}
       </ScrollView>
-      {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} />}
+      {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} bgColor="#e11d48" textColor="#fff" />}
       <View style={styles.footerRow}>
         {showBackButton && (
           <TouchableOpacity style={styles.backButton} onPress={goToPrevStep}>
@@ -890,8 +892,8 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   progressBar: { flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
   closeBtn: { padding: 4 },
-  progressTrack: { flex: 1, height: 6, backgroundColor: colors.borderLight, borderRadius: 3, marginHorizontal: 12 },
-  progressFill: { height: '100%', backgroundColor: '#e11d48', borderRadius: 3 },
+  progressTrack: { flex: 1, height: 8, backgroundColor: colors.borderLight, borderRadius: 4, marginHorizontal: 12 },
+  progressFill: { height: '100%', backgroundColor: '#e11d48', borderRadius: 4 },
   xpText: { ...typography.bold, fontSize: 14, color: '#92400e' },
   scrollView: { flex: 1 },
   scrollContent: { padding: 16, paddingBottom: 40 },

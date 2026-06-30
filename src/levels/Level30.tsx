@@ -586,6 +586,7 @@ export default function World5Level6({ navigation: propsNavigation, setAllowBack
     <View style={{ alignItems: 'center', padding: 20 }}>
       <Text style={{ fontSize: 56 }}>🎤</Text>
       <Text style={[styles.title, { textAlign: 'center' }]}>¡Nivel 30 completado!</Text>
+      <Text style={{ fontSize: 12, color: '#9ca3af', marginBottom: 6 }}>Nivel 30 de 36</Text>
       <Text style={[styles.subtitle, { textAlign: 'center' }]}>Terminaste "Presenta tu Proyecto". Ahora eres Speaker Pro.</Text>
       <Text style={{ fontSize: 28, fontWeight: 'bold', color: '#4338ca', marginVertical: 12 }}>⭐ {xp} XP</Text>
       <View style={[styles.card, { width: '100%', backgroundColor: '#eef2ff', borderColor: '#c7d2fe' }]}>
@@ -608,7 +609,7 @@ export default function World5Level6({ navigation: propsNavigation, setAllowBack
       case 6: return renderBuilder(builderStory, BUILDER_STORY, setBuilderStory, '🛠️ Módulo 6 · Builder', 'Storytelling: el héroe ERES tú');
       case 7: return renderBuilder(builderHardQ, BUILDER_HARDQ, setBuilderHardQ, '🛠️ Módulo 7 · Builder', 'La IA como audiencia difícil');
       case 8: return renderExpandCards([
-        { emoji: '🇨🇴', title: 'Diego, Hackathon Bogotá', sub: '', body: '17 años. Empezó con video de 15 seg de su abuelo agricultor. Después: dato, demo, cifras con 30 agricultores reales.', fact: '⭐ Premio: $5,000 USD + mentoría.' },
+        { emoji: '🇵🇪', title: 'Diego, Hackathon Lima', sub: '', body: '17 años. Empezó con video de 15 seg de su abuelo agricultor. Después: dato, demo, cifras con 30 agricultores reales.', fact: '⭐ Premio: $5,000 USD + mentoría.' },
         { emoji: '🇲🇽', title: 'Sofía, Premio Emprendedora Joven', sub: '', body: '16 años. Cuando un jurado dijo "eso ya existe", reconoció 3 competidores, mostró diferencias y data de 60 usuarias.', fact: '⭐ La diferencia ganadora: madurez al manejar la objeción.' },
         { emoji: '🌎', title: 'Equipo de 14 años, Global Finalist', sub: '', body: 'Pitch de 4:48 exacto. Practicaron 47 veces. Cada palabra medida, cada transición ensayada.', fact: '⭐ La maestría parece natural porque está hiper-ensayada.' },
       ], '🏆 Módulo 8 · Casos ganadores');

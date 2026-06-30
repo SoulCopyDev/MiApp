@@ -514,7 +514,7 @@ export default function World5Level3({ navigation: propsNavigation, setAllowBack
         <View style={styles.stepContainer}>
           {tag('🇱🇦 Módulo 17 · Casos reales')}
           {title('Jóvenes latinoamericanos que cambiaron algo')}
-          {body('Simón Borrero (Rappi): de un barrio en Bogotá a 9 países.\nAlec Oxenford (Mercado Libre): empezó sin aceptar pagos online.\nElisa Velázquez: cursos gratuitos de IA para mujeres latinas, empezó con 12 alumnas.')}
+          {body('Simón Borrero (Rappi): de un barrio en Lima a 9 países de LATAM.\nAlec Oxenford (Mercado Libre): empezó sin aceptar pagos online.\nElisa Velázquez: cursos gratuitos de IA para mujeres latinas, empezó con 12 alumnas.')}
           {btn('Sigamos →', nextStep)}
         </View>
       );
@@ -528,6 +528,7 @@ export default function World5Level3({ navigation: propsNavigation, setAllowBack
         <View style={styles.completeContainer}>
           <View style={styles.completeIcon}><Text style={styles.iconEmoji}>💡</Text></View>
           {title('¡Nivel 27 completado!')}
+          <Text style={{ fontSize: 12, color: '#9ca3af', marginBottom: 6 }}>Nivel 27 de 36</Text>
           {sub('Terminaste "Tu Idea para Cambiar Algo". Ahora eres Changemaker.')}
           <Text style={styles.xpBig}>⭐ {xp} XP ganados</Text>
           {btn('Volver al mapa', finishLevel, false, true)}
@@ -560,7 +561,7 @@ export default function World5Level3({ navigation: propsNavigation, setAllowBack
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.background },
+  screen: { flex: 1, backgroundColor: '#ffffff' },
   bar: { flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
   track: { flex: 1, height: 6, backgroundColor: colors.borderLight, borderRadius: 3, marginHorizontal: 12 },
   fill: { height: '100%', backgroundColor: '#d97706', borderRadius: 3 },

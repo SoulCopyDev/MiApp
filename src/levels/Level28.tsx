@@ -507,6 +507,7 @@ export default function World5Level4({ navigation: propsNavigation, setAllowBack
     <View style={{ alignItems: 'center', padding: 20 }}>
       <Text style={{ fontSize: 56 }}>📱</Text>
       <Text style={[styles.title, { textAlign: 'center' }]}>¡Nivel 28 completado!</Text>
+      <Text style={{ fontSize: 12, color: '#9ca3af', marginBottom: 6 }}>Nivel 28 de 36</Text>
       <Text style={[styles.subtitle, { textAlign: 'center' }]}>Terminaste "Diseña una App con IA — Sin Código". Ahora eres App Designer.</Text>
       <Text style={{ fontSize: 28, fontWeight: 'bold', color: '#7c3aed', marginVertical: 12 }}>⭐ {xp} XP</Text>
       <TouchableOpacity style={styles.finishBtn} onPress={handleFinish}><Text style={{ color: '#fff', fontWeight: 'bold' }}>Volver al mapa</Text></TouchableOpacity>

@@ -188,6 +188,7 @@ export default function World6Level7({ navigation: propsNavigation, setAllowBack
   // ============ RENDER ============
   const renderIntro = () => (
     <View>
+      <View style={[styles.tag, { backgroundColor: '#fef3c7' }]}><Text style={[styles.tagText, { color: '#78350f' }]}>🎓 EVALUACIÓN FINAL · GRADUACIÓN</Text></View>
       <View style={styles.iconCircle}><Text style={{ fontSize: 34 }}>🎓</Text></View>
       <Text style={styles.title}>Evaluación Final · Graduación AI Expert</Text>
       <Text style={styles.subtitle}>Llegaste al final del camino. 36 niveles, 6 mundos, decenas de proyectos. Esta es tu prueba maestra.</Text>
@@ -270,12 +271,35 @@ export default function World6Level7({ navigation: propsNavigation, setAllowBack
     <View style={{ alignItems: 'center', padding: 20 }}>
       <Text style={{ fontSize: 90 }}>🎓</Text>
       <Text style={[styles.title, { textAlign: 'center', fontSize: 28 }]}>¡FELICITACIONES, GRADUADO!</Text>
-      <Text style={[styles.subtitle, { textAlign: 'center' }]}>Recibiste el certificado oficial: <Text style={{ fontWeight: 'bold' }}>AI Expert · Graduado</Text>. El mundo necesita gente como tú.</Text>
-      <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#854d0e', marginVertical: 12, padding: 18, backgroundColor: '#fef9c3', borderRadius: 12, borderWidth: 1, borderColor: '#fde047' }}>⭐ {xp} XP ganados en la graduación</Text>
-      <View style={[styles.card, { width: '100%', backgroundColor: '#fef3c7', borderColor: '#fde68a' }]}>
-        <Text style={{ textAlign: 'center', fontWeight: 'bold', color: '#78350f' }}>🏆 36 de 36 niveles · 100% completado</Text>
+      <Text style={[styles.subtitle, { textAlign: 'center', marginBottom: 16 }]}>
+        Recibiste el certificado oficial: <Text style={{ fontWeight: 'bold' }}>AI Expert · Graduado</Text>. Eres ahora oficialmente miembro de la primera generación AI Expert. <Text style={{ fontStyle: 'italic' }}>El mundo necesita gente como tú.</Text>
+      </Text>
+      <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#854d0e', marginBottom: 16, padding: 12, backgroundColor: '#fef9c3', borderRadius: 12, borderWidth: 1, borderColor: '#fde047', width: '100%', textAlign: 'center' }}>⭐ {xp} XP ganados en la graduación</Text>
+      {[
+        'Demostré dominio integral de los 6 mundos del curso',
+        'Resolví un problema real eligiendo herramienta + técnica de prompting + plan de acción',
+        'Identifico verdades, mitos y zonas grises sobre IA con criterio propio',
+        'Tengo mi portafolio de graduación documentado y articulado',
+        'Cierro el curso oficialmente como AI Expert · Graduado',
+      ].map((skill, i) => (
+        <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 9, padding: 9, paddingHorizontal: 11, backgroundColor: '#f0fdf4', borderRadius: 10, borderWidth: 1, borderColor: '#bbf7d0', width: '100%', marginBottom: 7 }}>
+          <Text style={{ color: '#16a34a', fontSize: 15, marginTop: 1 }}>✓</Text>
+          <Text style={{ fontSize: 12, color: '#166534', lineHeight: 18, fontWeight: '500', flex: 1 }}>{skill}</Text>
+        </View>
+      ))}
+      <View style={[styles.card, { width: '100%', marginBottom: 14 }]}>
+        <Text style={{ fontWeight: 'bold', fontSize: 12, color: '#374151', marginBottom: 5 }}>🎓 Has completado AI Expert oficialmente</Text>
+        <Text style={{ fontSize: 12, color: '#374151', lineHeight: 18 }}>Eres ahora <Text style={{ fontWeight: 'bold' }}>graduado certificado</Text>. Tienes el conocimiento, las habilidades, y la responsabilidad. <Text style={{ fontStyle: 'italic' }}>Tu trabajo apenas empieza. Pero ya no estás en cero — empiezas con todo.</Text></Text>
       </View>
-      <TouchableOpacity style={styles.finishBtn} onPress={handleFinish}><Text style={{ color: '#fff', fontWeight: 'bold' }}>Volver al mapa</Text></TouchableOpacity>
+      <View style={{ width: '100%', marginBottom: 16 }}>
+        <Text style={{ fontSize: 11, color: '#6b7280', marginBottom: 5, fontWeight: '700' }}>36 de 36 niveles · 100% completado · CURSO TERMINADO</Text>
+        <View style={{ height: 7, backgroundColor: '#e5e7eb', borderRadius: 4, overflow: 'hidden' }}>
+          <View style={{ height: '100%', width: '100%', backgroundColor: '#b45309', borderRadius: 4 }} />
+        </View>
+      </View>
+      <TouchableOpacity style={styles.finishBtn} onPress={handleFinish}>
+        <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 15 }}>Ver mi certificado oficial 🏆</Text>
+      </TouchableOpacity>
     </View>
   );
 

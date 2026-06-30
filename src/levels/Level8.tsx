@@ -671,7 +671,7 @@ export default function World2Level2({ navigation: propsNavigation, setAllowBack
             </Text>
           </View>
           <Text style={{ fontSize: 10, color: '#94a3b8', marginBottom: 8 }}>Nivel 8 de 36 completado · Mundo 2 — Domina el Prompting</Text>
-          <TouchableOpacity style={styles.btn} onPress={finishLevel}><Text style={styles.btnText}>Volver al mapa</Text></TouchableOpacity>
+          <TouchableOpacity style={styles.btn} onPress={finishLevel}><Text style={styles.btnText}>Siguiente nivel →</Text></TouchableOpacity>
         </View>
       );
       default: return null;
@@ -688,7 +688,7 @@ export default function World2Level2({ navigation: propsNavigation, setAllowBack
         <Text style={styles.xpChip}>{xp} XP</Text>
       </View>
       <ScrollView contentContainerStyle={styles.scrollContent}>{renderStep()}</ScrollView>
-      {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} />}
+      {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} bgColor="#10b981" textColor="#fff" />}
     </View>
   );
 }
@@ -696,8 +696,8 @@ export default function World2Level2({ navigation: propsNavigation, setAllowBack
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   bar: { flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
-  track: { flex: 1, height: 6, backgroundColor: colors.borderLight, borderRadius: 3, marginHorizontal: 12 },
-  fill: { height: '100%', backgroundColor: colors.success, borderRadius: 3 },
+  track: { flex: 1, height: 8, backgroundColor: colors.borderLight, borderRadius: 4, marginHorizontal: 12 },
+  fill: { height: '100%', backgroundColor: '#10b981', borderRadius: 4 },
   xpChip: { ...typography.bold, fontSize: 14, color: colors.accentDark },
   scrollContent: { padding: 16, paddingBottom: 40 },
   stepContainer: { flex: 1 },

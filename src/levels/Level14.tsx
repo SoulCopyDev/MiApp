@@ -617,10 +617,11 @@ export default function World3Level2({ navigation: propsNavigation, setAllowBack
           <View style={styles.completeIcon}><Text style={styles.iconEmoji}>🎵</Text></View>
           <Text style={styles.completeTitle}>¡Badge desbloqueado!</Text>
           <View style={styles.badgeBox}><Text style={styles.badgeText}>🏅 Sound Designer</Text></View>
+          <Text style={{ ...typography.bold, fontSize: 13, color: '#67e8f9', marginBottom: 8, opacity: 0.8 }}>Nivel 14 de 36</Text>
           <Text style={styles.completeSub}>¡Nivel 14 completado! Ahora entiendes el mundo del audio con IA: voces sintéticas, clonación, música generativa y los riesgos que conlleva esta tecnología.</Text>
           <Text style={styles.xpBig}>⭐ {xp} XP ganados</Text>
-          <View style={{ backgroundColor: '#f8fafc', borderRadius: 10, padding: 11, marginBottom: 14, borderWidth: 1, borderColor: '#e2e8f0', width: '100%' }}>
-            <Text style={{ fontSize: 12, color: '#334155', lineHeight: 20 }}>
+          <View style={{ backgroundColor: '#031820', borderRadius: 10, padding: 11, marginBottom: 14, borderWidth: 1, borderColor: '#0d4a5a', width: '100%' }}>
+            <Text style={{ fontSize: 12, color: '#67e8f9', lineHeight: 20 }}>
               🎬 <Text style={{ fontWeight: '700' }}>Nivel 15: IA y Video{'\n\n'}</Text>
               Del audio al video: Runway, Sora, Kling. Cómo se generan videos con IA, deepfakes, copyright y el futuro del cine. Completarás el Módulo 3 del Mundo 3.
             </Text>
@@ -663,10 +664,10 @@ function pickN<T>(arr: T[], n: number): T[] {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.background },
+  screen: { flex: 1, backgroundColor: '#020f12' },
   bar: { flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
   track: { flex: 1, height: 6, backgroundColor: colors.borderLight, borderRadius: 3, marginHorizontal: 12 },
-  fill: { height: '100%', backgroundColor: colors.success, borderRadius: 3 },
+  fill: { height: '100%', backgroundColor: '#00bcd4', borderRadius: 3 },
   xpChip: { ...typography.bold, fontSize: 14, color: colors.accentDark },
   scrollContent: { padding: 16, paddingBottom: 40 },
   stepContainer: { flex: 1 },

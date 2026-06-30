@@ -623,7 +623,7 @@ export default function World2Level5({ navigation: propsNavigation, setAllowBack
 
   const renderArbol = () => (
     <View>
-      <View style={[styles.tag, { backgroundColor: '#fef3c7' }]}><Text style={[styles.tagText, { color: '#92400e' }]}>🌳 Módulo 8 · Matching</Text></View>
+      <View style={[styles.tag, { backgroundColor: '#ecfdf5' }]}><Text style={[styles.tagText, { color: '#065f46' }]}>🌳 Módulo 8 · Matching</Text></View>
       <Text style={styles.title}>Árbol de decisiones para tu IA</Text>
       {ARBOL_ITEMS.map((item, i) => (
         <View key={i} style={[styles.card, { backgroundColor: '#eff6ff' }]}>
@@ -675,7 +675,7 @@ export default function World2Level5({ navigation: propsNavigation, setAllowBack
 
   const renderSprint = () => (
     <View>
-      <View style={[styles.tag, { backgroundColor: '#fef3c7' }]}><Text style={[styles.tagText, { color: '#92400e' }]}>⚡ Módulo 11 · Sprint</Text></View>
+      <View style={[styles.tag, { backgroundColor: '#ecfdf5' }]}><Text style={[styles.tagText, { color: '#065f46' }]}>⚡ Módulo 11 · Sprint</Text></View>
       <Text style={styles.title}>Sprint: diseña la cadena</Text>
       <Text style={{ fontSize: 26, fontWeight: 'bold', textAlign: 'center', color: '#1e40af' }}>
         {Math.floor(sprintSec / 60)}:{String(sprintSec % 60).padStart(2, '0')}
@@ -747,7 +747,7 @@ export default function World2Level5({ navigation: propsNavigation, setAllowBack
     const item = RAZON_ITEMS[razonIdx];
     return (
       <View>
-        <View style={[styles.tag, { backgroundColor: '#fef3c7' }]}><Text style={[styles.tagText, { color: '#92400e' }]}>🔎 Módulo 14 · Clasificador · {razonIdx + 1}/{RAZON_ITEMS.length}</Text></View>
+        <View style={[styles.tag, { backgroundColor: '#ecfdf5' }]}><Text style={[styles.tagText, { color: '#065f46' }]}>🔎 Módulo 14 · Clasificador · {razonIdx + 1}/{RAZON_ITEMS.length}</Text></View>
         <View style={[styles.card, { backgroundColor: '#f8fafc' }]}>
           <Text style={{ fontStyle: 'italic', fontSize: 13 }}>"{item.texto}"</Text>
         </View>
@@ -811,7 +811,7 @@ export default function World2Level5({ navigation: propsNavigation, setAllowBack
     const item = QUIZ_COT[quizIdx];
     return (
       <View>
-        <View style={[styles.tag, { backgroundColor: '#fef3c7' }]}><Text style={[styles.tagText, { color: '#92400e' }]}>🧠 Módulo 17 · Quiz · {quizIdx + 1}/{QUIZ_COT.length}</Text></View>
+        <View style={[styles.tag, { backgroundColor: '#ecfdf5' }]}><Text style={[styles.tagText, { color: '#065f46' }]}>🧠 Módulo 17 · Quiz · {quizIdx + 1}/{QUIZ_COT.length}</Text></View>
         <View style={[styles.card, { backgroundColor: '#f8fafc' }]}>
           <Text style={{ fontSize: 13, fontWeight: '600' }}>{item.q}</Text>
         </View>
@@ -840,7 +840,9 @@ export default function World2Level5({ navigation: propsNavigation, setAllowBack
 
   const renderCompletion = () => (
     <View style={{ alignItems: 'center', padding: 20 }}>
-      <Text style={{ fontSize: 44, marginBottom: 14 }}>🏅</Text>
+      <View style={{ width: 86, height: 86, borderRadius: 24, backgroundColor: '#a7f3d0', justifyContent: 'center', alignItems: 'center', marginBottom: 14 }}>
+        <Text style={{ fontSize: 44 }}>🏅</Text>
+      </View>
       <Text style={[styles.title, { textAlign: 'center' }]}>¡Nivel 11 completado!</Text>
       <Text style={[styles.subtitle, { textAlign: 'center', marginBottom: 14 }]}>Badge: 🔗 Chain Master desbloqueado. Ahora construyes secuencias de prompts que la mayoría de adultos no sabe usar.</Text>
       <View style={{ backgroundColor: '#fef9c3', borderRadius: 12, padding: 11, marginBottom: 14, borderWidth: 1, borderColor: '#fcd34d', width: '100%' }}>
@@ -867,7 +869,7 @@ export default function World2Level5({ navigation: propsNavigation, setAllowBack
         </Text>
       </View>
       <Text style={{ fontSize: 10, color: '#94a3b8', marginBottom: 8 }}>Nivel 11 de 36 completado · Mundo 2 — Domina el Prompting</Text>
-      <TouchableOpacity style={styles.finishButton} onPress={handleFinish}><Text style={{ fontWeight: 'bold', color: '#fff' }}>Volver al mapa</Text></TouchableOpacity>
+      <TouchableOpacity style={styles.finishButton} onPress={handleFinish}><Text style={{ fontWeight: 'bold', color: '#fff' }}>Siguiente nivel →</Text></TouchableOpacity>
     </View>
   );
 
@@ -957,7 +959,7 @@ export default function World2Level5({ navigation: propsNavigation, setAllowBack
           </View>
         )}
       </ScrollView>
-      {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} />}
+      {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} bgColor="#10b981" textColor="#fff" />}
       <View style={styles.footerRow}>
         {showBackButton && (
           <TouchableOpacity style={styles.backButton} onPress={goToPrevStep}>
@@ -984,8 +986,8 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   progressBar: { flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
   closeBtn: { padding: 4 },
-  progressTrack: { flex: 1, height: 6, backgroundColor: colors.borderLight, borderRadius: 3, marginHorizontal: 12 },
-  progressFill: { height: '100%', backgroundColor: '#10b981', borderRadius: 3 },
+  progressTrack: { flex: 1, height: 8, backgroundColor: colors.borderLight, borderRadius: 4, marginHorizontal: 12 },
+  progressFill: { height: '100%', backgroundColor: '#10b981', borderRadius: 4 },
   xpText: { ...typography.bold, fontSize: 14, color: '#92400e' },
   scrollView: { flex: 1 },
   scrollContent: { padding: 16, paddingBottom: 40 },
