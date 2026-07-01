@@ -1,11 +1,10 @@
 import { router } from 'expo-router';
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
   Alert, BackHandler, Animated,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
 import { useGameStore } from '../store/gameStore';
 import { colors, typography } from '../theme';
 import XPToast from '../components/XPToast';
@@ -131,11 +130,7 @@ const CHART_DATA = [
   { label: 'Alemania', pct: 48 }
 ];
 
-interface LevelProps { navigation?: any; setAllowBack?: (allow: boolean) => void; }
-
-export default function World3Level5({ navigation: propsNavigation, setAllowBack }: LevelProps) {
-  const nav = useNavigation();
-  const navigation = propsNavigation || nav;
+export default function World3Level5() {
   const completeLevel = useGameStore(s => s.completeLevel);
 
   const [current, setCurrent] = useState(0);
@@ -182,7 +177,6 @@ export default function World3Level5({ navigation: propsNavigation, setAllowBack
   const theorySteps = new Set([0, 1, 4, 8, 12, 15]);
   const canGoBack = theorySteps.has(current);
 
-  useEffect(() => { setAllowBack?.(canGoBack); }, [canGoBack]);
   useEffect(() => {
     const h = BackHandler.addEventListener('hardwareBackPress', () => {
       if (!canGoBack) { Alert.alert('Actividad en curso', 'Completa la actividad antes de salir.'); return true; }

@@ -2,7 +2,6 @@ import React, { useState, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, TextInput, Alert,
 } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
 import { useGameStore } from '../store/gameStore';
 import { AVATAR_EMOJIS } from '../config/avatarEmojis';
 import { colors, typography } from '../theme';

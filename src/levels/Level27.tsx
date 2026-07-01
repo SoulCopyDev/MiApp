@@ -1,11 +1,10 @@
 import { router } from 'expo-router';
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
   Alert, BackHandler,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
 import { useGameStore } from '../store/gameStore';
 import { colors, typography } from '../theme';
 import XPToast from '../components/XPToast';
@@ -112,11 +111,7 @@ const pickN = <T,>(arr: T[], n: number): T[] => {
   return shuffled.slice(0, n);
 };
 
-interface LevelProps { navigation?: any; setAllowBack?: (allow: boolean) => void; }
-
-export default function World5Level3({ navigation: propsNavigation, setAllowBack }: LevelProps) {
-  const nav = useNavigation();
-  const navigation = propsNavigation || nav;
+export default function World5Level3() {
   const completeLevel = useGameStore(s => s.completeLevel);
 
   const [step, setStep] = useState(0);
@@ -151,7 +146,6 @@ export default function World5Level3({ navigation: propsNavigation, setAllowBack
 
   // Builders
   const [builderState, setBuilderState] = useState<{ [key: string]: string }>({});
-  const [builderCfg, setBuilderCfg] = useState<BuilderConfig | null>(null);
 
   // V/F
   const [tfAnswers, setTfAnswers] = useState<{ [key: number]: boolean }>({});
@@ -164,7 +158,6 @@ export default function World5Level3({ navigation: propsNavigation, setAllowBack
   const showBackButton = step > 0 && theorySteps.has(step);
   const goToPrevStep = () => { setStep(s => s - 1); };
 
-  useEffect(() => { setAllowBack?.(showBackButton); }, [showBackButton]);
   useEffect(() => {
     const h = BackHandler.addEventListener('hardwareBackPress', () => {
       if (!showBackButton) { Alert.alert('Actividad en curso', 'Completa la actividad antes de salir.'); return true; }
@@ -199,7 +192,7 @@ export default function World5Level3({ navigation: propsNavigation, setAllowBack
     setMatchSel(null); setMatchedLeft(new Set()); setMatchedRight(new Set());
     setSortOrder([]); setSortOk(false);
     setDragPlaced({}); setDragSel(null);
-    setBuilderState({}); setBuilderCfg(null);
+    setBuilderState({});
     setTfAnswers({}); setTfChecked(false);
     setReflectText('');
   };

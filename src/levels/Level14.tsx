@@ -1,11 +1,10 @@
 import { router } from 'expo-router';
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
-  Alert, BackHandler, ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
 import { useGameStore } from '../store/gameStore';
 import { colors, typography } from '../theme';
 import XPToast from '../components/XPToast';
@@ -125,18 +124,12 @@ const QUIZ_FINAL: QuizItem = {
   fb: '¡Solución perfecta! Con los clones de voz de cada estudiante, el audiolibro final sonaría como si cada uno hubiera narrado su propio cuento.',
 };
 
-// ---------- Props ----------
-interface LevelProps { navigation?: any; setAllowBack?: (allow: boolean) => void; }
-
-export default function World3Level2({ navigation: propsNavigation, setAllowBack }: LevelProps) {
-  const nav = useNavigation();
-  const navigation = propsNavigation || nav;
+export default function World3Level2() {
   const completeLevel = useGameStore(s => s.completeLevel);
 
   const [step, setStep] = useState(0);
   const [xp, setXp] = useState(0);
   const [xpToast, setXpToast] = useState<{ amount: number; id: number } | null>(null);
-  const [correctCount, setCorrectCount] = useState(0);
 
   // Quiz states
   const [quizAnswered, setQuizAnswered] = useState(false);
@@ -176,7 +169,6 @@ export default function World3Level2({ navigation: propsNavigation, setAllowBack
   const theorySteps = new Set([0, 1, 3, 7, 11, 15]);
   const canGoBack = theorySteps.has(step);
 
-  useEffect(() => { setAllowBack?.(canGoBack); }, [canGoBack]);
   useEffect(() => { return () => { if (sprintTimerRef.current) clearInterval(sprintTimerRef.current); }; }, []);
 
   // Sprint timer
@@ -194,7 +186,6 @@ export default function World3Level2({ navigation: propsNavigation, setAllowBack
 
   const addXP = (v: number) => {
     setXp(prev => prev + v);
-    setCorrectCount(prev => prev + 1);
     if (v > 0) setXpToast((prev) => ({ amount: v, id: (prev?.id ?? 0) + 1 }));
   };
   const nextStep = () => { if (step < MODULE_COUNT - 1) setStep(step + 1); };
@@ -306,9 +297,6 @@ export default function World3Level2({ navigation: propsNavigation, setAllowBack
       <TouchableOpacity style={[styles.btn, disabled && styles.btnOff]} onPress={onPress} disabled={disabled}>
         <Text style={styles.btnText}>{label}</Text>
       </TouchableOpacity>
-    );
-    const card = (titleT: string, textT: string) => (
-      <View style={styles.card}><Text style={styles.cardTitle}>{titleT}</Text><Text style={styles.cardText}>{textT}</Text></View>
     );
     const tag = (label: string) => <Text style={styles.tag}>{label}</Text>;
     const title = (t: string) => <Text style={styles.title}>{t}</Text>;

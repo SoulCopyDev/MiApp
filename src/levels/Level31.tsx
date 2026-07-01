@@ -1,10 +1,9 @@
 import { router } from 'expo-router';
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, BackHandler,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
 import { useGameStore } from '../store/gameStore';
 import { colors, typography } from '../theme';
 import XPToast from '../components/XPToast';
@@ -14,11 +13,9 @@ type DragItem = { text: string; correct: string };
 type MatchPairItem = { left: string; right: string };
 type QuizItem = { q: string; opts: string[]; correct: number; explain: string };
 type TFItem = { stmt: string; correct: boolean; explain: string };
-type FillItem = { sentence: string; allOpts: string[]; correct: Record<string, number>; explain: string };
 type BuilderRow = { key: string; label: string; opts: string[] };
 
 const TOTAL_STEPS = 21; // 0:intro + 19 módulos + 1:complete
-const CONTENT_STEPS = 19;
 
 const pickN = <T,>(arr: T[], n: number): T[] => {
   const shuffled = [...arr].sort(() => Math.random() - 0.5);
@@ -87,13 +84,6 @@ const SENSORS_POOL: DragItem[] = [
   { text: 'Termómetros internos para cada motor', correct: 'temperatura' },
 ];
 
-const FILL_POOL: FillItem[] = [
-  { sentence: 'El ciclo básico de toda robótica es _____ → IA → Actuador.', allOpts: ['Sensor', 'Motor', 'Software', 'Pantalla'], correct: { fb0: 0 }, explain: 'Sensor capta datos del ambiente, IA decide qué hacer, Actuador ejecuta. Ciclo universal en toda la robótica.' },
-  { sentence: 'El método donde un robot aprende caminando millones de veces en simulación antes del mundo real se llama aprendizaje por _____.', allOpts: ['refuerzo', 'memoria', 'imitación', 'supervisión'], correct: { fb0: 0 }, explain: 'Reinforcement Learning: prueba acciones, recibe recompensa cuando logra objetivo, ajusta política.' },
-  { sentence: 'Los humanoides industriales ya en producción real demuestran que la robótica está pasando de prototipo a _____.', allOpts: ['producto', 'fantasía', 'prototipo', 'ficción'], correct: { fb0: 0 }, explain: 'Producto comercial real. Stretch, Da Vinci, Figure 02, Spot ya operan en producción, no son demos.' },
-  { sentence: 'Sistemas militares autónomos letales (que matan sin control humano) se llaman _____.', allOpts: ['LAWS', 'API', 'WIFI', 'RAM'], correct: { fb0: 0 }, explain: 'Lethal Autonomous Weapons Systems. ONU debate restringirlos.' },
-];
-
 const BUILDER_CITY = {
   xp: 22,
   rows: [
@@ -105,14 +95,7 @@ const BUILDER_CITY = {
 };
 
 // ===================== COMPONENTE =====================
-interface LevelProps {
-  navigation?: any;
-  setAllowBack?: (allow: boolean) => void;
-}
-
-export default function World6Level1({ navigation: propsNavigation, setAllowBack }: LevelProps) {
-  const nav = useNavigation();
-  const navigation = propsNavigation || nav;
+export default function World6Level1() {
   const completeLevel = useGameStore((s) => s.completeLevel);
 
   const [step, setStep] = useState(0);
@@ -126,7 +109,6 @@ export default function World6Level1({ navigation: propsNavigation, setAllowBack
   const [advancedQItems] = useState(() => pickN(ADVANCED_Q_POOL, 5));
   const [ethicsItems] = useState(() => pickN(ETHICS_Q_POOL, 5));
   const [sensorsItems] = useState(() => pickN(SENSORS_POOL, 6));
-  const [fillItem] = useState(() => pickN(FILL_POOL, 1)[0]);
 
   // Estados de módulos
   const [matchLeft, setMatchLeft] = useState<number | null>(null);
@@ -139,8 +121,6 @@ export default function World6Level1({ navigation: propsNavigation, setAllowBack
   const [tfAnswers, setTfAnswers] = useState<Record<number, boolean>>({});
   const [tfChecked, setTfChecked] = useState(false);
 
-  const [fillSel, setFillSel] = useState<number | null>(null);
-  const [fillChecked, setFillChecked] = useState(false);
 
   const [dragPlaced, setDragPlaced] = useState<Record<number, string>>({});
   const [dragSel, setDragSel] = useState<number | null>(null);
@@ -158,7 +138,6 @@ export default function World6Level1({ navigation: propsNavigation, setAllowBack
   const showBackButton = step > 0 && theorySteps.has(step);
   const goToPrevStep = () => setStep(s => s - 1);
 
-  useEffect(() => { setAllowBack?.(showBackButton); }, [showBackButton]);
   useEffect(() => {
     const bh = BackHandler.addEventListener('hardwareBackPress', () => {
       if (!showBackButton) { Alert.alert('Actividad en curso', 'No puedes regresar ahora.'); return true; }
@@ -180,7 +159,6 @@ export default function World6Level1({ navigation: propsNavigation, setAllowBack
 
   const addXP = (n: number) => { setXp((p) => p + n); if (n > 0) setXpToast((prev) => ({ amount: n, id: (prev?.id ?? 0) + 1 })); };
   const goNext = () => { if (step < TOTAL_STEPS - 1) setStep(step + 1); };
-  const handleClose = () => Alert.alert('Salir', '¿Seguro?', [{ text: 'Cancelar' }, { text: 'Salir', onPress: () => router.back() }]);
   const handleFinish = () => {
     let stars = 0;
     if (xp >= 180) stars = 3; else if (xp >= 120) stars = 2; else if (xp >= 60) stars = 1;
@@ -221,17 +199,6 @@ export default function World6Level1({ navigation: propsNavigation, setAllowBack
     ethicsItems.forEach((q, i) => { if (tfAnswers[i] === q.correct) c++; });
     addXP(c * 5);
     Alert.alert(`${c}/${ethicsItems.length} correctas`, `+${c * 5} XP`, [{ text: 'OK', onPress: goNext }]);
-    return false;
-  };
-
-  // Fill
-  const selFill = (i: number) => { if (!fillChecked) setFillSel(i); };
-  const checkFill = () => {
-    if (fillChecked) return true;
-    if (fillSel === null) { Alert.alert('Elige una opción'); return false; }
-    setFillChecked(true);
-    if (fillSel === fillItem.correct.fb0) addXP(10);
-    Alert.alert(fillSel === fillItem.correct.fb0 ? '✅ +10 XP' : '❌', fillItem.explain);
     return false;
   };
 

@@ -1,11 +1,10 @@
 import { router } from 'expo-router';
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
   Alert, BackHandler,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
 import { useGameStore } from '../store/gameStore';
 import { colors, typography } from '../theme';
 import XPToast from '../components/XPToast';
@@ -160,15 +159,7 @@ const splitHallText = (text: string): string[] => {
   return fragments.length ? fragments : [text];
 };
 
-// Props
-interface LevelProps {
-  navigation?: any;
-  setAllowBack?: (allow: boolean) => void;
-}
-
-export default function World2Level2({ navigation: propsNavigation, setAllowBack }: LevelProps) {
-  const nav = useNavigation();
-  const navigation = propsNavigation || nav;
+export default function World2Level2() {
   const completeLevel = useGameStore(s => s.completeLevel);
 
   const [step, setStep] = useState(0);
@@ -192,7 +183,6 @@ export default function World2Level2({ navigation: propsNavigation, setAllowBack
   // Drag temperatura
   const [tempPlaced, setTempPlaced] = useState<{ [key: number]: string }>({});
   const [tempSel, setTempSel] = useState<number | null>(null);
-  const [tempOk, setTempOk] = useState(false);
 
   // TF contexto
   const [tfAnswers, setTfAnswers] = useState<{ [key: number]: boolean }>({});
@@ -215,7 +205,6 @@ export default function World2Level2({ navigation: propsNavigation, setAllowBack
   // Drag sesgos
   const [sesgoPlaced, setSesgoPlaced] = useState<{ [key: number]: string }>({});
   const [sesgoSel, setSesgoSel] = useState<number | null>(null);
-  const [sesgoOk, setSesgoOk] = useState(false);
 
   // Sprint
   const [sprintRunning, setSprintRunning] = useState(false);
@@ -231,7 +220,6 @@ export default function World2Level2({ navigation: propsNavigation, setAllowBack
   const theorySteps = new Set([0, 1, 3, 4, 7, 9, 11, 14]);
   const canGoBack = theorySteps.has(step);
 
-  useEffect(() => { setAllowBack?.(canGoBack); }, [canGoBack]);
   useEffect(() => {
     const handler = BackHandler.addEventListener('hardwareBackPress', () => {
       if (!canGoBack) {
@@ -256,17 +244,10 @@ export default function World2Level2({ navigation: propsNavigation, setAllowBack
     if (v > 0) setXpToast((prev) => ({ amount: v, id: (prev?.id ?? 0) + 1 }));
   };
   const nextStep = () => { if (step < TOTAL_STEPS - 1) setStep(step + 1); };
-  const goToPrevStep = () => setStep(s => s - 1);
   const finishLevel = () => {
     let stars = xp >= 180 ? 3 : xp >= 120 ? 2 : xp >= 50 ? 1 : 0;
     completeLevel(8, stars, xp);
     router.back();
-  };
-  const closeAlert = () => {
-    Alert.alert('Salir', '¿Salir del nivel?', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Salir', onPress: () => router.back() },
-    ]);
   };
 
   // ---- Mecánicas ----
@@ -282,7 +263,6 @@ export default function World2Level2({ navigation: propsNavigation, setAllowBack
       Alert.alert('Faltan tarjetas', `Coloca todas (${tempItems.length - Object.keys(tempPlaced).length} restantes).`);
       return;
     }
-    setTempOk(true);
     addXP(15);
     nextStep();
   };
@@ -347,7 +327,6 @@ export default function World2Level2({ navigation: propsNavigation, setAllowBack
       Alert.alert('Faltan tarjetas', 'Clasifica todas.');
       return;
     }
-    setSesgoOk(true);
     addXP(15);
     nextStep();
   };

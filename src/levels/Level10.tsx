@@ -1,11 +1,10 @@
 import { router } from 'expo-router';
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
   Alert, BackHandler,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
 import { useGameStore } from '../store/gameStore';
 import { colors, typography } from '../theme';
 import XPToast from '../components/XPToast';
@@ -129,11 +128,7 @@ const pickN = <T,>(arr: T[], n: number): T[] => {
   return shuffled.slice(0, n);
 };
 
-interface LevelProps { navigation?: any; setAllowBack?: (allow: boolean) => void; }
-
-export default function World2Level4({ navigation: propsNavigation, setAllowBack }: LevelProps) {
-  const nav = useNavigation();
-  const navigation = propsNavigation || nav;
+export default function World2Level4() {
   const completeLevel = useGameStore(s => s.completeLevel);
 
   const [step, setStep] = useState(0);
@@ -160,7 +155,6 @@ export default function World2Level4({ navigation: propsNavigation, setAllowBack
   const [vfAns, setVfAns] = useState<boolean | null>(null);
 
   // Fill-in-blank
-  const [fillIdx, setFillIdx] = useState(0);
   const [fillTexts, setFillTexts] = useState<string[]>(['', '', '']);
 
   // Compare repite vs reformula
@@ -209,7 +203,6 @@ export default function World2Level4({ navigation: propsNavigation, setAllowBack
   const theorySteps = new Set([0, 1, 6, 8, 11, 14]);
   const canGoBack = theorySteps.has(step);
 
-  useEffect(() => { setAllowBack?.(canGoBack); }, [canGoBack]);
   useEffect(() => {
     const h = BackHandler.addEventListener('hardwareBackPress', () => {
       if (!canGoBack) { Alert.alert('Actividad en curso', 'Completa la actividad.'); return true; }
@@ -243,7 +236,6 @@ export default function World2Level4({ navigation: propsNavigation, setAllowBack
     if (v > 0) setXpToast((prev) => ({ amount: v, id: (prev?.id ?? 0) + 1 }));
   };
   const nextStep = () => { if (step < TOTAL_STEPS - 1) setStep(step + 1); };
-  const goToPrevStep = () => setStep(s => s - 1);
   const finish = () => {
     let stars = xp >= 180 ? 3 : xp >= 120 ? 2 : xp >= 50 ? 1 : 0;
     completeLevel(10, stars, xp);

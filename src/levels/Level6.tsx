@@ -12,7 +12,6 @@ import {
   Platform,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
 import { useGameStore } from '../store/gameStore';
 import { colors, typography } from '../theme';
 import XPToast from '../components/XPToast';
@@ -128,15 +127,7 @@ const pickN = <T,>(arr: T[], n: number): T[] => {
 };
 
 // ---------- Componente principal ----------
-interface Props {
-  navigation?: any;
-  setAllowBack?: (allow: boolean) => void;
-}
-
-export default function World1Level6({ navigation: propsNavigation, setAllowBack }: Props) {
-  const hookNavigation = useNavigation();
-  const navigation = propsNavigation || hookNavigation;
-
+export default function World1Level6() {
   const completeLevel = useGameStore((state) => state.completeLevel);
   const devMode = useGameStore((state) => state.devMode);
 
@@ -196,10 +187,6 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
   const canGoBack = allowedBackSteps.has(step);
 
   useEffect(() => {
-    setAllowBack?.(canGoBack);
-  }, [canGoBack, setAllowBack]);
-
-  useEffect(() => {
     const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
       if (!canGoBack) {
         Alert.alert('Actividad en curso', 'No puedes salir mientras realizas esta actividad.', [
@@ -211,7 +198,7 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
       return false;
     });
     return () => backHandler.remove();
-  }, [canGoBack, navigation]);
+  }, [canGoBack]);
 
   // Temporizador del sprint
   useEffect(() => {

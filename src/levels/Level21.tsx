@@ -1,12 +1,11 @@
 import { router } from 'expo-router';
 
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
   Alert, BackHandler,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
 import { useGameStore } from '../store/gameStore';
 import { colors, typography } from '../theme';
 import XPToast from '../components/XPToast';
@@ -117,11 +116,7 @@ const pickN = <T,>(arr: T[], n: number): T[] => {
   return shuffled.slice(0, n);
 };
 
-interface LevelProps { navigation?: any; setAllowBack?: (allow: boolean) => void; }
-
-export default function World4Level3({ navigation: propsNavigation, setAllowBack }: LevelProps) {
-  const nav = useNavigation();
-  const navigation = propsNavigation || nav;
+export default function World4Level3() {
   const completeLevel = useGameStore(s => s.completeLevel);
 
   const [step, setStep] = useState(0);
@@ -140,7 +135,6 @@ export default function World4Level3({ navigation: propsNavigation, setAllowBack
   // Drag 1 (fortalezas)
   const [d1Placed, setD1Placed] = useState<{ [key: number]: string }>({});
   const [d1Sel, setD1Sel] = useState<number | null>(null);
-  const [d1Ok, setD1Ok] = useState(false);
 
   // Matching
   const [matchSel, setMatchSel] = useState<number | null>(null);
@@ -150,7 +144,6 @@ export default function World4Level3({ navigation: propsNavigation, setAllowBack
 
   // Sort
   const [sortOrder, setSortOrder] = useState<number[]>([]);
-  const [sortOk, setSortOk] = useState(false);
 
   // Quiz
   const [quizAns, setQuizAns] = useState<{ [key: number]: number }>({});
@@ -167,7 +160,6 @@ export default function World4Level3({ navigation: propsNavigation, setAllowBack
   // Drag 2 (casos de uso)
   const [d2Placed, setD2Placed] = useState<{ [key: number]: string }>({});
   const [d2Sel, setD2Sel] = useState<number | null>(null);
-  const [d2Ok, setD2Ok] = useState(false);
 
   // Prompts
   const [promptSels, setPromptSels] = useState<{ [key: number]: string }>({});
@@ -179,7 +171,6 @@ export default function World4Level3({ navigation: propsNavigation, setAllowBack
   const theorySteps = new Set([0, 1, 2, 4, 6, 7, 8, 11, 15, 13, 18, 19]);
   const canGoBack = theorySteps.has(step);
 
-  useEffect(() => { setAllowBack?.(canGoBack); }, [canGoBack]);
   useEffect(() => {
     const h = BackHandler.addEventListener('hardwareBackPress', () => {
       if (!canGoBack) { Alert.alert('Actividad en curso', 'Completa la actividad.'); return true; }
@@ -205,7 +196,7 @@ export default function World4Level3({ navigation: propsNavigation, setAllowBack
   const removeD1 = (idx: number) => { setD1Placed(p => { const n = { ...p }; delete n[idx]; return n; }); };
   const checkD1 = () => {
     let correct = 0; drag1Items.forEach((item, i) => { if (d1Placed[i] === item.correct) correct++; });
-    if (correct === drag1Items.length) { setD1Ok(true); addXP(20); Alert.alert('✅', '¡Perfecto!'); }
+    if (correct === drag1Items.length) { addXP(20); Alert.alert('✅', '¡Perfecto!'); }
     else Alert.alert('❌', `${correct}/${drag1Items.length} correctos.`);
   };
 
@@ -226,7 +217,7 @@ export default function World4Level3({ navigation: propsNavigation, setAllowBack
   };
   const checkSort = () => {
     const ok = sortOrder.every((v, i) => v === i);
-    if (ok) { setSortOk(true); addXP(15); Alert.alert('✅', '¡Orden perfecto!'); }
+    if (ok) { addXP(15); Alert.alert('✅', '¡Orden perfecto!'); }
     else Alert.alert('❌', 'Revisa el orden.');
   };
 
@@ -241,7 +232,7 @@ export default function World4Level3({ navigation: propsNavigation, setAllowBack
   const removeD2 = (idx: number) => { setD2Placed(p => { const n = { ...p }; delete n[idx]; return n; }); };
   const checkD2 = () => {
     let correct = 0; drag2Items.forEach((item, i) => { if (d2Placed[i] === item.correct) correct++; });
-    if (correct === drag2Items.length) { setD2Ok(true); addXP(20); Alert.alert('✅', '¡Excelente!'); }
+    if (correct === drag2Items.length) { addXP(20); Alert.alert('✅', '¡Excelente!'); }
     else Alert.alert('❌', `${correct}/${drag2Items.length} correctos.`);
   };
   // Prompts

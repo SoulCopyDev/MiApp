@@ -25,9 +25,9 @@ export function coordsToGlobalN(worldId: number, levelId: number): number {
 }
 
 // ---------- Tipos ----------
-export type LevelStatus = 'locked' | 'current' | 'completed';
+type LevelStatus = 'locked' | 'current' | 'completed';
 
-export interface LevelProgress {
+interface LevelProgress {
   id: number;
   name: string;
   icon: string;
@@ -43,7 +43,7 @@ export interface World {
   levels: LevelProgress[];
 }
 
-export interface Badge {
+interface Badge {
   id: number;
   name: string;
   description: string;
@@ -53,13 +53,13 @@ export interface Badge {
   bgColor: string;
 }
 
-export interface UserProfile {
+interface UserProfile {
   name: string;
   avatarEmoji: string;
   soundEnabled: boolean;
 }
 
-export interface GameState {
+interface GameState {
   profile: UserProfile;
   playerLevel: number;
   currentXP: number;
@@ -77,7 +77,6 @@ export interface GameState {
   unlockBadge: (badgeId: number) => void;
   addXP: (amount: number) => void;
   resetProgress: () => void;
-  calculateMaxXP: (level: number) => number;
   setDevMode: (enabled: boolean) => void;
   updateStreak: () => void;
   refreshDailyMission: () => void;
@@ -397,8 +396,6 @@ export const useGameStore = create<GameState>()(
           devMode: true,
         });
       },
-
-      calculateMaxXP,
 
       setDevMode: (enabled) => set({ devMode: enabled }),
 

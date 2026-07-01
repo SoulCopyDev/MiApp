@@ -8,10 +8,9 @@ import {
   TouchableOpacity,
   TextInput,
   StyleSheet,
-  Platform,
 } from 'react-native';
 import { useGameStore } from '../store/gameStore';
-import { colors, typography } from '../theme';
+import { typography } from '../theme';
 import XPToast from '../components/XPToast';
 
 // ─── Tipos de módulo ──────────────────────────────────────
@@ -698,7 +697,6 @@ export default function World4Level2() {
     if (step >= steps.length - 1) return;
     const current = steps[step];
 
-    let canAdvance = true;
     if (current.type === 'dragdrop' && !dOk) {
       const drag = current as DragDropStep;
       const placed = Object.keys(dPlaced).length;

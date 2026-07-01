@@ -1,10 +1,9 @@
 import { router } from 'expo-router';
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, BackHandler,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
 import { useGameStore } from '../store/gameStore';
 import { colors, typography } from '../theme';
 import XPToast from '../components/XPToast';
@@ -19,7 +18,6 @@ type SprintItem = { text: string; good: boolean };
 type BuilderRow = { key: string; label: string; opts: string[] };
 
 const TOTAL_STEPS = 21; // 0:intro + 19 módulos + 1:complete
-const CONTENT_STEPS = 19;
 
 const pickN = <T,>(arr: T[], n: number): T[] => {
   const shuffled = [...arr].sort(() => Math.random() - 0.5);
@@ -106,14 +104,7 @@ const FILL_POOL: FillItem[] = [
 ];
 
 // ===================== COMPONENTE =====================
-interface LevelProps {
-  navigation?: any;
-  setAllowBack?: (allow: boolean) => void;
-}
-
-export default function World6Level3({ navigation: propsNavigation, setAllowBack }: LevelProps) {
-  const nav = useNavigation();
-  const navigation = propsNavigation || nav;
+export default function World6Level3() {
   const completeLevel = useGameStore((s) => s.completeLevel);
 
   const [step, setStep] = useState(0);
@@ -161,7 +152,6 @@ export default function World6Level3({ navigation: propsNavigation, setAllowBack
   const showBackButton = step > 0 && theorySteps.has(step);
   const goToPrevStep = () => setStep(s => s - 1);
 
-  useEffect(() => { setAllowBack?.(showBackButton); }, [showBackButton]);
   useEffect(() => {
     const bh = BackHandler.addEventListener('hardwareBackPress', () => {
       if (!showBackButton) { Alert.alert('Actividad en curso', 'No puedes regresar ahora.'); return true; }
@@ -182,7 +172,6 @@ export default function World6Level3({ navigation: propsNavigation, setAllowBack
 
   const addXP = (n: number) => { setXp((p) => p + n); if (n > 0) setXpToast((prev) => ({ amount: n, id: (prev?.id ?? 0) + 1 })); };
   const goNext = () => { if (step < TOTAL_STEPS - 1) setStep(step + 1); };
-  const handleClose = () => Alert.alert('Salir', '¿Seguro?', [{ text: 'Cancelar' }, { text: 'Salir', onPress: () => router.back() }]);
   const handleFinish = () => {
     let stars = 0;
     if (xp >= 180) stars = 3; else if (xp >= 120) stars = 2; else if (xp >= 60) stars = 1;
@@ -238,17 +227,6 @@ export default function World6Level3({ navigation: propsNavigation, setAllowBack
     accidentsItems.forEach((q, i) => { if (tfAnswers[i] === q.correct) c++; });
     addXP(c * 5);
     Alert.alert(`${c}/${accidentsItems.length} correctas`, `+${c * 5} XP`, [{ text: 'OK', onPress: goNext }]);
-    return false;
-  };
-
-  // Fill
-  const selFill = (i: number) => { if (!fillChecked) setFillSel(i); };
-  const checkFill = () => {
-    if (fillChecked) return true;
-    if (fillSel === null) { Alert.alert('Elige una opción'); return false; }
-    setFillChecked(true);
-    if (fillSel === fillItem.correct.fb0) addXP(10);
-    Alert.alert(fillSel === fillItem.correct.fb0 ? '✅ +10 XP' : '❌', fillItem.explain);
     return false;
   };
 

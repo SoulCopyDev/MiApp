@@ -1,7 +1,7 @@
 // Sistema de rangos basado en el total de estrellas acumuladas.
 // Agregar un nuevo rango al final del array es suficiente para escalar el sistema.
 
-export interface RankTier {
+interface RankTier {
   level: number;
   name: string;
   icon: string;
@@ -11,7 +11,7 @@ export interface RankTier {
   bgColor: string;
 }
 
-export interface RankInfo {
+interface RankInfo {
   tier: RankTier;
   nextTierName: string | null;
   /** Progreso dentro del rango actual, de 0 a 1. */
@@ -25,7 +25,7 @@ export interface RankInfo {
 
 // Máximo teórico alcanzable: 42 niveles × 3 estrellas = 126 estrellas.
 // Los umbrales están distribuidos para que cada rango represente un hito real.
-export const RANK_TIERS: readonly RankTier[] = [
+const RANK_TIERS: readonly RankTier[] = [
   { level: 1, name: 'Novato',     icon: 'school',            minStars: 0,   maxStars: 4,   color: '#747779', bgColor: '#f0f2f3' },
   { level: 2, name: 'Aprendiz',   icon: 'menu-book',         minStars: 5,   maxStars: 14,  color: '#16a34a', bgColor: '#dcfce7' },
   { level: 3, name: 'Explorador', icon: 'explore',           minStars: 15,  maxStars: 29,  color: '#005ca8', bgColor: '#eef3ff' },

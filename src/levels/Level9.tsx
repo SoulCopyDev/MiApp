@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -52,7 +52,6 @@ type QuizInversoItem = {
 };
 
 const TOTAL_STEPS = 20; // 0:intro + 18 módulos + 1:complete
-const CONTENT_STEPS = 18;
 
 const pickN = <T,>(arr: T[], n: number): T[] => {
   const shuffled = [...arr].sort(() => Math.random() - 0.5);
@@ -240,19 +239,12 @@ const TONOS = [
 ];
 
 // ===================== COMPONENTE =====================
-interface LevelProps {
-  navigation?: any;
-  setAllowBack?: (allow: boolean) => void;
-}
-
-export default function World2Level3({ navigation: propsNavigation, setAllowBack }: LevelProps) {
-  const navigationFromHook = useNavigation();
-  const navigation = propsNavigation || navigationFromHook;
+export default function World2Level3() {
+  const navigation = useNavigation();
   const completeLevel = useGameStore((state) => state.completeLevel);
 
   const [step, setStep] = useState(0);
   const [xp, setXp] = useState(0);
-  const [stepResult, setStepResult] = useState<{ ok: boolean; msg: string } | null>(null);
   const [xpToast, setXpToast] = useState<{ amount: number; id: number } | null>(null);
 
   // Pools aleatorios
@@ -336,8 +328,6 @@ export default function World2Level3({ navigation: propsNavigation, setAllowBack
   const examSteps = new Set([3, 7, 11, 14, 16]);
   const isExamMode = examSteps.has(step);
 
-  useEffect(() => { setAllowBack?.(!isExamMode); }, [isExamMode, setAllowBack]);
-
   useEffect(() => {
     const onBackPress = () => {
       if (isExamMode) {
@@ -366,11 +356,10 @@ export default function World2Level3({ navigation: propsNavigation, setAllowBack
     setXp((prev) => prev + n);
     if (n > 0) setXpToast((prev) => ({ amount: n, id: (prev?.id ?? 0) + 1 }));
   };
-  const goToNextStep = () => { setStepResult(null); if (step < TOTAL_STEPS - 1) setStep(step + 1); };
-  const goToPrevStep = () => { setStepResult(null); setStep(s => s - 1); };
+  const goToNextStep = () => { if (step < TOTAL_STEPS - 1) setStep(step + 1); };
+  const goToPrevStep = () => { setStep(s => s - 1); };
 
-  const showResult = (ok: boolean, msg: string, andAdvance = false) => {
-    setStepResult({ ok, msg });
+  const showResult = (_ok: boolean, _msg: string, andAdvance = false) => {
     if (andAdvance) setTimeout(() => goToNextStep(), 1800);
   };
 

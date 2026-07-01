@@ -1,11 +1,10 @@
 import { router } from 'expo-router';
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
   Alert, BackHandler,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
 import { useGameStore } from '../store/gameStore';
 import { colors, typography } from '../theme';
 import XPToast from '../components/XPToast';
@@ -149,11 +148,7 @@ const pickN = <T,>(arr: T[], n: number): T[] => {
   return shuffled.slice(0, n);
 };
 
-interface LevelProps { navigation?: any; setAllowBack?: (allow: boolean) => void; }
-
-export default function World4Level1({ navigation: propsNavigation, setAllowBack }: LevelProps) {
-  const nav = useNavigation();
-  const navigation = propsNavigation || nav;
+export default function World4Level1() {
   const completeLevel = useGameStore(s => s.completeLevel);
 
   const [step, setStep] = useState(0);
@@ -170,13 +165,11 @@ export default function World4Level1({ navigation: propsNavigation, setAllowBack
 
   // Detective
   const [detQ, setDetQ] = useState(0);
-  const [detCorrect, setDetCorrect] = useState(0);
   const [detDone, setDetDone] = useState(false);
 
   // Drag & Drop
   const [ddPlaced, setDdPlaced] = useState<{ [key: number]: string }>({});
   const [ddSel, setDdSel] = useState<number | null>(null);
-  const [ddOk, setDdOk] = useState(false);
 
   // Matching
   const [matchSel, setMatchSel] = useState<number | null>(null);
@@ -216,7 +209,6 @@ export default function World4Level1({ navigation: propsNavigation, setAllowBack
 
   // Sesión
   const [sesionQ, setSesionQ] = useState(0);
-  const [sesionCor, setSesionCor] = useState(0);
   const [sesionDone, setSesionDone] = useState(false);
 
   // Reflexión
@@ -225,7 +217,6 @@ export default function World4Level1({ navigation: propsNavigation, setAllowBack
   const theorySteps = new Set([0, 1, 2, 4, 6, 8, 11, 13, 15]);
   const canGoBack = theorySteps.has(step);
 
-  useEffect(() => { setAllowBack?.(canGoBack); }, [canGoBack]);
   useEffect(() => {
     const h = BackHandler.addEventListener('hardwareBackPress', () => {
       if (!canGoBack) { Alert.alert('Actividad en curso', 'Completa la actividad.'); return true; }
@@ -264,7 +255,6 @@ export default function World4Level1({ navigation: propsNavigation, setAllowBack
   const answerDet = (side: string) => {
     const item = DETECTIVE_POOL[detQ];
     const ok = side === item.cual4o;
-    if (ok) setDetCorrect(c => c + 1);
     if (detQ + 1 < DETECTIVE_POOL.length) {
       setTimeout(() => setDetQ(q => q + 1), 800);
     } else {
@@ -285,7 +275,7 @@ export default function World4Level1({ navigation: propsNavigation, setAllowBack
   const checkDd = () => {
     let correct = 0;
     dragItems.forEach((item, i) => { if (ddPlaced[i] === item.correct) correct++; });
-    if (correct === dragItems.length) { setDdOk(true); addXP(20); Alert.alert('✅', '¡Perfecto!'); }
+    if (correct === dragItems.length) { addXP(20); Alert.alert('✅', '¡Perfecto!'); }
     else Alert.alert('❌', `${correct}/${dragItems.length} correctos.`);
   };
 
@@ -374,7 +364,6 @@ export default function World4Level1({ navigation: propsNavigation, setAllowBack
   // Sesión
   const answerSesion = (oi: number) => {
     const s = SESION_STEPS[sesionQ];
-    if (oi === s.correct) setSesionCor(c => c + 1);
     Alert.alert(oi === s.correct ? '✅' : '❌', oi === s.correct ? s.fb_ok : s.fb_no, [{ text: 'OK', onPress: () => {
       if (sesionQ + 1 < SESION_STEPS.length) setSesionQ(q => q + 1);
       else { setSesionDone(true); addXP(25); nextStep(); }
