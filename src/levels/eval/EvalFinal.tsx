@@ -1,12 +1,10 @@
 import { router } from 'expo-router';
-import React from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
-import { useGameStore } from '../../store/gameStore';
 import { colors, typography } from '../../theme';
+import { useGameStore } from '../../store/gameStore';
 
 // ---------- Datos de los mundos ----------
 const WORLD_DATA = [
@@ -95,19 +93,8 @@ const WORLD_DATA = [
   },
 ];
 
-interface LevelProps {
-  navigation?: any;
-  setAllowBack?: (allow: boolean) => void;
-}
-
-export default function World6Level8({ navigation: propsNavigation, setAllowBack }: LevelProps) {
-  const nav = useNavigation();
-  const navigation = propsNavigation || nav;
+export default function World6Level8() {
   const completeLevel = useGameStore((s) => s.completeLevel);
-
-  React.useEffect(() => {
-    setAllowBack?.(true);
-  }, []);
 
   const handleClose = () => {
     completeLevel(43, 3, 0);
@@ -118,7 +105,7 @@ export default function World6Level8({ navigation: propsNavigation, setAllowBack
     <View style={styles.screen}>
       {/* Barra de progreso */}
       <View style={styles.bar}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.closeBtn}>
+        <TouchableOpacity onPress={handleClose} style={styles.closeBtn}>
           <MaterialIcons name="close" size={24} color={colors.textSecondary} />
         </TouchableOpacity>
         <View style={styles.track}>

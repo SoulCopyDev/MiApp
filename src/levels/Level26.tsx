@@ -1,29 +1,23 @@
 import { router } from 'expo-router';
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, BackHandler,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
 import { useGameStore } from '../store/gameStore';
 import { colors, typography } from '../theme';
 import XPToast from '../components/XPToast';
 
 // ---------- Tipos ----------
 type DragItem = { text: string; correct: string };
-type MatchPairItem = { left: string; right: string };
 type QuizItem = { q: string; opts: string[]; correct: number; explain: string };
 type TFItem = { stmt: string; correct: boolean; explain: string };
-type FillItem = { sentence: string; allOpts: string[]; correct: Record<string, number>; explain: string };
 type ScenarioChoice = { title: string; text: string; correct: boolean; explain: string };
 type EthicsItem = { text: string; correct: string; explain: string };
 type SprintItem = { text: string; good: boolean };
-type ConnectQuestion = { label: string; opts: { t: string; ok: boolean }[] };
-type BuilderDayRow = { key: string; label: string; opts: string[] };
 type FlowOpts = { trigger_opts: string[]; middle_opts: string[]; final_opts: string[] };
 
 const TOTAL_STEPS = 21; // 0:intro + 19 módulos + 1:complete
-const CONTENT_STEPS = 19;
 
 const pickN = <T,>(arr: T[], n: number): T[] => {
   const shuffled = [...arr].sort(() => Math.random() - 0.5);
@@ -117,13 +111,6 @@ const RESP_SCN: ScenarioChoice[] = [
   { title: 'Un vendedor pregunta "horario de atención" y la IA responde con info del sitio', text: 'Consulta impersonal, respuesta factual disponible públicamente.', correct: true, explain: 'Aceptable. Sin carga emocional, info pública — ideal para automatizar.' },
 ];
 
-const FILL_POOL: FillItem[] = [
-  { sentence: 'El evento que inicia una automatización se llama _____.', allOpts: ['disparador', 'ejecutor', 'cierre', 'interfaz'], correct: { fb0: 0 }, explain: 'Disparador (trigger): evento que arranca el flujo.' },
-  { sentence: 'Zapier, Make y n8n son herramientas de _____ que conectan apps.', allOpts: ['automatización', 'traducción', 'edición', 'seguridad'], correct: { fb0: 0 }, explain: 'Orquestadores de automatización.' },
-  { sentence: 'Las señales técnicas que una app envía cuando pasa algo se llaman _____.', allOpts: ['webhooks', 'cookies', 'pixeles', 'puertos'], correct: { fb0: 0 }, explain: 'Webhook: "app A dice pasó X", lanza flujo.' },
-  { sentence: 'La ventaja principal de n8n es que puedes _____ en tu servidor.', allOpts: ['autohostearlo', 'descargarlo', 'editarlo', 'cancelarlo'], correct: { fb0: 0 }, explain: 'Autohosting: privacidad, control, costo plano.' },
-];
-
 const SORT_FLOW = [
   'Identifica el problema: ¿qué tarea repetitiva te quita tiempo?',
   'Define el disparador: ¿qué evento debería iniciar el flujo?',
@@ -158,14 +145,7 @@ const FLOW_CFG: FlowOpts = {
 };
 
 // ===================== COMPONENTE =====================
-interface LevelProps {
-  navigation?: any;
-  setAllowBack?: (allow: boolean) => void;
-}
-
-export default function World5Level2({ navigation: propsNavigation, setAllowBack }: LevelProps) {
-  const nav = useNavigation();
-  const navigation = propsNavigation || nav;
+export default function World5Level2() {
   const completeLevel = useGameStore((s) => s.completeLevel);
 
   const [step, setStep] = useState(0);
@@ -179,7 +159,6 @@ export default function World5Level2({ navigation: propsNavigation, setAllowBack
   const [ethicsItems] = useState(() => pickN(ETHICS_POOL, 5));
   const [replacedQItems] = useState(() => pickN(REPLACED_Q_POOL, 4));
   const [autoFinalQItems] = useState(() => pickN(AUTO_FINAL_Q_POOL, 6));
-  const [fillItem] = useState(() => pickN(FILL_POOL, 1)[0]);
   const [sprintItems] = useState(() => pickN(SPRINT_POOL, 10));
 
   // Estados de módulos
@@ -187,10 +166,6 @@ export default function World5Level2({ navigation: propsNavigation, setAllowBack
   const [dragSel, setDragSel] = useState<number | null>(null);
   const [dragAttempts, setDragAttempts] = useState(0);
   const [dragOk, setDragOk] = useState(false);
-
-  const [matchLeft, setMatchLeft] = useState<number | null>(null);
-  const [matchDone, setMatchDone] = useState(0);
-  const [rightOrder] = useState<string[]>([]);
 
   const [sortOrder, setSortOrder] = useState<number[]>([]);
   const [sortOk, setSortOk] = useState(false);
@@ -200,9 +175,6 @@ export default function World5Level2({ navigation: propsNavigation, setAllowBack
 
   const [tfAnswers, setTfAnswers] = useState<Record<number, boolean>>({});
   const [tfChecked, setTfChecked] = useState(false);
-
-  const [fillSel, setFillSel] = useState<number | null>(null);
-  const [fillChecked, setFillChecked] = useState(false);
 
   const [scenarioSel, setScenarioSel] = useState<number | null>(null);
   const [scenarioDone, setScenarioDone] = useState(false);
@@ -224,14 +196,12 @@ export default function World5Level2({ navigation: propsNavigation, setAllowBack
   const [builderDay, setBuilderDay] = useState<Record<string, string>>({});
 
   const [reflectVal, setReflectVal] = useState('');
-  const [reflectMinLen, setReflectMinLen] = useState(80);
 
   const examSteps = new Set([3, 7, 8, 9, 10, 11, 12, 14, 15, 17, 19]);
   const isExam = examSteps.has(step);
   const showBackButton = step > 0 && !isExam;
   const goToPrevStep = () => setStep(s => s - 1);
 
-  useEffect(() => { setAllowBack?.(!isExam); }, [isExam, setAllowBack]);
   useEffect(() => {
     const bh = BackHandler.addEventListener('hardwareBackPress', () => {
       if (isExam) { Alert.alert('Actividad en curso', 'No puedes regresar ahora.'); return true; }
@@ -256,7 +226,6 @@ export default function World5Level2({ navigation: propsNavigation, setAllowBack
 
   const addXP = (n: number) => { setXp((p) => p + n); if (n > 0) setXpToast((prev) => ({ amount: n, id: (prev?.id ?? 0) + 1 })); };
   const goNext = () => { if (step < TOTAL_STEPS - 1) setStep(step + 1); };
-  const handleClose = () => Alert.alert('Salir', '¿Seguro?', [{ text: 'Cancelar' }, { text: 'Salir', onPress: () => router.back() }]);
   const handleFinish = () => {
     let stars = 0;
     if (xp >= 180) stars = 3; else if (xp >= 120) stars = 2; else if (xp >= 60) stars = 1;
@@ -319,18 +288,6 @@ export default function World5Level2({ navigation: propsNavigation, setAllowBack
     tfItems.forEach((q, i) => { if (tfAnswers[i] === q.correct) c++; });
     addXP(c * 5);
     Alert.alert(`${c}/${tfItems.length} correctas`, `+${c * 5} XP`, [{ text: 'OK', onPress: goNext }]);
-    return false;
-  };
-
-  // Fill
-  const selFill = (i: number) => { if (!fillChecked) setFillSel(i); };
-  const checkFill = () => {
-    if (fillChecked) return true;
-    if (fillSel === null) { Alert.alert('Elige una opción'); return false; }
-    setFillChecked(true);
-    const isOk = fillSel === fillItem.correct.fb0;
-    if (isOk) addXP(10);
-    Alert.alert(isOk ? '✅ ¡Correcto! +10 XP' : '❌ Incorrecto', fillItem.explain);
     return false;
   };
 

@@ -1,11 +1,10 @@
 import { router } from 'expo-router';
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
   Alert, BackHandler,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
 import { useGameStore } from '../store/gameStore';
 import { colors, typography } from '../theme';
 import XPToast from '../components/XPToast';
@@ -123,11 +122,7 @@ const MODULES: ModuleData[] = [
 
 const TOTAL_STEPS = MODULES.length;
 
-interface LevelProps { navigation?: any; setAllowBack?: (allow: boolean) => void; }
-
-export default function World3Level3({ navigation: propsNavigation, setAllowBack }: LevelProps) {
-  const nav = useNavigation();
-  const navigation = propsNavigation || nav;
+export default function World3Level3() {
   const completeLevel = useGameStore(s => s.completeLevel);
 
   const [current, setCurrent] = useState(0);
@@ -172,7 +167,6 @@ export default function World3Level3({ navigation: propsNavigation, setAllowBack
 
   const theorySteps = new Set([0, 1, 4, 9, 13]);
 
-  useEffect(() => { setAllowBack?.(theorySteps.has(current)); }, [current]);
   useEffect(() => {
     const h = BackHandler.addEventListener('hardwareBackPress', () => {
       if (!theorySteps.has(current)) {

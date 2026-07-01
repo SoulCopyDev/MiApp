@@ -194,14 +194,8 @@ const pickN = <T,>(arr: T[], n: number): T[] => {
   return shuffled.slice(0, n);
 };
 
-interface LevelProps {
-  navigation?: any;
-  setAllowBack?: (allow: boolean) => void;
-}
-
-export default function GameLevel2({ navigation: propsNavigation, setAllowBack }: LevelProps) {
-  const navigationFromHook = useNavigation();
-  const navigation = propsNavigation || navigationFromHook;
+export default function GameLevel2() {
+  const navigation = useNavigation();
 
   const [step, setStep] = useState(0);
   const [xp, setXp] = useState(0);
@@ -263,10 +257,6 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
   const [llmOk, setLlmOk] = useState(false);
 
   const isExamMode = step === 3 || step === 5 || step === 8 || step === 9 || step === 10 || step === 12 || step === 13 || step === 14 || step === 15;
-
-  useEffect(() => {
-    setAllowBack?.(!isExamMode);
-  }, [isExamMode, setAllowBack]);
 
   useEffect(() => {
     const onBackPress = () => {

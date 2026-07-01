@@ -12,7 +12,7 @@ import {
   Platform,
 } from 'react-native';
 import { useGameStore } from '../store/gameStore';
-import { colors, typography } from '../theme';
+import { typography } from '../theme';
 import XPToast from '../components/XPToast';
 
 // ─── TIPOS DE MÓDULO ──────────────────────────────────────

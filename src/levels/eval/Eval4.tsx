@@ -1,11 +1,10 @@
 import { router } from 'expo-router';
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
   Alert, BackHandler,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
 import { useGameStore } from '../../store/gameStore';
 import { colors, typography } from '../../theme';
 import XPToast from '../../components/XPToast';
@@ -98,11 +97,7 @@ const PC_DATA: PCItem[] = [
   }
 ];
 
-interface LevelProps { navigation?: any; setAllowBack?: (allow: boolean) => void; }
-
-export default function World4Level7({ navigation: propsNavigation, setAllowBack }: LevelProps) {
-  const nav = useNavigation();
-  const navigation = propsNavigation || nav;
+export default function World4Level7() {
   const completeLevel = useGameStore(s => s.completeLevel);
 
   const [currentPart, setCurrentPart] = useState(1);
@@ -147,7 +142,6 @@ export default function World4Level7({ navigation: propsNavigation, setAllowBack
   const [reflectionText, setReflectionText] = useState('');
   const [reflectionDone, setReflectionDone] = useState(false);
 
-  useEffect(() => { setAllowBack?.(true); }, []);
   useEffect(() => {
     const h = BackHandler.addEventListener('hardwareBackPress', () => {
       Alert.alert('Salir', '¿Abandonar la evaluación?', [{ text: 'Cancelar', style: 'cancel' }, { text: 'Salir', onPress: () => router.back() }]);

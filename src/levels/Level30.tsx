@@ -1,10 +1,9 @@
 import { router } from 'expo-router';
-import React, { useState, useEffect, useRef, type SetStateAction } from 'react';
+import { useState, useEffect, useRef, type SetStateAction } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, BackHandler,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
 import { useGameStore } from '../store/gameStore';
 import { colors, typography } from '../theme';
 import XPToast from '../components/XPToast';
@@ -19,7 +18,6 @@ type BuilderRow = { key: string; label: string; opts: string[] };
 type SprintItem = { text: string; good: boolean };
 
 const TOTAL_STEPS = 20; // 0:intro + 19 módulos
-const CONTENT_STEPS = 19;
 
 const pickN = <T,>(arr: T[], n: number): T[] => {
   const shuffled = [...arr].sort(() => Math.random() - 0.5);
@@ -156,14 +154,7 @@ const BUILDER_HARDQ = {
 };
 
 // ===================== COMPONENTE =====================
-interface LevelProps {
-  navigation?: any;
-  setAllowBack?: (allow: boolean) => void;
-}
-
-export default function World5Level6({ navigation: propsNavigation, setAllowBack }: LevelProps) {
-  const nav = useNavigation();
-  const navigation = propsNavigation || nav;
+export default function World5Level6() {
   const completeLevel = useGameStore((s) => s.completeLevel);
 
   const [step, setStep] = useState(0);
@@ -206,13 +197,11 @@ export default function World5Level6({ navigation: propsNavigation, setAllowBack
   const [compareChoice, setCompareChoice] = useState<string | null>(null);
   const [compareChecked, setCompareChecked] = useState(false);
   const [reflectVal, setReflectVal] = useState('');
-  const [reflectMinLen, setReflectMinLen] = useState(120);
 
   const examSteps = new Set([2, 3, 4, 5, 6, 7, 9, 10, 11, 13, 14, 15, 16, 17]);
   const isExam = examSteps.has(step);
   const showBackButton = step > 0 && !isExam;
   const goToPrevStep = () => setStep(s => s - 1);
-  useEffect(() => { setAllowBack?.(!isExam); }, [isExam, setAllowBack]);
   useEffect(() => {
     const bh = BackHandler.addEventListener('hardwareBackPress', () => {
       if (isExam) { Alert.alert('Actividad en curso', 'No puedes regresar ahora.'); return true; }
@@ -236,13 +225,12 @@ export default function World5Level6({ navigation: propsNavigation, setAllowBack
     if (step === 15) { setTfAnswers({}); setTfChecked(false); }
     if (step === 16) { setFillSel(null); setFillChecked(false); }
     if (step === 17) { setCompareChoice(null); setCompareChecked(false); }
-    if (step === 12) { setReflectMinLen(120); setReflectVal(''); }
-    if (step === 18) { setReflectMinLen(150); setReflectVal(''); }
+    if (step === 12) { setReflectVal(''); }
+    if (step === 18) { setReflectVal(''); }
   }, [step]);
 
   const addXP = (n: number) => { setXp((p) => p + n); if (n > 0) setXpToast((prev) => ({ amount: n, id: (prev?.id ?? 0) + 1 })); };
   const goNext = () => { if (step < TOTAL_STEPS - 1) setStep(step + 1); };
-  const handleClose = () => Alert.alert('Salir', '¿Seguro?', [{ text: 'Cancelar' }, { text: 'Salir', onPress: () => router.back() }]);
   const handleFinish = () => {
     let stars = 0;
     if (xp >= 190) stars = 3; else if (xp >= 125) stars = 2; else if (xp >= 60) stars = 1;
@@ -400,7 +388,7 @@ export default function World5Level6({ navigation: propsNavigation, setAllowBack
     </View>
   );
 
-  const renderSort = (items: string[], order: number[], ok: boolean, onMove: (pos: number, dir: number) => void, tag: string, title: string) => (
+  const renderSort = (items: string[], order: number[], onMove: (pos: number, dir: number) => void, tag: string, title: string) => (
     <View>
       <View style={[styles.tag, { backgroundColor: '#f5f3ff' }]}><Text style={[styles.tagText, { color: '#5b21b6' }]}>{tag}</Text></View>
       <Text style={styles.title}>{title}</Text>
@@ -602,7 +590,7 @@ export default function World5Level6({ navigation: propsNavigation, setAllowBack
     switch (step) {
       case 0: return renderIntro();
       case 1: return renderTheory1();
-      case 2: return renderSort(WINNING_STRUCTURE, sortOrder2, sortOk2, (pos, dir) => moveSort(pos, dir, sortOrder2, setSortOrder2), '↕️ Módulo 2 · Ordenar', 'Estructura ganadora');
+      case 2: return renderSort(WINNING_STRUCTURE, sortOrder2, (pos, dir) => moveSort(pos, dir, sortOrder2, setSortOrder2), '↕️ Módulo 2 · Ordenar', 'Estructura ganadora');
       case 3: return renderQuiz(gammaQItems, '❓ Módulo 3 · Quiz Gamma');
       case 4: return renderBuilder(builderDeck, BUILDER_DECK, setBuilderDeck, '🛠️ Módulo 4 · Builder', 'El deck de tu proyecto: 5 slides');
       case 5: return renderBuilder(builderPitch, BUILDER_PITCH, setBuilderPitch, '🛠️ Módulo 5 · Builder', 'Elevator pitch · 30 palabras');
@@ -618,7 +606,7 @@ export default function World5Level6({ navigation: propsNavigation, setAllowBack
       case 11: return renderDrag();
       case 12: return renderReflect('Piensa tú', 'Los 3 datos que convencen: 1 dato del problema, 1 dato de tu solución, 1 dato de impacto. Identifica los TUYOS.', 'Mi dato del problema: ... Mi dato de la solución: ... Mi dato de impacto: ...', 120, '📊 Tus 3 datos clave', '18');
       case 13: return renderQuiz(feedbackQItems, '❓ Módulo 13 · Quiz feedback');
-      case 14: return renderSort(PRESENTATION_CHECKLIST, sortOrder14, sortOk14, (pos, dir) => moveSort(pos, dir, sortOrder14, setSortOrder14), '↕️ Módulo 14 · Ordenar', 'El día D: checklist de 10 cosas');
+      case 14: return renderSort(PRESENTATION_CHECKLIST, sortOrder14, (pos, dir) => moveSort(pos, dir, sortOrder14, setSortOrder14), '↕️ Módulo 14 · Ordenar', 'El día D: checklist de 10 cosas');
       case 15: return renderTF();
       case 16: return (
         <View>

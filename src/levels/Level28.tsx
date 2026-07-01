@@ -1,10 +1,9 @@
 import { router } from 'expo-router';
-import React, { useState, useEffect, useRef, type SetStateAction } from 'react';
+import { useState, useEffect, type SetStateAction } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, BackHandler,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
 import { useGameStore } from '../store/gameStore';
 import { colors, typography } from '../theme';
 import XPToast from '../components/XPToast';
@@ -13,12 +12,10 @@ import XPToast from '../components/XPToast';
 type DragItem = { text: string; correct: string };
 type QuizItem = { q: string; opts: string[]; correct: number; explain: string };
 type TFItem = { stmt: string; correct: boolean; explain: string };
-type FillItem = { sentence: string; allOpts: string[]; correct: Record<string, number>; explain: string };
 type ScenarioChoice = { title: string; text: string; correct: boolean; explain: string };
 type BuilderRow = { key: string; label: string; opts: string[] };
 
 const TOTAL_STEPS = 22; // 0:intro + 19 módulos + 1:reflexión + 1:complete
-const CONTENT_STEPS = 19;
 
 const pickN = <T,>(arr: T[], n: number): T[] => {
   const shuffled = [...arr].sort(() => Math.random() - 0.5);
@@ -77,14 +74,6 @@ const TF_Q_POOL: TFItem[] = [
   { stmt: 'Cuando lanzas, todo debe estar perfecto antes de mostrarlo a alguien', correct: false, explain: 'Reid Hoffman: "si no te da vergüenza, lanzaste tarde".' },
   { stmt: 'Los colores y tipografía elegidos al azar funcionan igual de bien que un sistema de diseño', correct: false, explain: 'Inconsistencia visual confunde y resta credibilidad.' },
   { stmt: 'Cargar muy lento es una de las razones #1 por las que los usuarios abandonan apps', correct: true, explain: '3+ segundos = pierdes ~40% de usuarios. Performance es UX.' },
-];
-
-const FILL_POOL: FillItem[] = [
-  { sentence: 'Construir software con interfaces visuales sin escribir código se llama _____.', allOpts: ['no-code', 'freelance', 'open-source', 'agile'], correct: { fb0: 0 }, explain: 'No-code: democratiza la creación de software. Lovable, Bubble, Bolt son sus exponentes.' },
-  { sentence: 'Una web instalable como app que no pasa por App Store se llama _____.', allOpts: ['PWA', 'API', 'SDK', 'VPN'], correct: { fb0: 0 }, explain: 'PWA (Progressive Web App): instalable, con notificaciones, sin gatekeeper.' },
-  { sentence: 'El modelo donde lo básico es gratis y las funciones premium son pagas se llama _____.', allOpts: ['freemium', 'ad-tech', 'shareware', 'trial'], correct: { fb0: 0 }, explain: 'Freemium: Spotify, Notion, Duolingo.' },
-  { sentence: 'La capa de tu app que verifica quién es el usuario se llama _____.', allOpts: ['autenticación', 'diseño', 'marketing', 'localización'], correct: { fb0: 0 }, explain: 'Autenticación: login con email/Google/Apple.' },
-  { sentence: 'El servicio que hospeda tu app y la entrega a usuarios en internet se llama _____.', allOpts: ['hosting', 'branding', 'lobby', 'asset'], correct: { fb0: 0 }, explain: 'Hosting: Vercel, Netlify, Lovable Cloud. Sin esto, tu app vive solo en tu computador.' },
 ];
 
 const SCREEN_ITEMS: DragItem[] = [
@@ -171,14 +160,7 @@ const BUILDER_DESCRIBE = {
 };
 
 // ===================== COMPONENTE =====================
-interface LevelProps {
-  navigation?: any;
-  setAllowBack?: (allow: boolean) => void;
-}
-
-export default function World5Level4({ navigation: propsNavigation, setAllowBack }: LevelProps) {
-  const nav = useNavigation();
-  const navigation = propsNavigation || nav;
+export default function World5Level4() {
   const completeLevel = useGameStore((s) => s.completeLevel);
 
   const [step, setStep] = useState(0);
@@ -192,7 +174,6 @@ export default function World5Level4({ navigation: propsNavigation, setAllowBack
   const [publishQItems] = useState(() => pickN(PUBLISH_Q_POOL, 5));
   const [finalQItems] = useState(() => pickN(FINAL_Q_POOL, 5));
   const [tfItems] = useState(() => pickN(TF_Q_POOL, 5));
-  const [fillItem] = useState(() => pickN(FILL_POOL, 1)[0]);
   const [screenItems] = useState(() => pickN(SCREEN_ITEMS, 8));
 
   // Estados
@@ -200,8 +181,6 @@ export default function World5Level4({ navigation: propsNavigation, setAllowBack
   const [quizChecked, setQuizChecked] = useState(false);
   const [tfAnswers, setTfAnswers] = useState<Record<number, boolean>>({});
   const [tfChecked, setTfChecked] = useState(false);
-  const [fillSel, setFillSel] = useState<number | null>(null);
-  const [fillChecked, setFillChecked] = useState(false);
   const [scenarioSel, setScenarioSel] = useState<number | null>(null);
   const [scenarioDone, setScenarioDone] = useState(false);
   const [dragPlaced, setDragPlaced] = useState<Record<number, string>>({});
@@ -223,7 +202,6 @@ export default function World5Level4({ navigation: propsNavigation, setAllowBack
   const isExam = examSteps.has(step);
   const showBackButton = step > 0 && !isExam;
   const goToPrevStep = () => setStep(s => s - 1);
-  useEffect(() => { setAllowBack?.(!isExam); }, [isExam, setAllowBack]);
   useEffect(() => {
     const bh = BackHandler.addEventListener('hardwareBackPress', () => {
       if (isExam) { Alert.alert('Actividad en curso', 'No puedes regresar ahora.'); return true; }
@@ -242,7 +220,6 @@ export default function World5Level4({ navigation: propsNavigation, setAllowBack
 
   const addXP = (n: number) => { setXp((p) => p + n); if (n > 0) setXpToast((prev) => ({ amount: n, id: (prev?.id ?? 0) + 1 })); };
   const goNext = () => { if (step < TOTAL_STEPS - 1) setStep(step + 1); };
-  const handleClose = () => Alert.alert('Salir', '¿Seguro?', [{ text: 'Cancelar' }, { text: 'Salir', onPress: () => router.back() }]);
   const handleFinish = () => {
     let stars = 0;
     if (xp >= 180) stars = 3; else if (xp >= 120) stars = 2; else if (xp >= 60) stars = 1;
@@ -273,17 +250,6 @@ export default function World5Level4({ navigation: propsNavigation, setAllowBack
     tfItems.forEach((q, i) => { if (tfAnswers[i] === q.correct) c++; });
     addXP(c * 5);
     Alert.alert(`${c}/${tfItems.length} correctas`, `+${c * 5} XP`, [{ text: 'OK', onPress: goNext }]);
-    return false;
-  };
-
-  // Fill
-  const selFill = (i: number) => { if (!fillChecked) setFillSel(i); };
-  const checkFill = () => {
-    if (fillChecked) return true;
-    if (fillSel === null) { Alert.alert('Elige una opción'); return false; }
-    setFillChecked(true);
-    if (fillSel === fillItem.correct.fb0) addXP(10);
-    Alert.alert(fillSel === fillItem.correct.fb0 ? '✅ +10 XP' : '❌', fillItem.explain);
     return false;
   };
 
@@ -319,14 +285,14 @@ export default function World5Level4({ navigation: propsNavigation, setAllowBack
     const np = pos + dir; if (np < 0 || np >= order.length) return;
     const no = [...order]; [no[pos], no[np]] = [no[np], no[pos]]; setter(no);
   };
-  const checkSortGen = (order: number[], ok: boolean, setOk: (v: boolean) => void, label: string) => {
+  const checkSortGen = (order: number[], ok: boolean, setOk: (v: boolean) => void) => {
     if (ok) return true;
     if (order.every((v, i) => v === i)) { setOk(true); addXP(15); Alert.alert('¡Perfecto!', '+15 XP', [{ text: 'OK', onPress: goNext }]); return false; }
     Alert.alert('Incorrecto', 'Algunos pasos fuera de lugar.'); return false;
   };
 
   // Builder genérico
-  const selBuilder = (key: string, val: string, setter: (next: SetStateAction<Record<string, string>>) => void, cfg: { xp: number; rows: BuilderRow[] }) => {
+  const selBuilder = (key: string, val: string, setter: (next: SetStateAction<Record<string, string>>) => void) => {
     setter((p) => ({ ...p, [key]: val }));
   };
   const checkBuilder = (state: Record<string, string>, cfg: { xp: number; rows: BuilderRow[] }) => {
@@ -423,7 +389,7 @@ export default function World5Level4({ navigation: propsNavigation, setAllowBack
           <Text style={{ fontWeight: 'bold', color: '#5b21b6', marginBottom: 4 }}>{row.label}</Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 5 }}>
             {row.opts.map((opt) => (
-              <TouchableOpacity key={opt} style={[styles.flowOpt, state[row.key] === opt && { borderColor: '#7c3aed', backgroundColor: '#faf5ff' }]} onPress={() => selBuilder(row.key, opt, setter, cfg)}>
+              <TouchableOpacity key={opt} style={[styles.flowOpt, state[row.key] === opt && { borderColor: '#7c3aed', backgroundColor: '#faf5ff' }]} onPress={() => selBuilder(row.key, opt, setter)}>
                 <Text style={{ fontSize: 11 }}>{opt}</Text>
               </TouchableOpacity>
             ))}
@@ -561,7 +527,7 @@ export default function World5Level4({ navigation: propsNavigation, setAllowBack
   const handleMain = () => {
     const handlers: Record<number, (() => boolean) | undefined> = {
       2: () => checkQuizGen(nocodeQItems),
-      5: () => checkSortGen(sortOrder5, sortOk5, setSortOk5, '5'),
+      5: () => checkSortGen(sortOrder5, sortOk5, setSortOk5),
       6: () => checkBuilder(builderWire, BUILDER_WIRE),
       7: checkDrag,
       8: () => checkBuilder(builderStyle, BUILDER_STYLE),
@@ -573,7 +539,7 @@ export default function World5Level4({ navigation: propsNavigation, setAllowBack
       15: () => checkQuizGen(moneyQItems),
       16: () => checkBuilder(builderSurvey, BUILDER_SURVEY),
       17: () => checkQuizGen(publishQItems),
-      18: () => checkSortGen(sortOrder18, sortOk18, setSortOk18, '18'),
+      18: () => checkSortGen(sortOrder18, sortOk18, setSortOk18),
       19: () => checkQuizGen(finalQItems),
       20: checkReflect,
     };

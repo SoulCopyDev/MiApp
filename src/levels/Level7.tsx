@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -27,7 +27,6 @@ type RankerPrompt = { id: string; text: string; level: number; label: string };
 type RankerSet = { task: string; prompts: RankerPrompt[]; explain: string };
 
 const TOTAL_STEPS = 22;
-const CONTENT_STEPS = 20;
 
 const pickN = <T,>(arr: T[], n: number): T[] => {
   const shuffled = [...arr].sort(() => Math.random() - 0.5);
@@ -131,14 +130,8 @@ const SPRINT_POOL: SprintItem[] = [
 ];
 
 // ===================== COMPONENTE =====================
-interface LevelProps {
-  navigation?: any;
-  setAllowBack?: (allow: boolean) => void;
-}
-
-export default function World2Level1({ navigation: propsNavigation, setAllowBack }: LevelProps) {
-  const navigationFromHook = useNavigation();
-  const navigation = propsNavigation || navigationFromHook;
+export default function World2Level1() {
+  const navigation = useNavigation();
   const completeLevel = useGameStore((state) => state.completeLevel);
 
   const [step, setStep] = useState(0);
@@ -185,8 +178,6 @@ export default function World2Level1({ navigation: propsNavigation, setAllowBack
 
   const examSteps = new Set([5, 7, 8, 10, 12, 14, 16, 18]);
   const isExamMode = examSteps.has(step);
-
-  useEffect(() => { setAllowBack?.(!isExamMode); }, [isExamMode, setAllowBack]);
 
   useEffect(() => {
     const onBackPress = () => {

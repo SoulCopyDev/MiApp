@@ -29,16 +29,8 @@ export const typography = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
-  bodySmall: {
-    fontSize: 12,
-    lineHeight: 16,
-  },
   caption: {
     fontSize: 11,
     lineHeight: 14,
-  },
-  button: {
-    fontSize: 16,
-    lineHeight: 24,
   },
 });

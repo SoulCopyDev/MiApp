@@ -1,6 +1,6 @@
 // src/levels/World3/Level1.tsx
 import { router } from 'expo-router';
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,50 +8,12 @@ import {
   TouchableOpacity,
   TextInput,
   StyleSheet,
-  Animated,
   Vibration,
   Platform,
 } from 'react-native';
 import { useGameStore } from '../store/gameStore';
 import { colors, typography } from '../theme';
 import XPToast from '../components/XPToast';
-
-// ─── TIPOS ──────────────────────────────────────────────
-type ModuleType = 'theory' | 'quiz' | 'matching' | 'builder' | 'dragdrop' |
-  'wordbuilder' | 'sprint' | 'classify3' | 'vf' | 'completion';
-
-interface QuizModule {
-  type: 'quiz';
-  title: string;
-  xp: number;
-  question: string;
-  options: string[];
-  correct: number;
-  feedback: string;
-}
-
-interface MatchingModule {
-  type: 'matching';
-  title: string;
-  xp: number;
-  pairs: { left: string; right: string }[]; // left already in order, right shuffled on render
-}
-
-interface BuilderModule {
-  type: 'builder';
-  title: string;
-  xp: number;
-  content: { __html: string }; // we'll use a render function instead
-  // We'll handle builder with a TextInput
-}
-
-// ... etc. We'll define a unified module interface
-interface Module {
-  type: ModuleType;
-  title: string;
-  xp: number;
-  // additional properties per type
-}
 
 // ─── DATOS DE LOS MÓDULOS ──────────────────────────────
 // (misma información que el HTML)

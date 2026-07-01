@@ -1,6 +1,6 @@
 import { useWindowDimensions } from 'react-native';
 
-export type Breakpoint = 'mobile' | 'tablet' | 'desktop';
+type Breakpoint = 'mobile' | 'tablet' | 'desktop';
 
 export function useBreakpoint(): Breakpoint {
   const { width } = useWindowDimensions();
