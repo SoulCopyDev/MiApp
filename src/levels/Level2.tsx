@@ -712,7 +712,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
 
   const renderIntro = () => (
     <View style={styles.stepContainer}>
-      <Text style={[styles.tag, styles.tagIntro]}>Nivel 2 · 15 módulos</Text>
+      <Text style={[styles.tag, styles.tagIntro]}>Nivel 2 · 16 módulos</Text>
       <View style={styles.iconContainer}><Text style={styles.iconEmoji}>📱</Text></View>
       <Text style={styles.title}>La IA que vive en tus apps</Text>
       <Text style={styles.subtitle}>Usas decenas de apps todos los días. Pero, ¿sabías que la IA está operando en todas ellas? Hoy vas a diseccionarlas, entender cómo funcionan por dentro, y conocer las herramientas de IA que van a cambiar la manera en que estudias y creas.</Text>
