@@ -194,6 +194,15 @@ const pickN = <T,>(arr: T[], n: number): T[] => {
   return shuffled.slice(0, n);
 };
 
+function shuffleQuizOptions(q: QuizQuestion): QuizQuestion {
+  const paired = q.opts.map((opt, i) => ({ opt, isCorrect: i === q.correct }));
+  for (let j = paired.length - 1; j > 0; j--) {
+    const k = Math.floor(Math.random() * (j + 1));
+    [paired[j], paired[k]] = [paired[k], paired[j]];
+  }
+  return { ...q, opts: paired.map(p => p.opt), correct: paired.findIndex(p => p.isCorrect) };
+}
+
 interface LevelProps {
   navigation?: any;
   setAllowBack?: (allow: boolean) => void;
@@ -210,7 +219,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
 
   const [drag3Items] = useState(() => pickN(AI_TYPE_POOL, 12));
   const [matchPairs] = useState(() => pickN(APP_MATCH_POOL, 4));
-  const [quizQuestions] = useState(() => pickN(SEARCH_QUIZ_POOL, 4));
+  const [quizQuestions] = useState(() => pickN(SEARCH_QUIZ_POOL, 4).map(shuffleQuizOptions));
   const [tfItems] = useState(() => pickN(LLM_TF_POOL, 5));
   const [fillItem] = useState(() => pickN(VOCAB_FILL_POOL, 1)[0]);
   const [promptItems] = useState(() => pickN(PROMPT_COMPARE_POOL, 3));
@@ -239,6 +248,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
   // Sort
   const [sortOrder, setSortOrder] = useState<number[]>([]);
   const [sortOk, setSortOk] = useState(false);
+  const [sortWrongPositions, setSortWrongPositions] = useState<Set<number>>(new Set());
 
   // TF
   const [tfAnswers, setTfAnswers] = useState<{ [key: number]: boolean }>({});
@@ -588,6 +598,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
     const newOrder = [...sortOrder];
     [newOrder[pos], newOrder[newPos]] = [newOrder[newPos], newOrder[pos]];
     setSortOrder(newOrder);
+    setSortWrongPositions(new Set());
   };
   const checkSort = () => {
     if (devMode) { setSortOk(true); addXP(15); return true; }
@@ -599,7 +610,10 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
       showResult(true, '¡Exacto! Ese es el orden real de procesamiento de un LLM. +15 XP');
       return false;
     } else {
-      showResult(false, 'Algunos pasos están fuera de lugar. ¡Piensa en el orden lógico!');
+      const wrong = new Set(sortOrder.reduce<number[]>((acc, v, i) => { if (v !== i) acc.push(i); return acc; }, []));
+      setSortWrongPositions(wrong);
+      setTimeout(() => setSortWrongPositions(new Set()), 3000);
+      showResult(false, `${wrong.size} de ${sortOrder.length} pasos fuera de lugar. ¡Piensa: qué necesita ocurrir primero!`);
       return false;
     }
   };
@@ -1242,7 +1256,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
         <Text style={styles.hintCardText}>💡 Piensa: ¿qué necesita pasar <Text style={styles.italic}>antes</Text> de que la IA pueda predecir algo? ¿Y qué es lo último que ocurre?</Text>
       </View>
       {sortOrder.map((stepIdx, pos) => (
-        <View key={pos} style={styles.sortItem}>
+        <View key={pos} style={[styles.sortItem, sortWrongPositions.has(pos) && styles.sortItemWrong]}>
           <Text style={styles.sortNum}>{pos + 1}</Text>
           <Text style={styles.sortText}>
             <Text style={styles.bold}>{LLM_SORT_STEPS[stepIdx].bold}</Text>{LLM_SORT_STEPS[stepIdx].rest}
@@ -1812,6 +1826,7 @@ const styles = StyleSheet.create({
   quizOptText: { flex: 1, ...typography.regular, fontSize: 13, color: colors.textPrimary },
   // Sort
   sortItem: { flexDirection: 'row', alignItems: 'center', padding: 11, backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.border, marginBottom: 8 },
+  sortItemWrong: { borderColor: '#ef4444', backgroundColor: '#fff1f2' },
   sortNum: { width: 26, height: 26, borderRadius: 13, backgroundColor: '#0ea5e9', color: '#fff', textAlign: 'center', lineHeight: 26, ...typography.bold, fontSize: 11, marginRight: 9 },
   sortText: { flex: 1, ...typography.regular, fontSize: 12, color: colors.textPrimary },
   sortArrows: { flexDirection: 'column', gap: 3 },
