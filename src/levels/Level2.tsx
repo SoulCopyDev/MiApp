@@ -150,21 +150,21 @@ const VOCAB_FILL_POOL: VocabItem[] = [
 const PROMPT_COMPARE_POOL: PromptItem[] = [
   {
     task: 'Pedir ayuda para estudiar para un examen',
-    bad: 'Ayúdame a estudiar',
+    bad: 'Necesito preparar un examen de historia. Por favor dame la información más importante sobre el siglo XX que deba saber. Incluye datos relevantes y fechas clave.',
     good: 'Tengo un examen de historia del siglo XX mañana. Soy estudiante de 9° grado. Necesito que me hagas 10 preguntas de práctica con sus respuestas, de menor a mayor dificultad.',
-    explain: 'El prompt bueno especifica: el tema exacto, tu nivel, el tipo de ayuda que necesitas y el formato deseado. Más contexto = mejor respuesta.',
+    explain: 'El prompt correcto pide un formato específico (10 preguntas, dificultad progresiva) y da tu nivel. El otro pide "información importante" sin decir cómo organizarla — el LLM dará un texto genérico que es difícil de estudiar.',
   },
   {
-    task: 'Pedir que revise un texto',
-    bad: 'Revisa esto',
+    task: 'Pedir que revise un texto que escribiste',
+    bad: 'Revisa el texto que escribí y corrige lo que está mal. También dime cómo mejorar la redacción y si algo no suena bien. Hazlo lo mejor posible.',
     good: 'Revisa este párrafo. Corrige errores de ortografía y gramática. No cambies el contenido ni mi estilo. Explica brevemente cada corrección que hagas.',
-    explain: 'El prompt bueno especifica qué revisar, qué no cambiar, y cómo quieres la respuesta. Un LLM sin instrucciones claras puede reescribir todo tu texto.',
+    explain: 'El prompt correcto define límites claros: qué corregir, qué NO cambiar y cómo entregar el resultado. El otro no protege tu estilo ni tu contenido — el LLM podría reescribir todo el texto por completo.',
   },
   {
-    task: 'Pedir que explique un concepto difícil',
-    bad: 'Explícame la relatividad',
+    task: 'Pedir que explique la teoría de la relatividad',
+    bad: 'Explícame la teoría de la relatividad de Einstein de forma clara y fácil de entender. Incluye los conceptos más importantes y dame ejemplos para que quede claro.',
     good: 'Explícame la teoría de la relatividad de Einstein como si tuviera 12 años, usando una analogía con algo de la vida cotidiana. Máximo 3 párrafos.',
-    explain: 'El prompt bueno especifica el nivel, el método (analogía) y el límite de longitud. Así el LLM sabe exactamente cómo formatear la respuesta para que sea útil para ti.',
+    explain: 'El prompt correcto fija el nivel de edad (12 años), el tipo de recurso (analogía cotidiana) y el límite de longitud. El otro pide "fácil" y "con ejemplos" pero sin especificar qué tan básico ni cuánto detalle — la respuesta puede seguir siendo demasiado técnica o demasiado larga.',
   },
 ];
 
@@ -261,6 +261,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
   // Prompt compare
   const [promptSels, setPromptSels] = useState<{ [key: number]: 'good' | 'bad' }>({});
   const [promptsChecked, setPromptsChecked] = useState(false);
+  const [promptFlipped] = useState<boolean[]>(() => promptItems.map(() => Math.random() < 0.5));
 
   // Reflect
   const [reflectText, setReflectText] = useState('');
@@ -1493,32 +1494,38 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
       <View style={styles.hintCard}>
         <Text style={styles.hintCardText}>👆 Toca el prompt que crees que daría mejor resultado en cada situación</Text>
       </View>
-      {promptItems.map((item, idx) => (
-        <View key={idx} style={styles.promptSet}>
-          <Text style={styles.promptTask}>🎯 Tarea: {item.task}</Text>
-          <TouchableOpacity
-            style={[styles.promptCard, promptSels[idx] === 'bad' && styles.promptCardSelected]}
-            onPress={() => selectPrompt(idx, 'bad')}
-            disabled={promptsChecked}
-          >
-            <Text style={[styles.promptLabel, { color: '#ef4444' }]}>Prompt A:</Text>
-            <Text style={styles.promptText}>{item.bad}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.promptCard, promptSels[idx] === 'good' && styles.promptCardSelected]}
-            onPress={() => selectPrompt(idx, 'good')}
-            disabled={promptsChecked}
-          >
-            <Text style={[styles.promptLabel, { color: '#10b981' }]}>Prompt B:</Text>
-            <Text style={styles.promptText}>{item.good}</Text>
-          </TouchableOpacity>
-          {promptsChecked && (
-            <View style={[styles.resultBanner, promptSels[idx] === 'good' ? styles.resultBannerOk : styles.resultBannerErr]}>
-              <Text style={styles.resultBannerText}>{promptSels[idx] === 'good' ? `✓ ¡Correcto! El Prompt B es mucho mejor. ${item.explain}` : `✗ El Prompt B es el correcto. ${item.explain}`}</Text>
-            </View>
-          )}
-        </View>
-      ))}
+      {promptItems.map((item, idx) => {
+        const flipped = promptFlipped[idx];
+        const optA = { text: flipped ? item.good : item.bad, kind: flipped ? 'good' : 'bad' as 'good' | 'bad' };
+        const optB = { text: flipped ? item.bad : item.good, kind: flipped ? 'bad' : 'good' as 'good' | 'bad' };
+        const correctLabel = flipped ? 'A' : 'B';
+        return (
+          <View key={idx} style={styles.promptSet}>
+            <Text style={styles.promptTask}>🎯 Tarea: {item.task}</Text>
+            <TouchableOpacity
+              style={[styles.promptCard, promptSels[idx] === optA.kind && styles.promptCardSelected]}
+              onPress={() => selectPrompt(idx, optA.kind)}
+              disabled={promptsChecked}
+            >
+              <Text style={[styles.promptLabel, { color: '#0ea5e9' }]}>Prompt A:</Text>
+              <Text style={styles.promptText}>{optA.text}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.promptCard, promptSels[idx] === optB.kind && styles.promptCardSelected]}
+              onPress={() => selectPrompt(idx, optB.kind)}
+              disabled={promptsChecked}
+            >
+              <Text style={[styles.promptLabel, { color: '#0ea5e9' }]}>Prompt B:</Text>
+              <Text style={styles.promptText}>{optB.text}</Text>
+            </TouchableOpacity>
+            {promptsChecked && (
+              <View style={[styles.resultBanner, promptSels[idx] === 'good' ? styles.resultBannerOk : styles.resultBannerErr]}>
+                <Text style={styles.resultBannerText}>{promptSels[idx] === 'good' ? `✓ ¡Correcto! El Prompt ${correctLabel} es el mejor. ${item.explain}` : `✗ El Prompt ${correctLabel} era el correcto. ${item.explain}`}</Text>
+              </View>
+            )}
+          </View>
+        );
+      })}
       <View style={styles.highlightBoxBlue}>
         <Text style={styles.highlightTextBlue}><Text style={styles.bold}>💡 Lo que vas a aprender en el Nivel 3:</Text> El arte del prompting completo — cómo darle rol, contexto, formato y restricciones a un LLM para obtener exactamente lo que necesitas.</Text>
       </View>
