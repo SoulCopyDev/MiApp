@@ -1590,13 +1590,6 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
         </View>
         <Text style={styles.xpText}>{xp} XP</Text>
       </View>
-      {step > 0 && (
-        <Text style={styles.stepsCounter}>
-          {step < TOTAL_STEPS - 1
-            ? `${step} de ${CONTENT_STEPS} módulos completados`
-            : `${CONTENT_STEPS} de ${CONTENT_STEPS} módulos completados`}
-        </Text>
-      )}
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {renderContent()}
       </ScrollView>
@@ -1629,8 +1622,7 @@ const styles = StyleSheet.create({
   progressWrap: { flex: 1, marginHorizontal: 12 },
   progressTrack: { height: 6, backgroundColor: colors.borderLight, borderRadius: 3 },
   progressFill: { height: '100%', backgroundColor: '#0ea5e9', borderRadius: 3 },
-  progLabel: { fontSize: 10, color: '#94a3b8', marginTop: 3, fontWeight: '500' },
-  stepsCounter: { fontSize: 10, color: '#94a3b8', textAlign: 'center', paddingBottom: 5, paddingTop: 2 },
+  progLabel: { fontSize: 10, color: colors.textSecondary, marginTop: 3 },
   xpText: { ...typography.bold, fontSize: 14, color: colors.accentDark },
   scrollView: { flex: 1 },
   scrollContent: { padding: 16, paddingBottom: 40 },
