@@ -790,7 +790,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
       <Text style={styles.subtitle}>Abre cada tarjeta y descubre qué tipo de IA está corriendo en las apps que más usas.</Text>
 
       {/* Instagram */}
-      <TouchableOpacity style={styles.exCard} onPress={() => setOpenAppCard(openAppCard === 0 ? null : 0)} activeOpacity={0.8}>
+      <TouchableOpacity style={[styles.exCard, openAppCard === 0 && styles.exCardOpen]} onPress={() => setOpenAppCard(openAppCard === 0 ? null : 0)} activeOpacity={0.8}>
         <View style={styles.exHead}>
           <View style={styles.exEmoji}><Text style={styles.exEmojiText}>📸</Text></View>
           <View style={styles.exInfo}>
@@ -809,7 +809,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
       </TouchableOpacity>
 
       {/* YouTube */}
-      <TouchableOpacity style={styles.exCard} onPress={() => setOpenAppCard(openAppCard === 1 ? null : 1)} activeOpacity={0.8}>
+      <TouchableOpacity style={[styles.exCard, openAppCard === 1 && styles.exCardOpen]} onPress={() => setOpenAppCard(openAppCard === 1 ? null : 1)} activeOpacity={0.8}>
         <View style={styles.exHead}>
           <View style={styles.exEmoji}><Text style={styles.exEmojiText}>▶️</Text></View>
           <View style={styles.exInfo}>
@@ -828,7 +828,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
       </TouchableOpacity>
 
       {/* WhatsApp */}
-      <TouchableOpacity style={styles.exCard} onPress={() => setOpenAppCard(openAppCard === 2 ? null : 2)} activeOpacity={0.8}>
+      <TouchableOpacity style={[styles.exCard, openAppCard === 2 && styles.exCardOpen]} onPress={() => setOpenAppCard(openAppCard === 2 ? null : 2)} activeOpacity={0.8}>
         <View style={styles.exHead}>
           <View style={styles.exEmoji}><Text style={styles.exEmojiText}>💬</Text></View>
           <View style={styles.exInfo}>
@@ -847,7 +847,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
       </TouchableOpacity>
 
       {/* Google Fotos */}
-      <TouchableOpacity style={styles.exCard} onPress={() => setOpenAppCard(openAppCard === 3 ? null : 3)} activeOpacity={0.8}>
+      <TouchableOpacity style={[styles.exCard, openAppCard === 3 && styles.exCardOpen]} onPress={() => setOpenAppCard(openAppCard === 3 ? null : 3)} activeOpacity={0.8}>
         <View style={styles.exHead}>
           <View style={styles.exEmoji}><Text style={styles.exEmojiText}>🖼️</Text></View>
           <View style={styles.exInfo}>
@@ -866,7 +866,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
       </TouchableOpacity>
 
       {/* Netflix */}
-      <TouchableOpacity style={styles.exCard} onPress={() => setOpenAppCard(openAppCard === 4 ? null : 4)} activeOpacity={0.8}>
+      <TouchableOpacity style={[styles.exCard, openAppCard === 4 && styles.exCardOpen]} onPress={() => setOpenAppCard(openAppCard === 4 ? null : 4)} activeOpacity={0.8}>
         <View style={styles.exHead}>
           <View style={styles.exEmoji}><Text style={styles.exEmojiText}>🎬</Text></View>
           <View style={styles.exInfo}>
@@ -1689,15 +1689,16 @@ const styles = StyleSheet.create({
   highlightBoxAmber: { borderLeftWidth: 3, borderLeftColor: '#f59e0b', padding: 11, backgroundColor: '#fffbeb', marginVertical: 10, borderRadius: 4 },
   highlightTextAmber: { ...typography.regular, fontSize: 13, color: '#92400e', lineHeight: 20 },
   // Expandable app cards (módulo 2)
-  exCard: { borderRadius: 14, borderWidth: 1, borderColor: colors.border, marginBottom: 8, padding: 12, backgroundColor: colors.surface },
+  exCard: { borderRadius: 14, borderWidth: 1, borderColor: '#e2e8f0', marginBottom: 8, padding: 12, backgroundColor: colors.surface },
+  exCardOpen: { borderColor: '#0ea5e9', backgroundColor: '#f0f9ff' },
   exHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  exEmoji: { width: 40, height: 40, backgroundColor: colors.surfaceVariant, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+  exEmoji: { width: 40, height: 40, backgroundColor: '#f1f5f9', borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
   exEmojiText: { fontSize: 22 },
   exInfo: { flex: 1 },
-  exName: { ...typography.bold, fontSize: 13, color: colors.textPrimary },
-  exSub: { ...typography.regular, fontSize: 11, color: colors.textSecondary, marginTop: 1 },
-  exArr: { fontSize: 17, color: colors.textSecondary },
-  exBody: { marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.border },
+  exName: { ...typography.bold, fontSize: 13, color: '#0f172a' },
+  exSub: { ...typography.regular, fontSize: 11, color: '#64748b', marginTop: 1 },
+  exArr: { fontSize: 17, color: '#94a3b8' },
+  exBody: { marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#e0f2fe' },
   exTag: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, fontSize: 10, fontWeight: '700', marginBottom: 8 },
   exHow: { ...typography.regular, fontSize: 12, color: colors.textPrimary, lineHeight: 19, marginBottom: 8 },
   exFact: { backgroundColor: '#fffbeb', padding: 8, borderRadius: 8, borderWidth: 1, borderColor: '#fde68a' },
