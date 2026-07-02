@@ -41,8 +41,8 @@ type PromptItem = {
 };
 type SortStep = { bold: string; rest: string };
 
-const TOTAL_STEPS = 17; // 0:intro + 15 módulos + 1:complete
-const CONTENT_STEPS = 15;
+const TOTAL_STEPS = 18; // 0:intro + 16 módulos + 1:complete
+const CONTENT_STEPS = 16;
 
 const AI_TYPE_POOL: DragItem[] = [
   { text: 'Recomendarte videos en YouTube', correct: 'rec' },
@@ -182,11 +182,11 @@ const LLM_DRAG_POOL: DragItem[] = [
 ];
 
 const LLM_SORT_STEPS: SortStep[] = [
-  { bold: 'Escribes tu pregunta:', rest: ' Le mandas tu mensaje al chat' },
-  { bold: 'La IA lo corta en trocitos:', rest: ' Divide tu texto en piecitas llamadas tokens' },
-  { bold: 'Revisa lo que hablaron:', rest: ' Lee el chat completo para no perder el hilo' },
-  { bold: 'Adivina la respuesta:', rest: ' Elige la mejor palabra, una por una' },
-  { bold: 'Te manda el resultado:', rest: ' Junta todo y te lo muestra' },
+  { bold: 'El Prompt:', rest: ' lo que tú le escribes a la IA' },
+  { bold: 'Tokenización:', rest: ' la IA corta tu texto en piezas pequeñas (tokens)' },
+  { bold: 'Contexto:', rest: ' revisa el historial del chat' },
+  { bold: 'Predicción:', rest: ' elige la mejor palabra, una por una' },
+  { bold: 'Respuesta:', rest: ' junta todos los tokens y te la muestra' },
 ];
 
 const pickN = <T,>(arr: T[], n: number): T[] => {
@@ -274,7 +274,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
   useEffect(() => { llmPlacedRef.current = llmPlaced; }, [llmPlaced]);
   const llmIdxRef = useRef<number | null>(null);
 
-  const isExamMode = step === 3 || step === 5 || step === 8 || step === 9 || step === 10 || step === 12 || step === 13 || step === 14 || step === 15;
+  const isExamMode = step === 3 || step === 5 || step === 8 || step === 10 || step === 11 || step === 13 || step === 14 || step === 15 || step === 16;
 
   useEffect(() => {
     setAllowBack?.(!isExamMode);
@@ -307,7 +307,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
       setMatchedLeft(new Set());
       setMatchedRight(new Set());
     }
-    if (step === 9) {
+    if (step === 10) {
       const order = [0, 1, 2, 3, 4];
       for (let i = order.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -316,7 +316,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
       setSortOrder(order);
       setSortOk(false);
     }
-    if (step === 12) {
+    if (step === 13) {
       setLlmPlaced({});
       setLlmSel(null);
       setLlmAttempts(0);
@@ -370,7 +370,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
 
   // Web drag & drop — Módulo 12 (LLM)
   useEffect(() => {
-    if (Platform.OS !== 'web' || step !== 12) return;
+    if (Platform.OS !== 'web' || step !== 13) return;
     const cleanups: (() => void)[] = [];
     const setup = () => {
       llmItems.forEach((_, idx) => {
@@ -724,8 +724,8 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
         <View style={styles.cardRow}>
           <View style={[styles.cardIcon, { backgroundColor: '#fde68a' }]}><Text style={styles.cardIconText}>🎮</Text></View>
           <View style={styles.cardContent}>
-            <Text style={styles.cardTitle}>15 módulos · hasta 160 XP</Text>
-            <Text style={styles.cardText}>Teoría · Apps reales · Caso de vida real · Clasificar · Conectar · Quiz · Ordenar · V/F · Qué LLM usar · Vocabulario clave · Comparar prompts · Reflexión</Text>
+            <Text style={styles.cardTitle}>16 módulos · hasta 160 XP</Text>
+            <Text style={styles.cardText}>Teoría · Apps reales · Caso de vida real · Clasificar · Conectar · Quiz · Cómo funciona la IA · Ordenar · V/F · Qué LLM usar · Vocabulario clave · Comparar prompts · Reflexión</Text>
           </View>
         </View>
       </View>
@@ -1175,31 +1175,71 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
     </View>
   );
 
+  const renderLLMHowItWorks = () => (
+    <View style={styles.stepContainer}>
+      <Text style={[styles.tag, styles.tagTheory]}>📖 Módulo 9 de 16 · Cómo funciona</Text>
+      <Text style={styles.title}>5 conceptos que la IA usa para responderte</Text>
+      <Text style={styles.subtitle}>Cuando le escribes algo a ChatGPT, pasan cosas fascinantes por dentro. Conoce los 5 conceptos clave — los vas a necesitar después. 😉</Text>
+
+      <View style={[styles.conceptCard, { backgroundColor: '#f0f9ff', borderColor: '#bae6fd' }]}>
+        <View style={[styles.conceptHeader, { backgroundColor: '#0ea5e9' }]}>
+          <Text style={styles.conceptTitle}>✏️  El Prompt</Text>
+        </View>
+        <Text style={styles.conceptBody}>Es lo que <Text style={styles.bold}>tú escribes</Text> para pedirle algo a la IA. Puede ser una pregunta, una instrucción o una idea.</Text>
+        <View style={styles.conceptExample}>
+          <Text style={styles.conceptExampleText}>💬 <Text style={styles.italic}>"Explícame los volcanes como si tuviera 10 años"</Text> — eso es un prompt</Text>
+        </View>
+      </View>
+
+      <View style={[styles.conceptCard, { backgroundColor: '#faf5ff', borderColor: '#e9d5ff' }]}>
+        <View style={[styles.conceptHeader, { backgroundColor: '#8b5cf6' }]}>
+          <Text style={styles.conceptTitle}>✂️  Los Tokens</Text>
+        </View>
+        <Text style={styles.conceptBody}>La IA no lee tu texto de corrido. Lo <Text style={styles.bold}>parte en trocitos</Text> llamados tokens — como piezas de LEGO del lenguaje.</Text>
+        <View style={styles.conceptExample}>
+          <Text style={styles.conceptExampleText}>🧩 <Text style={styles.italic}>"extraordinario"</Text> = 3 tokens: <Text style={styles.bold}>"extra"</Text> + <Text style={styles.bold}>"ordi"</Text> + <Text style={styles.bold}>"nario"</Text></Text>
+        </View>
+      </View>
+
+      <View style={[styles.conceptCard, { backgroundColor: '#f0fdf4', borderColor: '#bbf7d0' }]}>
+        <View style={[styles.conceptHeader, { backgroundColor: '#10b981' }]}>
+          <Text style={styles.conceptTitle}>📖  El Contexto</Text>
+        </View>
+        <Text style={styles.conceptBody}>Antes de responder, la IA <Text style={styles.bold}>revisa todo lo que hablaron antes</Text> en el chat para no perder el hilo.</Text>
+        <View style={styles.conceptExample}>
+          <Text style={styles.conceptExampleText}>🧠 Si al inicio dijiste "tengo 12 años", la IA ya sabe que eres joven y adapta su respuesta sin que lo repitas</Text>
+        </View>
+      </View>
+
+      <View style={[styles.conceptCard, { backgroundColor: '#fffbeb', borderColor: '#fde68a' }]}>
+        <View style={[styles.conceptHeader, { backgroundColor: '#f59e0b' }]}>
+          <Text style={styles.conceptTitle}>🔮  La Predicción</Text>
+        </View>
+        <Text style={styles.conceptBody}>La IA <Text style={styles.bold}>no piensa una respuesta entera de golpe</Text>. Elige la mejor palabra siguiente, una por una — como un autocorrector súper inteligente.</Text>
+        <View style={styles.conceptExample}>
+          <Text style={styles.conceptExampleText}>⚡ "El animal más rápido es el ___" → la IA predice: <Text style={styles.bold}>"guepardo"</Text> y luego sigue palabra por palabra</Text>
+        </View>
+      </View>
+
+      <View style={[styles.conceptCard, { backgroundColor: '#fff1f2', borderColor: '#fecdd3' }]}>
+        <View style={[styles.conceptHeader, { backgroundColor: '#ef4444' }]}>
+          <Text style={styles.conceptTitle}>💬  La Respuesta</Text>
+        </View>
+        <Text style={styles.conceptBody}>Al final, la IA <Text style={styles.bold}>junta todos los tokens que predijo</Text> y te los muestra como texto completo y coherente.</Text>
+        <View style={styles.conceptExample}>
+          <Text style={styles.conceptExampleText}>✅ Todas esas palabras elegidas una por una forman la respuesta que lees en pantalla</Text>
+        </View>
+      </View>
+    </View>
+  );
+
   const renderSort = () => (
     <View style={styles.stepContainer}>
-      <Text style={[styles.tag, styles.tagSort]}>↕️ Módulo 9 de 15 · Ordenar</Text>
-      <Text style={styles.title}>¿Cómo piensa la IA cuando le escribes?</Text>
-      <Text style={styles.subtitle}>Imagina que le preguntas a ChatGPT: <Text style={styles.italic}>"¿Por qué el cielo es azul?"</Text> En décimas de segundo, pasan 5 cosas dentro de la IA:</Text>
-      <View style={styles.sortTheory}>
-        {[
-          { emoji: '✏️', label: 'Escribes tu pregunta', desc: 'Le mandas tu mensaje al chat' },
-          { emoji: '✂️', label: 'Lo corta en trocitos', desc: 'Divide el texto en piecitas pequeñas: los tokens' },
-          { emoji: '📖', label: 'Revisa lo que hablaron', desc: 'Lee el chat completo para no perder el hilo' },
-          { emoji: '🔮', label: 'Adivina la respuesta', desc: 'Elige la mejor palabra, una por una' },
-          { emoji: '💬', label: 'Te manda el resultado', desc: 'Junta todo y te lo muestra' },
-        ].map((s, i) => (
-          <View key={i} style={[styles.sortTheoryRow, i === 4 && { marginBottom: 0 }]}>
-            <View style={styles.sortTheoryBadge}><Text style={styles.sortTheoryBadgeText}>{i + 1}</Text></View>
-            <Text style={styles.sortTheoryEmoji}>{s.emoji}</Text>
-            <View style={styles.sortTheoryInfo}>
-              <Text style={styles.sortTheoryLabel}>{s.label}</Text>
-              <Text style={styles.sortTheoryDesc}>{s.desc}</Text>
-            </View>
-          </View>
-        ))}
-      </View>
-      <View style={styles.sortChallenge}>
-        <Text style={styles.sortChallengeText}>↕️ ¿Lo captaste? Están mezclados — ponlos en el orden correcto con ▲▼</Text>
+      <Text style={[styles.tag, styles.tagSort]}>↕️ Módulo 10 de 16 · Ordenar</Text>
+      <Text style={styles.title}>¿En qué orden ocurre todo?</Text>
+      <Text style={styles.subtitle}>Ya conoces los 5 conceptos. Ahora ponlos en el orden en que ocurren dentro de la IA — de lo primero a lo último.</Text>
+      <View style={styles.hintCard}>
+        <Text style={styles.hintCardText}>💡 Piensa: ¿qué necesita pasar <Text style={styles.italic}>antes</Text> de que la IA pueda predecir algo? ¿Y qué es lo último que ocurre?</Text>
       </View>
       {sortOrder.map((stepIdx, pos) => (
         <View key={pos} style={styles.sortItem}>
@@ -1225,7 +1265,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
 
   const renderTF = () => (
     <View style={styles.stepContainer}>
-      <Text style={[styles.tag, styles.tagVF]}>✅ Módulo 10 de 15 · Verdadero o Falso</Text>
+      <Text style={[styles.tag, styles.tagVF]}>✅ Módulo 11 de 16 · Verdadero o Falso</Text>
       <Text style={styles.title}>Mitos y realidades de los LLMs</Text>
       <Text style={styles.subtitle}>Muchas ideas sobre los LLMs son falsas. Separa los mitos de la realidad.</Text>
       {tfItems.map((item, idx) => (
@@ -1254,7 +1294,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
 
   const renderLLMCompare = () => (
     <View style={styles.stepContainer}>
-      <Text style={[styles.tag, styles.tagTheory]}>📖 Módulo 11 de 15 · Los 4 LLMs</Text>
+      <Text style={[styles.tag, styles.tagTheory]}>📖 Módulo 12 de 16 · Los 4 LLMs</Text>
       <Text style={styles.title}>ChatGPT, Claude, Gemini y Grok</Text>
       <Text style={styles.subtitle}>No todos los LLMs son iguales. Cada uno tiene fortalezas distintas. Conocerlos te permite elegir el correcto para cada tarea.</Text>
       {/* ChatGPT */}
@@ -1325,7 +1365,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
 
   const renderLLMDrag = () => (
     <View style={styles.stepContainer}>
-      <Text style={[styles.tag, styles.tagActivity]}>🧩 Módulo 12 de 15 · ¿Qué LLM usarías?</Text>
+      <Text style={[styles.tag, styles.tagActivity]}>🧩 Módulo 13 de 16 · ¿Qué LLM usarías?</Text>
       <Text style={styles.title}>Asigna la herramienta correcta</Text>
       <Text style={styles.subtitle}>Basándote en lo que aprendiste, ¿qué LLM usarías para cada tarea?</Text>
       <View style={[styles.card, { backgroundColor: '#f8fafc', borderColor: '#e2e8f0' }]}>
@@ -1395,7 +1435,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
     const parts = fillItem.sentence.split('<b>___</b>');
     return (
       <View style={styles.stepContainer}>
-        <Text style={[styles.tag, styles.tagVocab]}>💬 Módulo 13 de 15 · Vocabulario IA</Text>
+        <Text style={[styles.tag, styles.tagVocab]}>💬 Módulo 14 de 16 · Vocabulario IA</Text>
         <Text style={styles.title}>El vocabulario que necesitas</Text>
         <Text style={styles.subtitle}>Los expertos en IA usan términos específicos. Aprende el más importante de este nivel.</Text>
         <View style={[styles.card, { backgroundColor: '#faf5ff', borderColor: '#e9d5ff' }]}>
@@ -1440,7 +1480,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
 
   const renderPromptCompare = () => (
     <View style={styles.stepContainer}>
-      <Text style={[styles.tag, styles.tagPrompt]}>🔍 Módulo 14 de 15 · Prompts</Text>
+      <Text style={[styles.tag, styles.tagPrompt]}>🔍 Módulo 15 de 16 · Prompts</Text>
       <Text style={styles.title}>¿Cuál prompt es mejor?</Text>
       <Text style={styles.subtitle}>Para la misma tarea, un buen prompt da resultados 10x mejores que uno vago. ¿Puedes identificar cuál es cuál?</Text>
       <View style={styles.hintCard}>
@@ -1558,28 +1598,29 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
       case 6: return renderTheoryLLM();
       case 7: return renderCase();
       case 8: return renderQuiz();
-      case 9: return renderSort();
-      case 10: return renderTF();
-      case 11: return renderLLMCompare();
-      case 12: return renderLLMDrag();
-      case 13: return renderVocab();
-      case 14: return renderPromptCompare();
-      case 15: return renderReflect();
-      case 16: return renderCompletion();
+      case 9: return renderLLMHowItWorks();
+      case 10: return renderSort();
+      case 11: return renderTF();
+      case 12: return renderLLMCompare();
+      case 13: return renderLLMDrag();
+      case 14: return renderVocab();
+      case 15: return renderPromptCompare();
+      case 16: return renderReflect();
+      case 17: return renderCompletion();
       default: return null;
     }
   };
 
   const progressPercent = (step / (TOTAL_STEPS - 1)) * 100;
-  const showNextButton = step < TOTAL_STEPS - 1 && ![3, 5, 8, 9, 10, 12, 13, 14, 15].includes(step);
+  const showNextButton = step < TOTAL_STEPS - 1 && ![3, 5, 8, 10, 11, 13, 14, 15, 16].includes(step);
   const getNextLabel = (s: number): string => {
     if (s === 0) return '¡Empecemos! 🚀';
-    if ([1, 4, 11].includes(s)) return 'Entendido →';
+    if ([1, 4, 9, 12].includes(s)) return 'Entendido →';
     if (s === 2) return '¡Las vi todas! →';
     if (s === 6) return 'Entendido, sigamos →';
     return 'Continuar →';
   };
-  const THEORY_STEPS_L2 = new Set([1, 2, 4, 6, 7, 11]);
+  const THEORY_STEPS_L2 = new Set([1, 2, 4, 6, 7, 9, 12]);
   const showBackButton = step > 0 && THEORY_STEPS_L2.has(step) && showNextButton;
   const goToPrevStep = () => { setStepResult(null); setStep(s => s - 1); };
 
@@ -1592,11 +1633,11 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
     if (step === 2) return 'Toca cada app para ver qué hace la IA por dentro 👆';
     if (step === 3) return 'Toca un chip → toca la columna. O arrástralo directo. 👇';
     if (step === 8 && !quizChecked) return `Responde las ${quizQuestions.length} preguntas · hasta ${quizQuestions.length * 8} XP`;
-    if (step === 10 && !tfChecked) return `Responde las ${tfItems.length} afirmaciones · hasta ${tfItems.length * 5} XP`;
-    if (step === 12) return 'Toca un chip → toca el modelo correcto. 👇';
-    if (step === 13 && !fillChecked) return 'Elige la palabra que completa la frase · +10 XP';
-    if (step === 14 && !promptsChecked) return `Elige el mejor prompt en cada situación · hasta ${promptItems.length * 8} XP`;
-    if (step === 15) return 'Escribe al menos 70 caracteres · +15 XP';
+    if (step === 11 && !tfChecked) return `Responde las ${tfItems.length} afirmaciones · hasta ${tfItems.length * 5} XP`;
+    if (step === 13) return 'Toca un chip → toca el modelo correcto. 👇';
+    if (step === 14 && !fillChecked) return 'Elige la palabra que completa la frase · +10 XP';
+    if (step === 15 && !promptsChecked) return `Elige el mejor prompt en cada situación · hasta ${promptItems.length * 8} XP`;
+    if (step === 16) return 'Escribe al menos 70 caracteres · +15 XP';
     return '';
   };
 
@@ -1775,6 +1816,12 @@ const styles = StyleSheet.create({
   sortText: { flex: 1, ...typography.regular, fontSize: 12, color: colors.textPrimary },
   sortArrows: { flexDirection: 'column', gap: 3 },
   sortBtn: { width: 28, height: 26, borderRadius: 7, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, justifyContent: 'center', alignItems: 'center' },
+  conceptCard: { borderRadius: 12, borderWidth: 1, marginBottom: 10, overflow: 'hidden' },
+  conceptHeader: { paddingVertical: 9, paddingHorizontal: 12 },
+  conceptTitle: { ...typography.bold, fontSize: 13, color: '#fff' },
+  conceptBody: { ...typography.regular, fontSize: 12, color: '#334155', padding: 12, paddingBottom: 8, lineHeight: 18 },
+  conceptExample: { backgroundColor: 'rgba(0,0,0,0.05)', marginHorizontal: 10, marginBottom: 10, padding: 9, borderRadius: 8 },
+  conceptExampleText: { ...typography.regular, fontSize: 11, color: '#475569', lineHeight: 17 },
   sortTheory: { backgroundColor: '#f0f9ff', borderRadius: 12, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: '#bae6fd' },
   sortTheoryRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 8 },
   sortTheoryBadge: { width: 22, height: 22, borderRadius: 11, backgroundColor: '#0ea5e9', justifyContent: 'center', alignItems: 'center', flexShrink: 0, marginTop: 2 },
