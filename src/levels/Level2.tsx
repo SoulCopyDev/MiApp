@@ -734,7 +734,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
 
   const renderTheory1 = () => (
     <View style={styles.stepContainer}>
-      <Text style={[styles.tag, styles.tagTheory]}>📖 Módulo 1 de 15 · Teoría</Text>
+      <Text style={[styles.tag, styles.tagTheory]}>📖 Módulo 1 de 16 · Teoría</Text>
       <Text style={styles.title}>¿Cómo decide la IA qué mostrarte?</Text>
       <Text style={styles.bodyText}>Abres Instagram. En milisegundos ves una publicación que te engancha al instante. No fue casualidad, ni suerte, ni un humano eligiéndola para ti. <Text style={styles.bold}>Una IA tomó esa decisión en menos de 100 milisegundos</Text>, basándose en miles de datos que tiene sobre ti.</Text>
       <View style={styles.highlightBox}>
@@ -778,7 +778,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
 
   const renderExamples = () => (
     <View style={styles.stepContainer}>
-      <Text style={[styles.tag, styles.tagExample]}>📱 Módulo 2 de 15 · Apps reales</Text>
+      <Text style={[styles.tag, styles.tagExample]}>📱 Módulo 2 de 16 · Apps reales</Text>
       <Text style={styles.title}>Disecciona 5 apps que ya conoces</Text>
       <Text style={styles.subtitle}>Abre cada tarjeta y descubre qué tipo de IA está corriendo en las apps que más usas.</Text>
 
@@ -881,7 +881,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
 
   const renderDrag3 = () => (
     <View style={styles.stepContainer}>
-      <Text style={[styles.tag, styles.tagActivity]}>🧩 Módulo 3 de 15 · Clasificar</Text>
+      <Text style={[styles.tag, styles.tagActivity]}>🧩 Módulo 3 de 16 · Clasificar</Text>
       <Text style={styles.title}>¿Qué tipo de IA es esta?</Text>
       <Text style={styles.subtitle}>Clasifica cada función en su tipo de IA correcto. Toca un chip y luego la columna.</Text>
       <View style={styles.hintCard}>
@@ -963,7 +963,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
 
   const renderTheory2 = () => (
     <View style={styles.stepContainer}>
-      <Text style={[styles.tag, styles.tagTheory]}>📖 Módulo 4 de 15 · Tipos de IA</Text>
+      <Text style={[styles.tag, styles.tagTheory]}>📖 Módulo 4 de 16 · Tipos de IA</Text>
       <Text style={styles.title}>Los 4 tipos de IA que ya usas</Text>
       <Text style={styles.subtitle}>Ahora que los clasificaste, veamos cada tipo con más detalle.</Text>
       <View style={[styles.card, styles.cardGreen]}>
@@ -1010,7 +1010,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
 
   const renderMatching = () => (
     <View style={styles.stepContainer}>
-      <Text style={[styles.tag, styles.tagMatch]}>🔗 Módulo 5 de 15 · Conectar</Text>
+      <Text style={[styles.tag, styles.tagMatch]}>🔗 Módulo 5 de 16 · Conectar</Text>
       <Text style={styles.title}>App + tipo de IA</Text>
       <Text style={styles.subtitle}>Conecta cada app con la descripción exacta de la IA que usa.</Text>
       <View style={[styles.card, styles.cardSky]}>
@@ -1056,7 +1056,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
 
   const renderTheoryLLM = () => (
     <View style={styles.stepContainer}>
-      <Text style={[styles.tag, styles.tagTheory]}>📖 Módulo 6 de 15 · LLMs</Text>
+      <Text style={[styles.tag, styles.tagTheory]}>📖 Módulo 6 de 16 · LLMs</Text>
       <Text style={styles.title}>¿Qué son los Modelos de Lenguaje (LLMs)?</Text>
       <Text style={styles.bodyText}>LLM significa <Text style={styles.bold}>Large Language Model</Text> — Modelo de Lenguaje Grande. Son el tipo de IA detrás de ChatGPT, Claude, Gemini y Grok. Para entender qué son, primero hay que entender en qué se diferencian de Google.</Text>
       <View style={styles.vsGrid}>
@@ -1094,7 +1094,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
 
   const renderCase = () => (
     <View style={styles.stepContainer}>
-      <Text style={[styles.tag, styles.tagCase]}>🎯 Módulo 7 de 15 · Caso real</Text>
+      <Text style={[styles.tag, styles.tagCase]}>🎯 Módulo 7 de 16 · Caso real</Text>
       <Text style={styles.title}>Sebastián: estudiante de 15 años en Medellín</Text>
       <Text style={styles.subtitle}>Así es como un estudiante usa los LLMs en su vida real — los buenos y los malos usos.</Text>
       <View style={styles.scenarioBox}>
@@ -1145,7 +1145,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
 
   const renderQuiz = () => (
     <View style={styles.stepContainer}>
-      <Text style={[styles.tag, styles.tagQuiz]}>❓ Módulo 8 de 15 · Quiz</Text>
+      <Text style={[styles.tag, styles.tagQuiz]}>❓ Módulo 8 de 16 · Quiz</Text>
       <Text style={styles.title}>¿Buscador o LLM? ¿Cuándo usar cuál?</Text>
       <Text style={styles.subtitle}>Cada situación requiere la herramienta correcta. Piensa antes de elegir.</Text>
       {quizQuestions.map((q, qIdx) => (
