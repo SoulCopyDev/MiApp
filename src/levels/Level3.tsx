@@ -491,7 +491,7 @@ export default function World1Level3({ navigation: propsNavigation, setAllowBack
   const examSteps = new Set([4, 5, 7, 9, 10, 12, 13, 14, 15, 17, 18]);
   const isExamMode = examSteps.has(step);
 
-  const THEORY_STEPS = new Set([1, 3, 6, 8, 11, 16]);
+  const THEORY_STEPS = new Set([1, 2, 3, 6, 8, 11, 16]);
   const showBackButton = step > 0 && THEORY_STEPS.has(step);
   const goToPrevStep = () => setStep((s) => s - 1);
 
