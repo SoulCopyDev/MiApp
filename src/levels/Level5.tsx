@@ -368,17 +368,20 @@ export default function World1Level5({ navigation: propsNavigation, setAllowBack
   const answerEthics = (val: 'safe' | 'doubt' | 'bad') => {
     if (ethicsAnswered || ethicsDone) return;
     const item = ethicsItems[ethicsQ];
-    const isOk = val === item.correct;
+    if (val === item.correct) setEthicsCorrect((prev) => prev + 1);
     setEthicsSel(val);
     setEthicsAnswered(true);
-    if (isOk) setEthicsCorrect((prev) => prev + 1);
+  };
+  // El feedback permanece visible hasta que el usuario pulse "Entendido".
+  const advanceEthics = () => {
     if (ethicsQ + 1 >= ethicsItems.length) {
-      const newCorrect = ethicsCorrect + (isOk ? 1 : 0);
-      const earned = newCorrect >= 4 ? 25 : newCorrect >= 3 ? 18 : newCorrect >= 2 ? 12 : 5;
+      const earned = ethicsCorrect >= 4 ? 25 : ethicsCorrect >= 3 ? 18 : ethicsCorrect >= 2 ? 12 : 5;
       addXP(earned);
-      setTimeout(() => setEthicsDone(true), 900);
+      setEthicsDone(true);
     } else {
-      setTimeout(() => { setEthicsQ((prev) => prev + 1); setEthicsAnswered(false); setEthicsSel(null); }, 900);
+      setEthicsQ((prev) => prev + 1);
+      setEthicsAnswered(false);
+      setEthicsSel(null);
     }
   };
 
@@ -648,9 +651,16 @@ export default function World1Level5({ navigation: propsNavigation, setAllowBack
           {btn('bad', '⛔', 'Problemático', 'No hacerlo', '#ef4444', '#fff1f2')}
         </View>
         {ethicsAnswered && <FeedbackBar type={ethicsSel === item.correct ? 'correct' : 'wrong'}>{ethicsSel === item.correct ? '✅ ' : '❌ '}{item.explain}</FeedbackBar>}
-        <InfoCard variant="slate" icon="💡" iconBg="#e2e8f0" title="">
-          <Text style={styles.b}>Hasta 25 XP</Text> según cuántas aciertes
-        </InfoCard>
+        {ethicsAnswered && !ethicsDone && (
+          <TouchableOpacity style={styles.entendidoBtn} onPress={advanceEthics}>
+            <Text style={styles.entendidoBtnText}>{ethicsQ + 1 >= ethicsItems.length ? 'Entendido, ver resultado →' : 'Entendido →'}</Text>
+          </TouchableOpacity>
+        )}
+        {!ethicsAnswered && (
+          <InfoCard variant="slate" icon="💡" iconBg="#e2e8f0" title="">
+            <Text style={styles.b}>Hasta 25 XP</Text> según cuántas aciertes
+          </InfoCard>
+        )}
       </View>
     );
   };
@@ -1250,6 +1260,8 @@ const styles = StyleSheet.create({
   scenarioBoxAmber: { backgroundColor: '#fffbeb', borderWidth: 1, borderColor: '#fde68a', borderRadius: 13, padding: 13, marginVertical: 10 },
   scenarioLabel: { fontSize: 9, fontWeight: '700', color: '#92400e', letterSpacing: 0.8, marginBottom: 7, textTransform: 'uppercase' },
   ethBtn: { flex: 1, paddingVertical: 10, paddingHorizontal: 6, borderRadius: 11, borderWidth: 2, backgroundColor: '#fff', alignItems: 'center', minHeight: 56, justifyContent: 'center', gap: 3 },
+  entendidoBtn: { backgroundColor: '#7c3aed', paddingVertical: 12, borderRadius: 11, alignItems: 'center', marginTop: 10 },
+  entendidoBtnText: { ...typography.bold, color: '#fff', fontSize: 14 },
   vsCol: { flex: 1, borderRadius: 12, padding: 11, borderWidth: 1, borderColor: '#e2e8f0' },
   vsHeader: { fontSize: 10, fontWeight: '700', textAlign: 'center', paddingVertical: 4, paddingHorizontal: 6, borderRadius: 7, marginBottom: 7, textTransform: 'uppercase' },
   vsItem: { fontSize: 11, color: '#334155', paddingVertical: 4, borderBottomWidth: 1, borderBottomColor: '#f1f5f9', lineHeight: 15 },

@@ -471,17 +471,20 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
   const answerEthics = (val: 'safe' | 'doubt' | 'bad') => {
     if (ethicsAnswered || ethicsDone) return;
     const item = ethicsItems[ethicsIdx];
-    const isOk = val === item.correct;
+    if (val === item.correct) setEthicsCorrect((prev) => prev + 1);
     setEthicsSel(val);
     setEthicsAnswered(true);
-    if (isOk) setEthicsCorrect((prev) => prev + 1);
+  };
+  // El feedback permanece visible hasta que el usuario pulse "Entendido".
+  const advanceEthics = () => {
     if (ethicsIdx + 1 >= ethicsItems.length) {
-      const newCorrect = ethicsCorrect + (isOk ? 1 : 0);
-      const earned = newCorrect >= 3 ? 20 : newCorrect >= 2 ? 12 : 5;
+      const earned = ethicsCorrect >= 3 ? 20 : ethicsCorrect >= 2 ? 12 : 5;
       addXP(earned);
-      setTimeout(() => setEthicsDone(true), 900);
+      setEthicsDone(true);
     } else {
-      setTimeout(() => { setEthicsIdx((prev) => prev + 1); setEthicsAnswered(false); setEthicsSel(null); }, 900);
+      setEthicsIdx((prev) => prev + 1);
+      setEthicsAnswered(false);
+      setEthicsSel(null);
     }
   };
 
@@ -918,6 +921,11 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
               {ethBtn('bad', '⛔', 'No publicar', 'Problema serio', '#ef4444', '#fff1f2')}
             </View>
             {ethicsAnswered && <FeedbackBar type={ethicsSel === item.correct ? 'correct' : 'wrong'}>{ethicsSel === item.correct ? '✅ ' : '❌ '}{item.explain}</FeedbackBar>}
+            {ethicsAnswered && !ethicsDone && (
+              <TouchableOpacity style={styles.entendidoBtn} onPress={advanceEthics}>
+                <Text style={styles.entendidoBtnText}>{ethicsIdx + 1 >= ethicsItems.length ? 'Entendido, ver resultado →' : 'Entendido →'}</Text>
+              </TouchableOpacity>
+            )}
           </View>
         );
       }
@@ -1276,6 +1284,8 @@ const styles = StyleSheet.create({
   fillOptWrong: { borderColor: '#ef4444', backgroundColor: '#fff1f2' },
   scenarioBox: { backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 10, padding: 12, marginBottom: 10 },
   ethBtn: { flex: 1, paddingVertical: 10, paddingHorizontal: 6, borderRadius: 11, borderWidth: 2, backgroundColor: '#fff', alignItems: 'center', minHeight: 56, justifyContent: 'center', gap: 3 },
+  entendidoBtn: { backgroundColor: '#d97706', paddingVertical: 12, borderRadius: 11, alignItems: 'center', marginTop: 10 },
+  entendidoBtnText: { ...typography.bold, color: '#fff', fontSize: 14 },
   builderWrap: { backgroundColor: '#fffbeb', borderWidth: 1, borderColor: '#fde68a', borderRadius: 14, padding: 13, marginBottom: 11 },
   builderLabel: { fontSize: 10, fontWeight: '700', color: '#92400e', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 5 },
   optionGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
