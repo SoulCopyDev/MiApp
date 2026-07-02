@@ -1612,21 +1612,23 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
         </View>
       )}
       {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} />}
-      <View style={styles.footerRow}>
-        {showBackButton && (
-          <TouchableOpacity style={styles.backButton} onPress={goToPrevStep}>
-            <Text style={styles.backButtonText}>← Volver</Text>
-          </TouchableOpacity>
-        )}
-        {showNextButton && (
-          <TouchableOpacity style={[styles.nextButton, showBackButton && styles.nextButtonFlex]} onPress={goToNextStep}>
-            <Text style={styles.nextButtonText}>{getNextLabel(step)}</Text>
-          </TouchableOpacity>
+      <View style={styles.btnRow}>
+        <View style={styles.btnRowInner}>
+          {showBackButton && (
+            <TouchableOpacity style={styles.backButton} onPress={goToPrevStep}>
+              <Text style={styles.backButtonText}>← Volver</Text>
+            </TouchableOpacity>
+          )}
+          {showNextButton && (
+            <TouchableOpacity style={styles.nextButton} onPress={goToNextStep}>
+              <Text style={styles.nextButtonText}>{getNextLabel(step)}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+        {getBtnNote() !== '' && (
+          <Text style={styles.btnNote}>{getBtnNote()}</Text>
         )}
       </View>
-      {getBtnNote() !== '' && (
-        <Text style={styles.btnNote}>{getBtnNote()}</Text>
-      )}
     </View>
   );
 }
@@ -1814,11 +1816,11 @@ const styles = StyleSheet.create({
   resultBannerErr: { backgroundColor: '#fee2e2', borderColor: colors.error },
   resultBannerText: { ...typography.bold, fontSize: 13, color: colors.textPrimary, lineHeight: 20 },
   // Footer
-  footerRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 16, gap: 8 },
-  nextButton: { backgroundColor: '#0ea5e9', padding: 14, margin: 16, borderRadius: 11, alignItems: 'center' },
-  nextButtonText: { ...typography.bold, color: '#fff', fontSize: 15 },
-  nextButtonFlex: { flex: 1, margin: 0 },
-  backButton: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, padding: 14, borderRadius: 11, alignItems: 'center', paddingHorizontal: 20 },
-  backButtonText: { ...typography.bold, color: colors.textSecondary, fontSize: 15 },
-  btnNote: { fontSize: 11, color: '#94a3b8', textAlign: 'center', paddingBottom: 8, paddingHorizontal: 16 },
+  btnRow: { paddingVertical: 12, paddingHorizontal: 13, borderTopWidth: 1, borderTopColor: '#f1f5f9', backgroundColor: '#fafcff' },
+  btnRowInner: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+  nextButton: { flex: 1, backgroundColor: '#0ea5e9', padding: 13, borderRadius: 12, alignItems: 'center', justifyContent: 'center', minHeight: 48 },
+  nextButtonText: { ...typography.bold, color: '#fff', fontSize: 14, letterSpacing: 0.01 },
+  backButton: { backgroundColor: '#f1f5f9', borderWidth: 1.5, borderColor: '#e2e8f0', paddingVertical: 13, paddingHorizontal: 16, borderRadius: 12, alignItems: 'center', justifyContent: 'center', minHeight: 48 },
+  backButtonText: { ...typography.bold, color: '#64748b', fontSize: 14 },
+  btnNote: { fontSize: 11, color: '#94a3b8', textAlign: 'center', marginTop: 5, minHeight: 15 },
 });
