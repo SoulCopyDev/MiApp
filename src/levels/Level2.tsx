@@ -354,9 +354,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
           e.preventDefault(); setDragOver3Zone(null);
           const idx = drag3IdxRef.current;
           if (idx === null || drag3PlacedRef.current[idx] !== undefined) return;
-          const item = drag3Items[idx];
-          if (item.correct === zone) { setDrag3Placed(prev => ({ ...prev, [idx]: zone })); setStepResult(null); }
-          else showResult(false, `"${item.text}" no pertenece a esta categoría.`);
+          setDrag3Placed(prev => ({ ...prev, [idx]: zone })); setStepResult(null);
           drag3IdxRef.current = null;
         };
         el.addEventListener('dragover', onDragOver);
@@ -467,14 +465,9 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
   const handleDropZone3 = (zone: string) => {
     if (drag3Sel === null) return;
     if (drag3Placed[drag3Sel] !== undefined) return;
-    const item = drag3Items[drag3Sel];
-    if (item.correct === zone) {
-      setDrag3Placed(prev => ({ ...prev, [drag3Sel!]: zone }));
-      setDrag3Sel(null);
-      setStepResult(null);
-    } else {
-      showResult(false, `"${item.text}" no pertenece a esta categoría.`);
-    }
+    setDrag3Placed(prev => ({ ...prev, [drag3Sel!]: zone }));
+    setDrag3Sel(null);
+    setStepResult(null);
   };
   const handleRemoveChip3 = (idx: number) => {
     setDrag3Placed(prev => { const n = { ...prev }; delete n[idx]; return n; });
