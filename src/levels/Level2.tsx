@@ -1186,47 +1186,47 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
           <Text style={styles.conceptTitle}>✏️  El Prompt</Text>
         </View>
         <Text style={styles.conceptBody}>Es lo que <Text style={styles.bold}>tú escribes</Text> para pedirle algo a la IA. Puede ser una pregunta, una instrucción o una idea.</Text>
-        <View style={styles.conceptExample}>
+        <View style={[styles.conceptExample, { backgroundColor: '#e0f2fe' }]}>
           <Text style={styles.conceptExampleText}>💬 <Text style={styles.italic}>"Explícame los volcanes como si tuviera 10 años"</Text> — eso es un prompt</Text>
         </View>
       </View>
 
-      <View style={[styles.conceptCard, { backgroundColor: '#faf5ff', borderColor: '#e9d5ff' }]}>
-        <View style={[styles.conceptHeader, { backgroundColor: '#8b5cf6' }]}>
+      <View style={[styles.conceptCard, { backgroundColor: '#faf5ff', borderColor: '#ddd6fe' }]}>
+        <View style={[styles.conceptHeader, { backgroundColor: '#7c3aed' }]}>
           <Text style={styles.conceptTitle}>✂️  Los Tokens</Text>
         </View>
         <Text style={styles.conceptBody}>La IA no lee tu texto de corrido. Lo <Text style={styles.bold}>parte en trocitos</Text> llamados tokens — como piezas de LEGO del lenguaje.</Text>
-        <View style={styles.conceptExample}>
+        <View style={[styles.conceptExample, { backgroundColor: '#ede9fe' }]}>
           <Text style={styles.conceptExampleText}>🧩 <Text style={styles.italic}>"extraordinario"</Text> = 3 tokens: <Text style={styles.bold}>"extra"</Text> + <Text style={styles.bold}>"ordi"</Text> + <Text style={styles.bold}>"nario"</Text></Text>
         </View>
       </View>
 
       <View style={[styles.conceptCard, { backgroundColor: '#f0fdf4', borderColor: '#bbf7d0' }]}>
-        <View style={[styles.conceptHeader, { backgroundColor: '#10b981' }]}>
+        <View style={[styles.conceptHeader, { backgroundColor: '#16a34a' }]}>
           <Text style={styles.conceptTitle}>📖  El Contexto</Text>
         </View>
         <Text style={styles.conceptBody}>Antes de responder, la IA <Text style={styles.bold}>revisa todo lo que hablaron antes</Text> en el chat para no perder el hilo.</Text>
-        <View style={styles.conceptExample}>
+        <View style={[styles.conceptExample, { backgroundColor: '#dcfce7' }]}>
           <Text style={styles.conceptExampleText}>🧠 Si al inicio dijiste "tengo 12 años", la IA ya sabe que eres joven y adapta su respuesta sin que lo repitas</Text>
         </View>
       </View>
 
       <View style={[styles.conceptCard, { backgroundColor: '#fffbeb', borderColor: '#fde68a' }]}>
-        <View style={[styles.conceptHeader, { backgroundColor: '#f59e0b' }]}>
+        <View style={[styles.conceptHeader, { backgroundColor: '#d97706' }]}>
           <Text style={styles.conceptTitle}>🔮  La Predicción</Text>
         </View>
         <Text style={styles.conceptBody}>La IA <Text style={styles.bold}>no piensa una respuesta entera de golpe</Text>. Elige la mejor palabra siguiente, una por una — como un autocorrector súper inteligente.</Text>
-        <View style={styles.conceptExample}>
+        <View style={[styles.conceptExample, { backgroundColor: '#fef3c7' }]}>
           <Text style={styles.conceptExampleText}>⚡ "El animal más rápido es el ___" → la IA predice: <Text style={styles.bold}>"guepardo"</Text> y luego sigue palabra por palabra</Text>
         </View>
       </View>
 
-      <View style={[styles.conceptCard, { backgroundColor: '#fff1f2', borderColor: '#fecdd3' }]}>
-        <View style={[styles.conceptHeader, { backgroundColor: '#ef4444' }]}>
+      <View style={[styles.conceptCard, { backgroundColor: '#f0fdfa', borderColor: '#99f6e4' }]}>
+        <View style={[styles.conceptHeader, { backgroundColor: '#0d9488' }]}>
           <Text style={styles.conceptTitle}>💬  La Respuesta</Text>
         </View>
         <Text style={styles.conceptBody}>Al final, la IA <Text style={styles.bold}>junta todos los tokens que predijo</Text> y te los muestra como texto completo y coherente.</Text>
-        <View style={styles.conceptExample}>
+        <View style={[styles.conceptExample, { backgroundColor: '#ccfbf1' }]}>
           <Text style={styles.conceptExampleText}>✅ Todas esas palabras elegidas una por una forman la respuesta que lees en pantalla</Text>
         </View>
       </View>
