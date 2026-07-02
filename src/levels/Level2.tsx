@@ -408,9 +408,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
           e.preventDefault(); setDragOverLLMZone(null);
           const idx = llmIdxRef.current;
           if (idx === null || llmPlacedRef.current[idx] !== undefined) return;
-          const item = llmItems[idx];
-          if (item.correct === zone) { setLlmPlaced(prev => ({ ...prev, [idx]: zone })); setStepResult(null); }
-          else showResult(false, `"${item.text}" no corresponde a este LLM.`);
+          setLlmPlaced(prev => ({ ...prev, [idx]: zone })); setStepResult(null);
           llmIdxRef.current = null;
         };
         el.addEventListener('dragover', onDragOver);
@@ -521,14 +519,9 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
   const handleDropZoneLLM = (zone: string) => {
     if (llmSel === null) return;
     if (llmPlaced[llmSel] !== undefined) return;
-    const item = llmItems[llmSel];
-    if (item.correct === zone) {
-      setLlmPlaced(prev => ({ ...prev, [llmSel!]: zone }));
-      setLlmSel(null);
-      setStepResult(null);
-    } else {
-      showResult(false, `"${item.text}" no corresponde a este LLM.`);
-    }
+    setLlmPlaced(prev => ({ ...prev, [llmSel!]: zone }));
+    setLlmSel(null);
+    setStepResult(null);
   };
   const handleRemoveChipLLM = (idx: number) => {
     setLlmPlaced(prev => { const n = { ...prev }; delete n[idx]; return n; });
