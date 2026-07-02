@@ -1576,6 +1576,19 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
     : step < TOTAL_STEPS - 1 ? `Módulo ${step} de ${CONTENT_STEPS}`
     : '¡Nivel completado!';
 
+  const getBtnNote = (): string => {
+    if (step === 0) return 'Tiempo estimado: 40-50 min · hasta 160 XP';
+    if (step === 2) return 'Toca cada app para ver qué hace la IA por dentro 👆';
+    if (step === 3) return 'Toca un chip → toca la columna. O arrástralo directo. 👇';
+    if (step === 8 && !quizChecked) return `Responde las ${quizQuestions.length} preguntas · hasta ${quizQuestions.length * 8} XP`;
+    if (step === 10 && !tfChecked) return `Responde las ${tfItems.length} afirmaciones · hasta ${tfItems.length * 5} XP`;
+    if (step === 12) return 'Toca un chip → toca el modelo correcto. 👇';
+    if (step === 13 && !fillChecked) return 'Elige la palabra que completa la frase · +10 XP';
+    if (step === 14 && !promptsChecked) return `Elige el mejor prompt en cada situación · hasta ${promptItems.length * 8} XP`;
+    if (step === 15) return 'Escribe al menos 70 caracteres · +15 XP';
+    return '';
+  };
+
   return (
     <View style={styles.screen}>
       <View style={styles.progressBar}>
@@ -1611,6 +1624,9 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
           </TouchableOpacity>
         )}
       </View>
+      {getBtnNote() !== '' && (
+        <Text style={styles.btnNote}>{getBtnNote()}</Text>
+      )}
     </View>
   );
 }
@@ -1804,4 +1820,5 @@ const styles = StyleSheet.create({
   nextButtonFlex: { flex: 1, margin: 0 },
   backButton: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, padding: 14, borderRadius: 11, alignItems: 'center', paddingHorizontal: 20 },
   backButtonText: { ...typography.bold, color: colors.textSecondary, fontSize: 15 },
+  btnNote: { fontSize: 11, color: '#94a3b8', textAlign: 'center', paddingBottom: 8, paddingHorizontal: 16 },
 });
