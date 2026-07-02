@@ -182,11 +182,11 @@ const LLM_DRAG_POOL: DragItem[] = [
 ];
 
 const LLM_SORT_STEPS: SortStep[] = [
-  { bold: 'Recibes tu prompt:', rest: ' Escribes tu pregunta o instrucción en el chat' },
-  { bold: 'Tokenización:', rest: ' Tu texto se divide en pequeños fragmentos llamados tokens' },
-  { bold: 'Búsqueda de contexto:', rest: ' El modelo analiza el historial de la conversación' },
-  { bold: 'Predicción:', rest: ' Calcula qué tokens son más probables como respuesta' },
-  { bold: 'Respuesta generada:', rest: ' Ensambla los tokens en texto y te lo muestra' },
+  { bold: 'Escribes tu pregunta:', rest: ' Le mandas tu mensaje al chat' },
+  { bold: 'La IA lo corta en trocitos:', rest: ' Divide tu texto en piecitas llamadas tokens' },
+  { bold: 'Revisa lo que hablaron:', rest: ' Lee el chat completo para no perder el hilo' },
+  { bold: 'Adivina la respuesta:', rest: ' Elige la mejor palabra, una por una' },
+  { bold: 'Te manda el resultado:', rest: ' Junta todo y te lo muestra' },
 ];
 
 const pickN = <T,>(arr: T[], n: number): T[] => {
@@ -1178,10 +1178,28 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
   const renderSort = () => (
     <View style={styles.stepContainer}>
       <Text style={[styles.tag, styles.tagSort]}>↕️ Módulo 9 de 15 · Ordenar</Text>
-      <Text style={styles.title}>El camino de tu pregunta en un LLM</Text>
-      <Text style={styles.subtitle}>Estos son los 5 pasos que ocurren desde que escribes hasta que aparece la respuesta. Están mezclados — ponlos en orden con ▲▼.</Text>
-      <View style={styles.hintCard}>
-        <Text style={styles.hintCardText}>💡 Piensa: ¿qué necesita pasar <Text style={styles.italic}>primero</Text> para que el modelo pueda predecir algo? ¿Y qué es lo último que ocurre antes de que veas la respuesta?</Text>
+      <Text style={styles.title}>¿Cómo piensa la IA cuando le escribes?</Text>
+      <Text style={styles.subtitle}>Imagina que le preguntas a ChatGPT: <Text style={styles.italic}>"¿Por qué el cielo es azul?"</Text> En décimas de segundo, pasan 5 cosas dentro de la IA:</Text>
+      <View style={styles.sortTheory}>
+        {[
+          { emoji: '✏️', label: 'Escribes tu pregunta', desc: 'Le mandas tu mensaje al chat' },
+          { emoji: '✂️', label: 'Lo corta en trocitos', desc: 'Divide el texto en piecitas pequeñas: los tokens' },
+          { emoji: '📖', label: 'Revisa lo que hablaron', desc: 'Lee el chat completo para no perder el hilo' },
+          { emoji: '🔮', label: 'Adivina la respuesta', desc: 'Elige la mejor palabra, una por una' },
+          { emoji: '💬', label: 'Te manda el resultado', desc: 'Junta todo y te lo muestra' },
+        ].map((s, i) => (
+          <View key={i} style={[styles.sortTheoryRow, i === 4 && { marginBottom: 0 }]}>
+            <View style={styles.sortTheoryBadge}><Text style={styles.sortTheoryBadgeText}>{i + 1}</Text></View>
+            <Text style={styles.sortTheoryEmoji}>{s.emoji}</Text>
+            <View style={styles.sortTheoryInfo}>
+              <Text style={styles.sortTheoryLabel}>{s.label}</Text>
+              <Text style={styles.sortTheoryDesc}>{s.desc}</Text>
+            </View>
+          </View>
+        ))}
+      </View>
+      <View style={styles.sortChallenge}>
+        <Text style={styles.sortChallengeText}>↕️ ¿Lo captaste? Están mezclados — ponlos en el orden correcto con ▲▼</Text>
       </View>
       {sortOrder.map((stepIdx, pos) => (
         <View key={pos} style={styles.sortItem}>
@@ -1757,6 +1775,16 @@ const styles = StyleSheet.create({
   sortText: { flex: 1, ...typography.regular, fontSize: 12, color: colors.textPrimary },
   sortArrows: { flexDirection: 'column', gap: 3 },
   sortBtn: { width: 28, height: 26, borderRadius: 7, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, justifyContent: 'center', alignItems: 'center' },
+  sortTheory: { backgroundColor: '#f0f9ff', borderRadius: 12, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: '#bae6fd' },
+  sortTheoryRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 8 },
+  sortTheoryBadge: { width: 22, height: 22, borderRadius: 11, backgroundColor: '#0ea5e9', justifyContent: 'center', alignItems: 'center', flexShrink: 0, marginTop: 2 },
+  sortTheoryBadgeText: { ...typography.bold, fontSize: 10, color: '#fff' },
+  sortTheoryEmoji: { fontSize: 15, marginTop: 2 },
+  sortTheoryInfo: { flex: 1 },
+  sortTheoryLabel: { ...typography.bold, fontSize: 12, color: '#0f172a' },
+  sortTheoryDesc: { ...typography.regular, fontSize: 11, color: '#64748b', marginTop: 1 },
+  sortChallenge: { backgroundColor: '#fef3c7', borderRadius: 10, padding: 9, marginBottom: 10, borderWidth: 1, borderColor: '#fcd34d' },
+  sortChallengeText: { ...typography.bold, fontSize: 12, color: '#92400e', textAlign: 'center' },
   // TF
   tfSet: { marginBottom: 14 },
   tfQuestion: { ...typography.bold, fontSize: 13, color: colors.textPrimary, marginBottom: 8, padding: 11, backgroundColor: colors.surfaceVariant, borderRadius: 10 },
