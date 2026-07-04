@@ -1,9 +1,9 @@
 // Sistema de misiones diarias.
 // No importa nada del store (evita dependencia circular). Usa tipado estructural.
 
-export type MissionStatus = 'pending' | 'in_progress' | 'completed';
+type MissionStatus = 'pending' | 'in_progress' | 'completed';
 
-export interface MissionReward {
+interface MissionReward {
   xp: number;
   label: string;
 }

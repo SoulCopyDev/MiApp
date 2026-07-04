@@ -1,11 +1,10 @@
 import { router } from 'expo-router';
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
   Alert, BackHandler,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
 import { useGameStore } from '../../store/gameStore';
 import { colors, typography } from '../../theme';
 import XPToast from '../../components/XPToast';
@@ -96,11 +95,7 @@ const pickN = <T,>(arr: T[], n: number): T[] => {
   return shuffled.slice(0, n);
 };
 
-interface LevelProps { navigation?: any; setAllowBack?: (allow: boolean) => void; }
-
-export default function World5Level7({ navigation: propsNavigation, setAllowBack }: LevelProps) {
-  const nav = useNavigation();
-  const navigation = propsNavigation || nav;
+export default function World5Level7() {
   const completeLevel = useGameStore(s => s.completeLevel);
 
   const [step, setStep] = useState(0);
@@ -134,7 +129,6 @@ export default function World5Level7({ navigation: propsNavigation, setAllowBack
   const theorySteps = new Set([0]);
   const canGoBack = theorySteps.has(step);
 
-  useEffect(() => { setAllowBack?.(canGoBack); }, [canGoBack]);
   useEffect(() => {
     const h = BackHandler.addEventListener('hardwareBackPress', () => {
       if (!canGoBack) { Alert.alert('Evaluación en curso', 'Completa esta parte antes de salir.'); return true; }

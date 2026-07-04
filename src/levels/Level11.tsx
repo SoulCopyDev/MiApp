@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -41,7 +41,6 @@ type RazonItem = { texto: string; tipo: string; label: string; explain: string }
 type QuizCoTItem = { q: string; opts: string[]; correct: number; explain: string };
 
 const TOTAL_STEPS = 20; // 0:intro + 18 módulos + 1:complete
-const CONTENT_STEPS = 18;
 
 const pickN = <T,>(arr: T[], n: number): T[] => {
   const shuffled = [...arr].sort(() => Math.random() - 0.5);
@@ -160,14 +159,8 @@ const ACERTIJOS = [
 ];
 
 // ===================== COMPONENTE =====================
-interface LevelProps {
-  navigation?: any;
-  setAllowBack?: (allow: boolean) => void;
-}
-
-export default function World2Level5({ navigation: propsNavigation, setAllowBack }: LevelProps) {
-  const navigationFromHook = useNavigation();
-  const navigation = propsNavigation || navigationFromHook;
+export default function World2Level5() {
+  const navigation = useNavigation();
   const completeLevel = useGameStore((state) => state.completeLevel);
 
   const [step, setStep] = useState(0);
@@ -246,8 +239,6 @@ export default function World2Level5({ navigation: propsNavigation, setAllowBack
 
   const examSteps = new Set([2, 5, 6, 8, 9, 11, 14, 16, 17]);
   const isExamMode = examSteps.has(step);
-
-  useEffect(() => { setAllowBack?.(!isExamMode); }, [isExamMode, setAllowBack]);
 
   useEffect(() => {
     const onBackPress = () => {

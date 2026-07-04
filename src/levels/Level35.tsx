@@ -1,10 +1,9 @@
 import { router } from 'expo-router';
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, BackHandler,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
 import { useGameStore } from '../store/gameStore';
 import { colors, typography } from '../theme';
 import XPToast from '../components/XPToast';
@@ -13,11 +12,9 @@ import XPToast from '../components/XPToast';
 type QuizItem = { q: string; opts: string[]; correct: number; explain: string };
 type EthicsItem = { text: string; correct: string; explain: string };
 type SprintItem = { text: string; good: boolean };
-type FillItem = { sentence: string; allOpts: string[]; correct: Record<string, number>; explain: string };
 type BuilderRow = { key: string; label: string; opts: string[] };
 
 const TOTAL_STEPS = 23; // 0:intro + 19 módulos + 2 reflexiones + 1:complete
-const CONTENT_STEPS = 19;
 
 const pickN = <T,>(arr: T[], n: number): T[] => {
   const shuffled = [...arr].sort(() => Math.random() - 0.5);
@@ -78,13 +75,6 @@ const HOSPITAL_SPRINT_ITEMS: SprintItem[] = [
   { text: 'Hospital sin pacientes — todo se hace en casa con telemedicina + wearables', good: true },
 ];
 
-const FILL_POOL: FillItem[] = [
-  { sentence: 'El sistema de IA que predice estructura 3D de proteínas y ganó Nobel 2024 se llama _____.', allOpts: ['AlphaFold', 'AlphaGo', 'AlphaZero', 'AlphaStar'], correct: { fb0: 0 }, explain: 'AlphaFold: Hassabis y Jumper de DeepMind. Aceleró biomedicina 50 años en 4.' },
-  { sentence: 'La técnica para editar genes específicos del ADN se llama _____.', allOpts: ['CRISPR', 'ADN', 'RNA', 'PCR'], correct: { fb0: 0 }, explain: 'CRISPR: Nobel 2020. Como editor de Word para tu ADN.' },
-  { sentence: 'El primer medicamento aprobado por FDA basado en CRISPR cura la anemia _____.', allOpts: ['falciforme', 'perniciosa', 'ferropénica', 'aplásica'], correct: { fb0: 0 }, explain: 'Casgevy aprobado en 2023. Cura definitiva al 90% de pacientes.' },
-  { sentence: 'El reloj inteligente más reconocido por detectar problemas cardíacos antes de síntomas es Apple _____.', allOpts: ['Watch', 'Health', 'Care', 'Vitals'], correct: { fb0: 0 }, explain: 'Apple Watch desde Series 4 (2018). Tiene ECG aprobado FDA.' },
-];
-
 const BUILDER_HEALTH = {
   xp: 22,
   rows: [
@@ -96,14 +86,7 @@ const BUILDER_HEALTH = {
 };
 
 // ===================== COMPONENTE =====================
-interface LevelProps {
-  navigation?: any;
-  setAllowBack?: (allow: boolean) => void;
-}
-
-export default function World6Level5({ navigation: propsNavigation, setAllowBack }: LevelProps) {
-  const nav = useNavigation();
-  const navigation = propsNavigation || nav;
+export default function World6Level5() {
   const completeLevel = useGameStore((s) => s.completeLevel);
 
   const [step, setStep] = useState(0);
@@ -115,7 +98,6 @@ export default function World6Level5({ navigation: propsNavigation, setAllowBack
   const [proteinQItems] = useState(() => pickN(PROTEIN_Q_POOL, 6));
   const [healthQItems] = useState(() => pickN(HEALTH_Q_POOL, 6));
   const [bioethicsItems] = useState(() => pickN(BIOETHICS_POOL, 6));
-  const [fillItem] = useState(() => pickN(FILL_POOL, 1)[0]);
 
   // Estados de módulos
   const [quizAnswers, setQuizAnswers] = useState<Record<number, number>>({});
@@ -130,8 +112,6 @@ export default function World6Level5({ navigation: propsNavigation, setAllowBack
   const [ethicsAnswers, setEthicsAnswers] = useState<Record<number, string>>({});
   const [ethicsDone, setEthicsDone] = useState(false);
 
-  const [fillSel, setFillSel] = useState<number | null>(null);
-  const [fillChecked, setFillChecked] = useState(false);
 
   const [builderHealth, setBuilderHealth] = useState<Record<string, string>>({});
 
@@ -141,7 +121,6 @@ export default function World6Level5({ navigation: propsNavigation, setAllowBack
   const showBackButton = step > 0 && theorySteps.has(step);
   const goToPrevStep = () => setStep(s => s - 1);
 
-  useEffect(() => { setAllowBack?.(showBackButton); }, [showBackButton]);
   useEffect(() => {
     const bh = BackHandler.addEventListener('hardwareBackPress', () => {
       if (!showBackButton) { Alert.alert('Actividad en curso', 'No puedes regresar ahora.'); return true; }
@@ -161,7 +140,6 @@ export default function World6Level5({ navigation: propsNavigation, setAllowBack
 
   const addXP = (n: number) => { setXp((p) => p + n); if (n > 0) setXpToast((prev) => ({ amount: n, id: (prev?.id ?? 0) + 1 })); };
   const goNext = () => { if (step < TOTAL_STEPS - 1) setStep(step + 1); };
-  const handleClose = () => Alert.alert('Salir', '¿Seguro?', [{ text: 'Cancelar' }, { text: 'Salir', onPress: () => router.back() }]);
   const handleFinish = () => {
     let stars = 0;
     if (xp >= 180) stars = 3; else if (xp >= 120) stars = 2; else if (xp >= 60) stars = 1;
@@ -219,17 +197,6 @@ export default function World6Level5({ navigation: propsNavigation, setAllowBack
     bioethicsItems.forEach((item, i) => { if (ethicsAnswers[i] === item.correct) c++; });
     addXP(c * 5);
     Alert.alert(`${c}/${bioethicsItems.length} correctas`, `+${c * 5} XP`, [{ text: 'OK', onPress: goNext }]);
-    return false;
-  };
-
-  // Fill
-  const selFill = (i: number) => { if (!fillChecked) setFillSel(i); };
-  const checkFill = () => {
-    if (fillChecked) return true;
-    if (fillSel === null) { Alert.alert('Elige una opción'); return false; }
-    setFillChecked(true);
-    if (fillSel === fillItem.correct.fb0) addXP(10);
-    Alert.alert(fillSel === fillItem.correct.fb0 ? '✅ +10 XP' : '❌', fillItem.explain);
     return false;
   };
 

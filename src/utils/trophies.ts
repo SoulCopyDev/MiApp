@@ -40,7 +40,7 @@ export interface TrophyColorScheme {
 }
 
 // Un esquema de color por mundo. Añadir entradas al ampliar mundos.
-export const WORLD_COLORS: Record<number, TrophyColorScheme> = {
+const WORLD_COLORS: Record<number, TrophyColorScheme> = {
   1: { accent: '#005ca8', bg: '#eef3ff', light: '#57a3ff' },
   2: { accent: '#8126cf', bg: '#f3e8ff', light: '#a855f7' },
   3: { accent: '#b07d00', bg: '#fff7e0', light: '#fed01b' },

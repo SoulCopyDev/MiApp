@@ -12,7 +12,6 @@ import {
   Platform,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
 import { useGameStore } from '../store/gameStore';
 import { colors, typography } from '../theme';
 import XPToast from '../components/XPToast';
@@ -107,7 +106,7 @@ const pickN = <T,>(arr: T[], n: number): T[] => {
   return shuffled.slice(0, n);
 };
 
-// ---------- Tags temáticos por módulo ----------
+
 const TAG_STYLES: Record<string, { bg: string; color: string }> = {
   intro: { bg: '#ecfdf5', color: '#065f46' },
   theory: { bg: '#fdf4ff', color: '#7e22ce' },
@@ -191,6 +190,7 @@ export default function World1Level4({ navigation: propsNavigation, setAllowBack
   const navigationFromHook = useNavigation();
   const navigation = propsNavigation || navigationFromHook;
 
+
   const [step, setStep] = useState(0);
   const [xp, setXp] = useState(0);
   const completeLevel = useGameStore((state) => state.completeLevel);
@@ -269,10 +269,6 @@ export default function World1Level4({ navigation: propsNavigation, setAllowBack
   const goToPrevStep = () => { setStep(s => s - 1); };
 
   useEffect(() => {
-    setAllowBack?.(!isExamMode);
-  }, [isExamMode, setAllowBack]);
-
-  useEffect(() => {
     const onBackPress = () => {
       if (isExamMode) {
         Alert.alert(
@@ -289,7 +285,7 @@ export default function World1Level4({ navigation: propsNavigation, setAllowBack
     };
     const backHandler = BackHandler.addEventListener('hardwareBackPress', onBackPress);
     return () => backHandler.remove();
-  }, [isExamMode, navigation]);
+  }, [isExamMode]);
 
   // Sprint 1 timer
   useEffect(() => {

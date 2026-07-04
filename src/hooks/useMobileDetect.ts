@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { DISMISS_KEY } from '../config/downloadConfig';
 
-export type DevicePlatform = 'android' | 'ios' | 'desktop';
+type DevicePlatform = 'android' | 'ios' | 'desktop';
 
 function detectPlatform(): DevicePlatform {
   if (typeof navigator === 'undefined') return 'desktop';

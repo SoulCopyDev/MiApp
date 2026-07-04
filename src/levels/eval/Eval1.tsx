@@ -1,11 +1,10 @@
 import { router } from 'expo-router';
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Alert, BackHandler, Platform,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
 import { useGameStore } from '../../store/gameStore';
 import { colors, typography } from '../../theme';
 import XPToast from '../../components/XPToast';
@@ -105,15 +104,7 @@ const pickN = <T,>(arr: T[], n: number): T[] =>
 
 const TOTAL_STEPS = 4; // 0:quiz, 1:tf, 2:resultado, 3:completado
 
-interface LevelProps {
-  navigation?: any;
-  setAllowBack?: (allow: boolean) => void;
-}
-
-export default function World1Level7({ navigation: propsNavigation, setAllowBack }: LevelProps) {
-  const navigationFromHook = useNavigation();
-  const navigation = propsNavigation || navigationFromHook;
-
+export default function World1Level7() {
   const [step, setStep] = useState(0);
   const [xp, setXp] = useState(0);
   const [xpToast, setXpToast] = useState<{ amount: number; id: number } | null>(null);
@@ -136,10 +127,6 @@ export default function World1Level7({ navigation: propsNavigation, setAllowBack
   const [tfScore, setTfScore] = useState(0);
 
   const isExamMode = step <= 1;
-
-  useEffect(() => {
-    setAllowBack?.(!isExamMode);
-  }, [isExamMode, setAllowBack]);
 
   useEffect(() => {
     const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -279,7 +266,6 @@ export default function World1Level7({ navigation: propsNavigation, setAllowBack
       <Text style={styles.tag}>✅ Parte 2 · Verdadero o Falso — 5 afirmaciones</Text>
       <Text style={styles.title}>¿Verdad o mito?</Text>
       {tfItems.map((item, idx) => {
-        const answered = tfAnswers[idx] !== undefined;
         return (
           <View key={idx} style={styles.tfCard}>
             <Text style={styles.tfQuestion}>{idx + 1}. {item.stmt}</Text>

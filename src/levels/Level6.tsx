@@ -12,7 +12,6 @@ import {
   Platform,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
 import { useGameStore } from '../store/gameStore';
 import { colors, typography } from '../theme';
 import XPToast from '../components/XPToast';
@@ -240,6 +239,7 @@ interface Props {
 export default function World1Level6({ navigation: propsNavigation, setAllowBack }: Props) {
   const hookNavigation = useNavigation();
   const navigation = propsNavigation || hookNavigation;
+
   const completeLevel = useGameStore((state) => state.completeLevel);
   const devMode = useGameStore((state) => state.devMode);
 
@@ -307,8 +307,6 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
   const allowedBackSteps = new Set([0, 1, 3, 5, 7, 9, 11]);
   const canGoBack = allowedBackSteps.has(step);
 
-  useEffect(() => { setAllowBack?.(canGoBack); }, [canGoBack, setAllowBack]);
-
   useEffect(() => {
     const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
       if (!canGoBack) {
@@ -321,7 +319,7 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
       return false;
     });
     return () => backHandler.remove();
-  }, [canGoBack, navigation]);
+  }, [canGoBack]);
 
   // Temporizador del sprint
   useEffect(() => {

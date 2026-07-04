@@ -77,7 +77,6 @@ type MissionSubject = {
 };
 
 const TOTAL_STEPS = 20; // 0:intro + 18 módulos + 1:complete
-const CONTENT_STEPS = 18;
 
 // Función helper
 const pickN = <T,>(arr: T[], n: number): T[] => {
@@ -411,14 +410,8 @@ function ColorCard({ variant, children, style }: { variant: keyof typeof CARD_BG
 }
 
 // ===================== COMPONENTE PRINCIPAL =====================
-interface LevelProps {
-  navigation?: any;
-  setAllowBack?: (allow: boolean) => void;
-}
-
-export default function World1Level3({ navigation: propsNavigation, setAllowBack }: LevelProps) {
-  const navigationFromHook = useNavigation();
-  const navigation = propsNavigation || navigationFromHook;
+export default function World1Level3() {
+  const navigation = useNavigation();
   const completeLevel = useGameStore((state) => state.completeLevel);
   const devMode = useGameStore((state) => state.devMode);
 
@@ -494,10 +487,6 @@ export default function World1Level3({ navigation: propsNavigation, setAllowBack
   const THEORY_STEPS = new Set([1, 2, 3, 6, 8, 11, 16]);
   const showBackButton = step > 0 && THEORY_STEPS.has(step);
   const goToPrevStep = () => setStep((s) => s - 1);
-
-  useEffect(() => {
-    setAllowBack?.(!isExamMode);
-  }, [isExamMode, setAllowBack]);
 
   useEffect(() => {
     const onBackPress = () => {

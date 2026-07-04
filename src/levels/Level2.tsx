@@ -194,6 +194,7 @@ const pickN = <T,>(arr: T[], n: number): T[] => {
   return shuffled.slice(0, n);
 };
 
+
 function shuffleQuizOptions(q: QuizQuestion): QuizQuestion {
   const paired = q.opts.map((opt, i) => ({ opt, isCorrect: i === q.correct }));
   for (let j = paired.length - 1; j > 0; j--) {
@@ -286,10 +287,6 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
   const llmIdxRef = useRef<number | null>(null);
 
   const isExamMode = step === 3 || step === 5 || step === 8 || step === 10 || step === 11 || step === 13 || step === 14 || step === 15 || step === 16;
-
-  useEffect(() => {
-    setAllowBack?.(!isExamMode);
-  }, [isExamMode, setAllowBack]);
 
   useEffect(() => {
     const onBackPress = () => {

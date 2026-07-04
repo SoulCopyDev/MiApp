@@ -1,11 +1,10 @@
 import { router } from 'expo-router';
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
   Alert, BackHandler,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
 import { useGameStore } from '../store/gameStore';
 import { colors, typography } from '../theme';
 import XPToast from '../components/XPToast';
@@ -20,14 +19,6 @@ type SprintItem = { text: string; good: boolean };
 type TribeChoice = { title: string; text: string; correct: boolean; explain: string };
 
 // ---------- Pools de datos ----------
-const STORY_Q: QuizQ[] = [
-  { q: "¿Cuáles son los 3 elementos esenciales de una historia que engancha?", opts: ["Personajes, escenario, estilo", "Problema, héroe, solución", "Inicio, mitad, final", "Hechos, datos, fuentes"], correct: 1, explain: "Problema doloroso → héroe identificable → solución concreta. Patrón usado desde Hollywood hasta TED talks." },
-  { q: "Si tu post empieza con 'Soy desarrollador y construí una app', ¿qué le falta?", opts: ["Más palabras", "El gancho del problema — empieza por el dolor que resolviste, no por ti", "Emojis", "Tu nombre"], correct: 1, explain: "La gente no se conecta con vos. Se conecta con su propio problema — el que vos resolviste. Empieza ahí." },
-  { q: "El 'héroe' de tu historia idealmente es:", opts: ["Tú mismo", "El usuario que sufría el problema y ahora tiene la solución", "La empresa", "El producto"], correct: 1, explain: "Tu usuario es el héroe. Tu producto es la espada que le diste." },
-  { q: "¿Cuánto debería durar un buen 'gancho' (primera frase) en redes?", opts: ["3 párrafos", "1 frase corta — máximo 12 palabras", "10 segundos", "Una imagen complicada"], correct: 1, explain: "Si la primera frase no engancha en <3 segundos, perdiste al 80% de lectores." },
-  { q: "Una historia con datos concretos vs. una historia con palabras vagas:", opts: ["Vagas conectan más emocionalmente", "Datos concretos son más memorables y creíbles", "Da igual", "Las vagas son más cortas"], correct: 1, explain: "'Ahorré tiempo' vs '240 estudiantes la usan en 8 meses'. El número se queda; lo vago se olvida." }
-];
-
 const COMMS_Q: QuizQ[] = [
   { q: "¿Por qué los primeros 3 segundos de un video corto son LOS más importantes?", opts: ["Porque después la cámara se daña", "Porque el algoritmo decide si seguir mostrando tu video según retention de esos 3 seg", "Por moda", "Porque YouTube lo exige"], correct: 1, explain: "Hook crítico. Si la gente sale en 3 seg, el algoritmo deja de distribuir." },
   { q: "¿Qué es 'CTA' (call to action)?", opts: ["Centro de Tecnología Avanzada", "Una llamada a acción específica al final del contenido (suscríbete, prueba, compra)", "Un emoji nuevo", "Un error de cámara"], correct: 1, explain: "CTA: sin él, la gente consume tu contenido pero no actúa." },
@@ -139,11 +130,7 @@ const pickN = <T,>(arr: T[], n: number): T[] => {
   return shuffled.slice(0, n);
 };
 
-interface LevelProps { navigation?: any; setAllowBack?: (allow: boolean) => void; }
-
-export default function World5Level5({ navigation: propsNavigation, setAllowBack }: LevelProps) {
-  const nav = useNavigation();
-  const navigation = propsNavigation || nav;
+export default function World5Level5() {
   const completeLevel = useGameStore(s => s.completeLevel);
 
   const [step, setStep] = useState(0);
@@ -151,7 +138,6 @@ export default function World5Level5({ navigation: propsNavigation, setAllowBack
   const [xpToast, setXpToast] = useState<{ amount: number; id: number } | null>(null);
 
   // Pools
-  const storyQ = useRef(pickN(STORY_Q, 5)).current;
   const commsQ = useRef(pickN(COMMS_Q, 5)).current;
   const tfImpactQ = useRef(pickN(TF_IMPACT_Q, 5)).current;
   const matchPairs = useRef(pickN(MATCH_PAIRS, 5)).current;
@@ -200,7 +186,6 @@ export default function World5Level5({ navigation: propsNavigation, setAllowBack
   const showBackButton = step > 0 && theorySteps.has(step);
   const goToPrevStep = () => { setStep(s => s - 1); };
 
-  useEffect(() => { setAllowBack?.(showBackButton); }, [showBackButton]);
   useEffect(() => {
     const h = BackHandler.addEventListener('hardwareBackPress', () => {
       if (!showBackButton) { Alert.alert('Actividad en curso', 'Completa la actividad antes de salir.'); return true; }
@@ -222,7 +207,7 @@ export default function World5Level5({ navigation: propsNavigation, setAllowBack
   // Sprint timer
   useEffect(() => {
     if (!sprintRunning || sprintDone) return;
-    if (sprintSec <= 0) { evaluateSprint(true); return; }
+    if (sprintSec <= 0) { evaluateSprint(); return; }
     sprintTimer.current = setTimeout(() => setSprintSec(s => s - 1), 1000);
     return () => { if (sprintTimer.current) clearTimeout(sprintTimer.current); };
   }, [sprintRunning, sprintSec, sprintDone]);
@@ -321,7 +306,7 @@ export default function World5Level5({ navigation: propsNavigation, setAllowBack
     const item = POST_SPRINT_ITEMS[i];
     setSprintPicks(prev => ({ ...prev, [i]: item.good ? 'good' : 'bad' }));
   };
-  const evaluateSprint = (timeout: boolean) => {
+  const evaluateSprint = () => {
     setSprintDone(true);
     if (sprintTimer.current) clearInterval(sprintTimer.current);
     const good = Object.values(sprintPicks).filter(v => v === 'good').length;

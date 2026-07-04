@@ -6,9 +6,7 @@ export const colors = {
   
     // Secundarios
     secondary: '#8126cf',
-    secondaryLight: '#a855f7',
-    secondaryDark: '#4c1d95',
-  
+
     // Acento
     accent: '#fed01b',
     accentDark: '#6f5900',

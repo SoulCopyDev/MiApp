@@ -65,7 +65,6 @@ MiApp/
 ├── metro.config.js          # getDefaultConfig(__)
 ├── eas.json                 # EAS Build profiles (dev/preview/production)
 ├── assets/
-│   ├── fonts/useFonts.ts    # Registro de fuentes
 │   └── *.png                # Íconos y splash
 └── src/
     ├── config/
@@ -79,7 +78,6 @@ MiApp/
     │   ├── useBreakpoint.ts # Retorna 'mobile'|'tablet'|'desktop' según ancho
     │   └── useMobileDetect.ts # Detección UA (android/ios/desktop), PWA, localStorage dismiss
     ├── levels/
-    │   ├── BaseLevel.tsx    # Componente base reutilizable (quiz de opción múltiple)
     │   ├── LevelScreen.tsx  # Dispatcher: N → Level{N} component
     │   ├── EvalScreen.tsx   # Dispatcher: worldId → Eval{W} | EvalFinal
     │   ├── Level{1-36}.tsx  # Niveles regulares (N1=World1/L1 … N36=World6/L6)
@@ -98,8 +96,6 @@ MiApp/
     │   ├── colors.ts        # Design tokens de color
     │   ├── typography.ts    # Design tokens tipográficos
     │   └── index.ts         # Re-exporta colors + typography
-    ├── types/
-    │   └── navigation.ts    # Tipos legacy (usado solo como referencia)
     └── utils/
         ├── dailyMission.ts  # Generación/detección de misiones diarias (sin dependencia circular)
         ├── rankSystem.ts    # Sistema de rangos por estrellas (8 tiers)
@@ -211,20 +207,11 @@ coordsToGlobalN(worldId, levelId): number
 
 ## Sistema de niveles
 
-### BaseLevel.tsx
+### Estructura de un nivel
 
-Componente genérico. Recibe `{ globalN, levelName, questions }`.
+Cada `Level{N}.tsx` es un componente autónomo (sin componente base compartido). Todos siguen el mismo patrón de cierre: al terminar llaman `completeLevel(globalN, stars, xp)` y luego `router.back()`.
 
-```ts
-interface Question {
-  question: string;
-  options: string[];
-  correct: number;      // índice de la opción correcta
-  explanation?: string;
-}
-```
-
-Flujo: pregunta → selección → feedback 1500ms → siguiente pregunta → resultado con estrellas → `completeLevel(globalN, ...)` → `router.back()`.
+Flujo típico: contenido/pregunta → interacción → feedback → resultado con estrellas → `completeLevel(globalN, ...)` → `router.back()`.
 
 **Estrellas:** `floor((correctas / total) * 3)`
 
@@ -243,7 +230,7 @@ Flujo: pregunta → selección → feedback 1500ms → siguiente pregunta → re
 
 ### Agregar un nuevo nivel
 
-1. Crear `src/levels/Level{N}.tsx` (siguiente N disponible) con su lógica o usando `BaseLevel`
+1. Crear `src/levels/Level{N}.tsx` (siguiente N disponible) con su lógica autónoma
 2. Registrar en `LevelScreen.tsx` en `LEVEL_COMPONENTS`
 3. Agregar entrada en `INITIAL_WORLDS` dentro de `gameStore.ts`
 4. **Incrementar `version`** en el config de `persist` en `gameStore.ts`

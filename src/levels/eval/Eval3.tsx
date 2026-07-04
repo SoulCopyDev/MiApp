@@ -1,11 +1,10 @@
 import { router } from 'expo-router';
-import React, { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
-  Alert, BackHandler,
+  Alert,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
 import { useGameStore } from '../../store/gameStore';
 import { colors, typography } from '../../theme';
 import XPToast from '../../components/XPToast';
@@ -67,11 +66,7 @@ const DD_ZONES: DdZone[] = [
   { label: '🔨 Lovable / Bubble', correct: ['e'] }
 ];
 
-interface LevelProps { navigation?: any; setAllowBack?: (allow: boolean) => void; }
-
-export default function World3Level7({ navigation: propsNavigation, setAllowBack }: LevelProps) {
-  const nav = useNavigation();
-  const navigation = propsNavigation || nav;
+export default function World3Level7() {
   const completeLevel = useGameStore(s => s.completeLevel);
 
   const [currentPart, setCurrentPart] = useState(1);

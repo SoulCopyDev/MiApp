@@ -1,10 +1,9 @@
 import { router } from 'expo-router';
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, BackHandler,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
 import { useGameStore } from '../store/gameStore';
 import { colors, typography } from '../theme';
 import XPToast from '../components/XPToast';
@@ -31,7 +30,6 @@ type MatchPairItem = {
 };
 
 const TOTAL_STEPS = 20; // 0:intro + 18 módulos + 1:complete
-const CONTENT_STEPS = 18;
 
 const pickN = <T,>(arr: T[], n: number): T[] => {
   const shuffled = [...arr].sort(() => Math.random() - 0.5);
@@ -106,14 +104,7 @@ const SPRINT_ANSWERS: SprintAnswer[] = [
 ];
 
 // ===================== COMPONENTE =====================
-interface LevelProps {
-  navigation?: any;
-  setAllowBack?: (allow: boolean) => void;
-}
-
-export default function World4Level6({ navigation: propsNavigation, setAllowBack }: LevelProps) {
-  const nav = useNavigation();
-  const navigation = propsNavigation || nav;
+export default function World4Level6() {
   const completeLevel = useGameStore((s) => s.completeLevel);
 
   const [step, setStep] = useState(0);
@@ -144,7 +135,6 @@ export default function World4Level6({ navigation: propsNavigation, setAllowBack
   const examSteps = new Set([9, 12, 14, 18]);
   const isExam = examSteps.has(step);
 
-  useEffect(() => { setAllowBack?.(!isExam); }, [isExam, setAllowBack]);
   useEffect(() => {
     const bh = BackHandler.addEventListener('hardwareBackPress', () => {
       if (isExam) { Alert.alert('Actividad en curso', 'No puedes regresar ahora.'); return true; }
@@ -165,7 +155,6 @@ export default function World4Level6({ navigation: propsNavigation, setAllowBack
     if (n > 0) setXpToast((prev) => ({ amount: n, id: (prev?.id ?? 0) + 1 }));
   };
   const goNext = () => { if (step < TOTAL_STEPS - 1) setStep(step + 1); };
-  const handleClose = () => Alert.alert('Salir', '¿Seguro?', [{ text: 'Cancelar' }, { text: 'Salir', onPress: () => router.back() }]);
   const handleFinish = () => {
     let stars = 0;
     if (xp >= 200) stars = 3; else if (xp >= 130) stars = 2; else if (xp >= 60) stars = 1;

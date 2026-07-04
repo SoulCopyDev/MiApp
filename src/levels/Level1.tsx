@@ -12,7 +12,6 @@ import {
   Platform,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
 import { useGameStore } from '../store/gameStore';
 import { colors, typography } from '../theme';
 import XPToast from '../components/XPToast';
@@ -29,7 +28,6 @@ type FillItem = {
 };
 
 const TOTAL_STEPS = 13;
-const CONTENT_STEPS = 10;
 
 const DRAG_POOL: DragItem[] = [
   { text: 'Analizar 500,000 partidas de ajedrez en 1 hora', correct: 'ai' },
@@ -147,15 +145,7 @@ const pickN = <T,>(arr: T[], n: number): T[] => {
   return shuffled.slice(0, n);
 };
 
-interface LevelProps {
-  navigation?: any;
-  setAllowBack?: (allow: boolean) => void;
-}
-
-export default function GameLevel1({ navigation: propsNavigation, setAllowBack }: LevelProps) {
-  const navigationFromHook = useNavigation();
-  const navigation = propsNavigation || navigationFromHook;
-
+export default function GameLevel1() {
   const [step, setStep] = useState(0);
   const [xp, setXp] = useState(0);
   const completeLevel = useGameStore((state) => state.completeLevel);
@@ -203,10 +193,6 @@ export default function GameLevel1({ navigation: propsNavigation, setAllowBack }
   const goToPrevStep = () => { setStepResult(null); setStep(s => s - 1); };
 
   useEffect(() => {
-    setAllowBack?.(!isExamMode);
-  }, [isExamMode, setAllowBack]);
-
-  useEffect(() => {
     const onBackPress = () => {
       if (isExamMode) {
         Alert.alert(
@@ -220,7 +206,7 @@ export default function GameLevel1({ navigation: propsNavigation, setAllowBack }
     };
     const backHandler = BackHandler.addEventListener('hardwareBackPress', onBackPress);
     return () => backHandler.remove();
-  }, [isExamMode, navigation]);
+  }, [isExamMode]);
 
   useEffect(() => {
     if (step === 5) {
@@ -749,7 +735,7 @@ export default function GameLevel1({ navigation: propsNavigation, setAllowBack }
           return (
             <TouchableOpacity
               key={idx}
-              nativeID={`drag-chip-${idx}`}
+              id={`drag-chip-${idx}`}
               style={[styles.chip, dragSel === idx && styles.chipSelected]}
               onPress={() => handleChipPress(idx)}
             >
@@ -762,7 +748,7 @@ export default function GameLevel1({ navigation: propsNavigation, setAllowBack }
         <View style={{ flex: 1 }}>
           <Text style={[styles.dropHeader, { backgroundColor: '#dbeafe', color: '#1e40af' }]}>🤖 IA</Text>
           <TouchableOpacity
-            nativeID="drop-zone-ai"
+            id="drop-zone-ai"
             style={[styles.dropCol, styles.dropAI, dragOverZone === 'ai' && styles.dropColDragOver]}
             onPress={() => handleDropZone('ai')}
           >
@@ -782,7 +768,7 @@ export default function GameLevel1({ navigation: propsNavigation, setAllowBack }
         <View style={{ flex: 1 }}>
           <Text style={[styles.dropHeader, { backgroundColor: '#dcfce7', color: '#166534' }]}>🧠 Humano</Text>
           <TouchableOpacity
-            nativeID="drop-zone-human"
+            id="drop-zone-human"
             style={[styles.dropCol, styles.dropHuman, dragOverZone === 'human' && styles.dropColDragOver]}
             onPress={() => handleDropZone('human')}
           >
