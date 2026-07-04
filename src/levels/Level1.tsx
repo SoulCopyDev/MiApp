@@ -268,13 +268,8 @@ export default function GameLevel1() {
           setDragOverZone(null);
           const idx = dragIdxRef.current;
           if (idx === null || dragPlacedRef.current[idx] !== undefined) return;
-          const it = dragItems[idx];
-          if (it.correct === zone) {
-            setDragPlaced(prev => ({ ...prev, [idx]: zone }));
-            setStepResult(null);
-          } else {
-            showResult(false, `"${it.text}" no pertenece a esta categoría.`);
-          }
+          setDragPlaced(prev => ({ ...prev, [idx]: zone }));
+          setStepResult(null);
           dragIdxRef.current = null;
         };
         el.addEventListener('dragover', onDragOver);
@@ -341,13 +336,8 @@ export default function GameLevel1() {
   const handleDropZone = (zone: string) => {
     if (dragSel === null) return;
     if (dragPlaced[dragSel] !== undefined) return;
-    const item = dragItems[dragSel];
-    if (item.correct === zone) {
-      setDragPlaced(prev => ({ ...prev, [dragSel]: zone }));
-      setDragSel(null); setStepResult(null);
-    } else {
-      showResult(false, `"${item.text}" no pertenece a esta categoría.`);
-    }
+    setDragPlaced(prev => ({ ...prev, [dragSel]: zone }));
+    setDragSel(null); setStepResult(null);
   };
 
   const handleRemoveChip = (idx: number) => {

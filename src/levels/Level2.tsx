@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -41,8 +41,8 @@ type PromptItem = {
 };
 type SortStep = { bold: string; rest: string };
 
-const TOTAL_STEPS = 17; // 0:intro + 15 módulos + 1:complete
-const CONTENT_STEPS = 15;
+const TOTAL_STEPS = 18; // 0:intro + 16 módulos + 1:complete
+const CONTENT_STEPS = 16;
 
 const AI_TYPE_POOL: DragItem[] = [
   { text: 'Recomendarte videos en YouTube', correct: 'rec' },
@@ -150,21 +150,21 @@ const VOCAB_FILL_POOL: VocabItem[] = [
 const PROMPT_COMPARE_POOL: PromptItem[] = [
   {
     task: 'Pedir ayuda para estudiar para un examen',
-    bad: 'Ayúdame a estudiar',
+    bad: 'Necesito preparar un examen de historia. Por favor dame la información más importante sobre el siglo XX que deba saber. Incluye datos relevantes y fechas clave.',
     good: 'Tengo un examen de historia del siglo XX mañana. Soy estudiante de 9° grado. Necesito que me hagas 10 preguntas de práctica con sus respuestas, de menor a mayor dificultad.',
-    explain: 'El prompt bueno especifica: el tema exacto, tu nivel, el tipo de ayuda que necesitas y el formato deseado. Más contexto = mejor respuesta.',
+    explain: 'El prompt correcto pide un formato específico (10 preguntas, dificultad progresiva) y da tu nivel. El otro pide "información importante" sin decir cómo organizarla — el LLM dará un texto genérico que es difícil de estudiar.',
   },
   {
-    task: 'Pedir que revise un texto',
-    bad: 'Revisa esto',
+    task: 'Pedir que revise un texto que escribiste',
+    bad: 'Revisa el texto que escribí y corrige lo que está mal. También dime cómo mejorar la redacción y si algo no suena bien. Hazlo lo mejor posible.',
     good: 'Revisa este párrafo. Corrige errores de ortografía y gramática. No cambies el contenido ni mi estilo. Explica brevemente cada corrección que hagas.',
-    explain: 'El prompt bueno especifica qué revisar, qué no cambiar, y cómo quieres la respuesta. Un LLM sin instrucciones claras puede reescribir todo tu texto.',
+    explain: 'El prompt correcto define límites claros: qué corregir, qué NO cambiar y cómo entregar el resultado. El otro no protege tu estilo ni tu contenido — el LLM podría reescribir todo el texto por completo.',
   },
   {
-    task: 'Pedir que explique un concepto difícil',
-    bad: 'Explícame la relatividad',
+    task: 'Pedir que explique la teoría de la relatividad',
+    bad: 'Explícame la teoría de la relatividad de Einstein de forma clara y fácil de entender. Incluye los conceptos más importantes y dame ejemplos para que quede claro.',
     good: 'Explícame la teoría de la relatividad de Einstein como si tuviera 12 años, usando una analogía con algo de la vida cotidiana. Máximo 3 párrafos.',
-    explain: 'El prompt bueno especifica el nivel, el método (analogía) y el límite de longitud. Así el LLM sabe exactamente cómo formatear la respuesta para que sea útil para ti.',
+    explain: 'El prompt correcto fija el nivel de edad (12 años), el tipo de recurso (analogía cotidiana) y el límite de longitud. El otro pide "fácil" y "con ejemplos" pero sin especificar qué tan básico ni cuánto detalle — la respuesta puede seguir siendo demasiado técnica o demasiado larga.',
   },
 ];
 
@@ -182,11 +182,11 @@ const LLM_DRAG_POOL: DragItem[] = [
 ];
 
 const LLM_SORT_STEPS: SortStep[] = [
-  { bold: 'Recibes tu prompt:', rest: ' Escribes tu pregunta o instrucción en el chat' },
-  { bold: 'Tokenización:', rest: ' Tu texto se divide en pequeños fragmentos llamados tokens' },
-  { bold: 'Búsqueda de contexto:', rest: ' El modelo analiza el historial de la conversación' },
-  { bold: 'Predicción:', rest: ' Calcula qué tokens son más probables como respuesta' },
-  { bold: 'Respuesta generada:', rest: ' Ensambla los tokens en texto y te lo muestra' },
+  { bold: 'El Prompt:', rest: ' lo que tú le escribes a la IA' },
+  { bold: 'Tokenización:', rest: ' la IA corta tu texto en piezas pequeñas (tokens)' },
+  { bold: 'Contexto:', rest: ' revisa el historial del chat' },
+  { bold: 'Predicción:', rest: ' elige la mejor palabra, una por una' },
+  { bold: 'Respuesta:', rest: ' junta todos los tokens y te la muestra' },
 ];
 
 const pickN = <T,>(arr: T[], n: number): T[] => {
@@ -194,8 +194,24 @@ const pickN = <T,>(arr: T[], n: number): T[] => {
   return shuffled.slice(0, n);
 };
 
-export default function GameLevel2() {
-  const navigation = useNavigation();
+
+function shuffleQuizOptions(q: QuizQuestion): QuizQuestion {
+  const paired = q.opts.map((opt, i) => ({ opt, isCorrect: i === q.correct }));
+  for (let j = paired.length - 1; j > 0; j--) {
+    const k = Math.floor(Math.random() * (j + 1));
+    [paired[j], paired[k]] = [paired[k], paired[j]];
+  }
+  return { ...q, opts: paired.map(p => p.opt), correct: paired.findIndex(p => p.isCorrect) };
+}
+
+interface LevelProps {
+  navigation?: any;
+  setAllowBack?: (allow: boolean) => void;
+}
+
+export default function GameLevel2({ navigation: propsNavigation, setAllowBack }: LevelProps) {
+  const navigationFromHook = useNavigation();
+  const navigation = propsNavigation || navigationFromHook;
 
   const [step, setStep] = useState(0);
   const [xp, setXp] = useState(0);
@@ -204,7 +220,7 @@ export default function GameLevel2() {
 
   const [drag3Items] = useState(() => pickN(AI_TYPE_POOL, 12));
   const [matchPairs] = useState(() => pickN(APP_MATCH_POOL, 4));
-  const [quizQuestions] = useState(() => pickN(SEARCH_QUIZ_POOL, 4));
+  const [quizQuestions] = useState(() => pickN(SEARCH_QUIZ_POOL, 4).map(shuffleQuizOptions));
   const [tfItems] = useState(() => pickN(LLM_TF_POOL, 5));
   const [fillItem] = useState(() => pickN(VOCAB_FILL_POOL, 1)[0]);
   const [promptItems] = useState(() => pickN(PROMPT_COMPARE_POOL, 3));
@@ -233,6 +249,7 @@ export default function GameLevel2() {
   // Sort
   const [sortOrder, setSortOrder] = useState<number[]>([]);
   const [sortOk, setSortOk] = useState(false);
+  const [sortWrongPositions, setSortWrongPositions] = useState<Set<number>>(new Set());
 
   // TF
   const [tfAnswers, setTfAnswers] = useState<{ [key: number]: boolean }>({});
@@ -245,6 +262,7 @@ export default function GameLevel2() {
   // Prompt compare
   const [promptSels, setPromptSels] = useState<{ [key: number]: 'good' | 'bad' }>({});
   const [promptsChecked, setPromptsChecked] = useState(false);
+  const [promptFlipped] = useState<boolean[]>(() => promptItems.map(() => Math.random() < 0.5));
 
   // Reflect
   const [reflectText, setReflectText] = useState('');
@@ -256,7 +274,19 @@ export default function GameLevel2() {
   const [llmAttempts, setLlmAttempts] = useState(0);
   const [llmOk, setLlmOk] = useState(false);
 
-  const isExamMode = step === 3 || step === 5 || step === 8 || step === 9 || step === 10 || step === 12 || step === 13 || step === 14 || step === 15;
+  // Web D&D — Drag 3
+  const [dragOver3Zone, setDragOver3Zone] = useState<string | null>(null);
+  const drag3PlacedRef = useRef(drag3Placed);
+  useEffect(() => { drag3PlacedRef.current = drag3Placed; }, [drag3Placed]);
+  const drag3IdxRef = useRef<number | null>(null);
+
+  // Web D&D — LLM Drag
+  const [dragOverLLMZone, setDragOverLLMZone] = useState<string | null>(null);
+  const llmPlacedRef = useRef(llmPlaced);
+  useEffect(() => { llmPlacedRef.current = llmPlaced; }, [llmPlaced]);
+  const llmIdxRef = useRef<number | null>(null);
+
+  const isExamMode = step === 3 || step === 5 || step === 8 || step === 10 || step === 11 || step === 13 || step === 14 || step === 15 || step === 16;
 
   useEffect(() => {
     const onBackPress = () => {
@@ -285,7 +315,7 @@ export default function GameLevel2() {
       setMatchedLeft(new Set());
       setMatchedRight(new Set());
     }
-    if (step === 9) {
+    if (step === 10) {
       const order = [0, 1, 2, 3, 4];
       for (let i = order.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -294,13 +324,101 @@ export default function GameLevel2() {
       setSortOrder(order);
       setSortOk(false);
     }
-    if (step === 12) {
+    if (step === 13) {
       setLlmPlaced({});
       setLlmSel(null);
       setLlmAttempts(0);
       setLlmOk(false);
     }
   }, [step, matchPairs]);
+
+  // Web drag & drop — Módulo 3
+  useEffect(() => {
+    if (Platform.OS !== 'web' || step !== 3) return;
+    const cleanups: (() => void)[] = [];
+    const setup = () => {
+      drag3Items.forEach((_, idx) => {
+        if (drag3PlacedRef.current[idx] !== undefined) return;
+        const el = document.getElementById(`drag3-chip-${idx}`);
+        if (!el) return;
+        el.setAttribute('draggable', 'true');
+        (el as HTMLElement).style.cursor = 'grab';
+        const onDragStart = (e: DragEvent) => {
+          drag3IdxRef.current = idx;
+          setDrag3Sel(null);
+          if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
+        };
+        const onDragEnd = () => { drag3IdxRef.current = null; setDragOver3Zone(null); };
+        el.addEventListener('dragstart', onDragStart);
+        el.addEventListener('dragend', onDragEnd);
+        cleanups.push(() => { el.removeEventListener('dragstart', onDragStart); el.removeEventListener('dragend', onDragEnd); });
+      });
+      (['rec', 'vis', 'nlp', 'gen'] as const).forEach(zone => {
+        const el = document.getElementById(`drop3-zone-${zone}`);
+        if (!el) return;
+        const onDragOver = (e: Event) => { e.preventDefault(); setDragOver3Zone(zone); };
+        const onDragLeave = (e: DragEvent) => { if (!el.contains(e.relatedTarget as Node)) setDragOver3Zone(null); };
+        const onDrop = (e: Event) => {
+          e.preventDefault(); setDragOver3Zone(null);
+          const idx = drag3IdxRef.current;
+          if (idx === null || drag3PlacedRef.current[idx] !== undefined) return;
+          setDrag3Placed(prev => ({ ...prev, [idx]: zone })); setStepResult(null);
+          drag3IdxRef.current = null;
+        };
+        el.addEventListener('dragover', onDragOver);
+        el.addEventListener('dragleave', onDragLeave);
+        el.addEventListener('drop', onDrop);
+        cleanups.push(() => { el.removeEventListener('dragover', onDragOver); el.removeEventListener('dragleave', onDragLeave); el.removeEventListener('drop', onDrop); });
+      });
+    };
+    const timer = setTimeout(setup, 50);
+    return () => { clearTimeout(timer); cleanups.forEach(fn => fn()); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, drag3Items, drag3Placed]);
+
+  // Web drag & drop — Módulo 12 (LLM)
+  useEffect(() => {
+    if (Platform.OS !== 'web' || step !== 13) return;
+    const cleanups: (() => void)[] = [];
+    const setup = () => {
+      llmItems.forEach((_, idx) => {
+        if (llmPlacedRef.current[idx] !== undefined) return;
+        const el = document.getElementById(`llm-chip-${idx}`);
+        if (!el) return;
+        el.setAttribute('draggable', 'true');
+        (el as HTMLElement).style.cursor = 'grab';
+        const onDragStart = (e: DragEvent) => {
+          llmIdxRef.current = idx;
+          setLlmSel(null);
+          if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
+        };
+        const onDragEnd = () => { llmIdxRef.current = null; setDragOverLLMZone(null); };
+        el.addEventListener('dragstart', onDragStart);
+        el.addEventListener('dragend', onDragEnd);
+        cleanups.push(() => { el.removeEventListener('dragstart', onDragStart); el.removeEventListener('dragend', onDragEnd); });
+      });
+      (['claude', 'chatgpt', 'gemini'] as const).forEach(zone => {
+        const el = document.getElementById(`llm-zone-${zone}`);
+        if (!el) return;
+        const onDragOver = (e: Event) => { e.preventDefault(); setDragOverLLMZone(zone); };
+        const onDragLeave = (e: DragEvent) => { if (!el.contains(e.relatedTarget as Node)) setDragOverLLMZone(null); };
+        const onDrop = (e: Event) => {
+          e.preventDefault(); setDragOverLLMZone(null);
+          const idx = llmIdxRef.current;
+          if (idx === null || llmPlacedRef.current[idx] !== undefined) return;
+          setLlmPlaced(prev => ({ ...prev, [idx]: zone })); setStepResult(null);
+          llmIdxRef.current = null;
+        };
+        el.addEventListener('dragover', onDragOver);
+        el.addEventListener('dragleave', onDragLeave);
+        el.addEventListener('drop', onDrop);
+        cleanups.push(() => { el.removeEventListener('dragover', onDragOver); el.removeEventListener('dragleave', onDragLeave); el.removeEventListener('drop', onDrop); });
+      });
+    };
+    const timer = setTimeout(setup, 50);
+    return () => { clearTimeout(timer); cleanups.forEach(fn => fn()); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, llmItems, llmPlaced]);
 
   const [xpToast, setXpToast] = useState<{ amount: number; id: number } | null>(null);
   const addXP = (amount: number) => {
@@ -353,14 +471,9 @@ export default function GameLevel2() {
   const handleDropZone3 = (zone: string) => {
     if (drag3Sel === null) return;
     if (drag3Placed[drag3Sel] !== undefined) return;
-    const item = drag3Items[drag3Sel];
-    if (item.correct === zone) {
-      setDrag3Placed(prev => ({ ...prev, [drag3Sel!]: zone }));
-      setDrag3Sel(null);
-      setStepResult(null);
-    } else {
-      showResult(false, `"${item.text}" no pertenece a esta categoría.`);
-    }
+    setDrag3Placed(prev => ({ ...prev, [drag3Sel!]: zone }));
+    setDrag3Sel(null);
+    setStepResult(null);
   };
   const handleRemoveChip3 = (idx: number) => {
     setDrag3Placed(prev => { const n = { ...prev }; delete n[idx]; return n; });
@@ -404,14 +517,9 @@ export default function GameLevel2() {
   const handleDropZoneLLM = (zone: string) => {
     if (llmSel === null) return;
     if (llmPlaced[llmSel] !== undefined) return;
-    const item = llmItems[llmSel];
-    if (item.correct === zone) {
-      setLlmPlaced(prev => ({ ...prev, [llmSel!]: zone }));
-      setLlmSel(null);
-      setStepResult(null);
-    } else {
-      showResult(false, `"${item.text}" no corresponde a este LLM.`);
-    }
+    setLlmPlaced(prev => ({ ...prev, [llmSel!]: zone }));
+    setLlmSel(null);
+    setStepResult(null);
   };
   const handleRemoveChipLLM = (idx: number) => {
     setLlmPlaced(prev => { const n = { ...prev }; delete n[idx]; return n; });
@@ -481,6 +589,7 @@ export default function GameLevel2() {
     const newOrder = [...sortOrder];
     [newOrder[pos], newOrder[newPos]] = [newOrder[newPos], newOrder[pos]];
     setSortOrder(newOrder);
+    setSortWrongPositions(new Set());
   };
   const checkSort = () => {
     if (devMode) { setSortOk(true); addXP(15); return true; }
@@ -492,7 +601,10 @@ export default function GameLevel2() {
       showResult(true, '¡Exacto! Ese es el orden real de procesamiento de un LLM. +15 XP');
       return false;
     } else {
-      showResult(false, 'Algunos pasos están fuera de lugar. ¡Piensa en el orden lógico!');
+      const wrong = new Set(sortOrder.reduce<number[]>((acc, v, i) => { if (v !== i) acc.push(i); return acc; }, []));
+      setSortWrongPositions(wrong);
+      setTimeout(() => setSortWrongPositions(new Set()), 3000);
+      showResult(false, `${wrong.size} de ${sortOrder.length} pasos fuera de lugar. ¡Piensa: qué necesita ocurrir primero!`);
       return false;
     }
   };
@@ -591,7 +703,7 @@ export default function GameLevel2() {
 
   const renderIntro = () => (
     <View style={styles.stepContainer}>
-      <Text style={[styles.tag, styles.tagIntro]}>Nivel 2 · 15 módulos</Text>
+      <Text style={[styles.tag, styles.tagIntro]}>Nivel 2 · 16 módulos</Text>
       <View style={styles.iconContainer}><Text style={styles.iconEmoji}>📱</Text></View>
       <Text style={styles.title}>La IA que vive en tus apps</Text>
       <Text style={styles.subtitle}>Usas decenas de apps todos los días. Pero, ¿sabías que la IA está operando en todas ellas? Hoy vas a diseccionarlas, entender cómo funcionan por dentro, y conocer las herramientas de IA que van a cambiar la manera en que estudias y creas.</Text>
@@ -617,8 +729,8 @@ export default function GameLevel2() {
         <View style={styles.cardRow}>
           <View style={[styles.cardIcon, { backgroundColor: '#fde68a' }]}><Text style={styles.cardIconText}>🎮</Text></View>
           <View style={styles.cardContent}>
-            <Text style={styles.cardTitle}>15 módulos · hasta 160 XP</Text>
-            <Text style={styles.cardText}>Teoría · Apps reales · Caso de vida real · Clasificar · Conectar · Quiz · Ordenar · V/F · Qué LLM usar · Vocabulario clave · Comparar prompts · Reflexión</Text>
+            <Text style={styles.cardTitle}>16 módulos · hasta 160 XP</Text>
+            <Text style={styles.cardText}>Teoría · Apps reales · Caso de vida real · Clasificar · Conectar · Quiz · Cómo funciona la IA · Ordenar · V/F · Qué LLM usar · Vocabulario clave · Comparar prompts · Reflexión</Text>
           </View>
         </View>
       </View>
@@ -627,7 +739,7 @@ export default function GameLevel2() {
 
   const renderTheory1 = () => (
     <View style={styles.stepContainer}>
-      <Text style={[styles.tag, styles.tagTheory]}>📖 Módulo 1 de 15 · Teoría</Text>
+      <Text style={[styles.tag, styles.tagTheory]}>📖 Módulo 1 de 16 · Teoría</Text>
       <Text style={styles.title}>¿Cómo decide la IA qué mostrarte?</Text>
       <Text style={styles.bodyText}>Abres Instagram. En milisegundos ves una publicación que te engancha al instante. No fue casualidad, ni suerte, ni un humano eligiéndola para ti. <Text style={styles.bold}>Una IA tomó esa decisión en menos de 100 milisegundos</Text>, basándose en miles de datos que tiene sobre ti.</Text>
       <View style={styles.highlightBox}>
@@ -671,12 +783,12 @@ export default function GameLevel2() {
 
   const renderExamples = () => (
     <View style={styles.stepContainer}>
-      <Text style={[styles.tag, styles.tagExample]}>📱 Módulo 2 de 15 · Apps reales</Text>
+      <Text style={[styles.tag, styles.tagExample]}>📱 Módulo 2 de 16 · Apps reales</Text>
       <Text style={styles.title}>Disecciona 5 apps que ya conoces</Text>
       <Text style={styles.subtitle}>Abre cada tarjeta y descubre qué tipo de IA está corriendo en las apps que más usas.</Text>
 
       {/* Instagram */}
-      <TouchableOpacity style={styles.exCard} onPress={() => setOpenAppCard(openAppCard === 0 ? null : 0)} activeOpacity={0.8}>
+      <TouchableOpacity style={[styles.exCard, openAppCard === 0 && styles.exCardOpen]} onPress={() => setOpenAppCard(openAppCard === 0 ? null : 0)} activeOpacity={0.8}>
         <View style={styles.exHead}>
           <View style={styles.exEmoji}><Text style={styles.exEmojiText}>📸</Text></View>
           <View style={styles.exInfo}>
@@ -695,7 +807,7 @@ export default function GameLevel2() {
       </TouchableOpacity>
 
       {/* YouTube */}
-      <TouchableOpacity style={styles.exCard} onPress={() => setOpenAppCard(openAppCard === 1 ? null : 1)} activeOpacity={0.8}>
+      <TouchableOpacity style={[styles.exCard, openAppCard === 1 && styles.exCardOpen]} onPress={() => setOpenAppCard(openAppCard === 1 ? null : 1)} activeOpacity={0.8}>
         <View style={styles.exHead}>
           <View style={styles.exEmoji}><Text style={styles.exEmojiText}>▶️</Text></View>
           <View style={styles.exInfo}>
@@ -714,7 +826,7 @@ export default function GameLevel2() {
       </TouchableOpacity>
 
       {/* WhatsApp */}
-      <TouchableOpacity style={styles.exCard} onPress={() => setOpenAppCard(openAppCard === 2 ? null : 2)} activeOpacity={0.8}>
+      <TouchableOpacity style={[styles.exCard, openAppCard === 2 && styles.exCardOpen]} onPress={() => setOpenAppCard(openAppCard === 2 ? null : 2)} activeOpacity={0.8}>
         <View style={styles.exHead}>
           <View style={styles.exEmoji}><Text style={styles.exEmojiText}>💬</Text></View>
           <View style={styles.exInfo}>
@@ -733,7 +845,7 @@ export default function GameLevel2() {
       </TouchableOpacity>
 
       {/* Google Fotos */}
-      <TouchableOpacity style={styles.exCard} onPress={() => setOpenAppCard(openAppCard === 3 ? null : 3)} activeOpacity={0.8}>
+      <TouchableOpacity style={[styles.exCard, openAppCard === 3 && styles.exCardOpen]} onPress={() => setOpenAppCard(openAppCard === 3 ? null : 3)} activeOpacity={0.8}>
         <View style={styles.exHead}>
           <View style={styles.exEmoji}><Text style={styles.exEmojiText}>🖼️</Text></View>
           <View style={styles.exInfo}>
@@ -752,7 +864,7 @@ export default function GameLevel2() {
       </TouchableOpacity>
 
       {/* Netflix */}
-      <TouchableOpacity style={styles.exCard} onPress={() => setOpenAppCard(openAppCard === 4 ? null : 4)} activeOpacity={0.8}>
+      <TouchableOpacity style={[styles.exCard, openAppCard === 4 && styles.exCardOpen]} onPress={() => setOpenAppCard(openAppCard === 4 ? null : 4)} activeOpacity={0.8}>
         <View style={styles.exHead}>
           <View style={styles.exEmoji}><Text style={styles.exEmojiText}>🎬</Text></View>
           <View style={styles.exInfo}>
@@ -774,7 +886,7 @@ export default function GameLevel2() {
 
   const renderDrag3 = () => (
     <View style={styles.stepContainer}>
-      <Text style={[styles.tag, styles.tagActivity]}>🧩 Módulo 3 de 15 · Clasificar</Text>
+      <Text style={[styles.tag, styles.tagActivity]}>🧩 Módulo 3 de 16 · Clasificar</Text>
       <Text style={styles.title}>¿Qué tipo de IA es esta?</Text>
       <Text style={styles.subtitle}>Clasifica cada función en su tipo de IA correcto. Toca un chip y luego la columna.</Text>
       <View style={styles.hintCard}>
@@ -784,7 +896,7 @@ export default function GameLevel2() {
         {drag3Items.map((item, idx) => {
           if (drag3Placed[idx] !== undefined) return null;
           return (
-            <TouchableOpacity key={idx} style={[styles.chip, drag3Sel === idx && styles.chipSelected]} onPress={() => handleChipPress3(idx)}>
+            <TouchableOpacity key={idx} nativeID={`drag3-chip-${idx}`} style={[styles.chip, drag3Sel === idx && styles.chipSelected]} onPress={() => handleChipPress3(idx)}>
               <Text style={styles.chipText}>{item.text}</Text>
             </TouchableOpacity>
           );
@@ -795,7 +907,7 @@ export default function GameLevel2() {
           <View style={[styles.llmDropHeaderBox, { backgroundColor: '#dcfce7' }]}>
             <Text style={[styles.llmDropHeaderText, { color: '#166534' }]}>🟢 Recomendación</Text>
           </View>
-          <TouchableOpacity style={[styles.dropCol, { backgroundColor: '#fafafa' }]} onPress={() => handleDropZone3('rec')}>
+          <TouchableOpacity nativeID="drop3-zone-rec" style={[styles.dropCol, { backgroundColor: dragOver3Zone === 'rec' ? '#e0f2fe' : '#fafafa', borderColor: dragOver3Zone === 'rec' ? '#0ea5e9' : colors.borderLight }]} onPress={() => handleDropZone3('rec')}>
             <View style={styles.dropChips}>
               {Object.entries(drag3Placed).map(([idx, zone]) => zone === 'rec' ? (
                 <TouchableOpacity key={idx} style={[styles.dropChip, { backgroundColor: '#dcfce7' }]} onPress={() => handleRemoveChip3(parseInt(idx))}>
@@ -809,7 +921,7 @@ export default function GameLevel2() {
           <View style={[styles.llmDropHeaderBox, { backgroundColor: '#ede9fe' }]}>
             <Text style={[styles.llmDropHeaderText, { color: '#5b21b6' }]}>🟣 Visión</Text>
           </View>
-          <TouchableOpacity style={[styles.dropCol, { backgroundColor: '#fafafa' }]} onPress={() => handleDropZone3('vis')}>
+          <TouchableOpacity nativeID="drop3-zone-vis" style={[styles.dropCol, { backgroundColor: dragOver3Zone === 'vis' ? '#f5f3ff' : '#fafafa', borderColor: dragOver3Zone === 'vis' ? '#8b5cf6' : colors.borderLight }]} onPress={() => handleDropZone3('vis')}>
             <View style={styles.dropChips}>
               {Object.entries(drag3Placed).map(([idx, zone]) => zone === 'vis' ? (
                 <TouchableOpacity key={idx} style={[styles.dropChip, { backgroundColor: '#ede9fe' }]} onPress={() => handleRemoveChip3(parseInt(idx))}>
@@ -823,7 +935,7 @@ export default function GameLevel2() {
           <View style={[styles.llmDropHeaderBox, { backgroundColor: '#dbeafe' }]}>
             <Text style={[styles.llmDropHeaderText, { color: '#1e40af' }]}>🔵 Lenguaje</Text>
           </View>
-          <TouchableOpacity style={[styles.dropCol, { backgroundColor: '#fafafa' }]} onPress={() => handleDropZone3('nlp')}>
+          <TouchableOpacity nativeID="drop3-zone-nlp" style={[styles.dropCol, { backgroundColor: dragOver3Zone === 'nlp' ? '#eff6ff' : '#fafafa', borderColor: dragOver3Zone === 'nlp' ? '#3b82f6' : colors.borderLight }]} onPress={() => handleDropZone3('nlp')}>
             <View style={styles.dropChips}>
               {Object.entries(drag3Placed).map(([idx, zone]) => zone === 'nlp' ? (
                 <TouchableOpacity key={idx} style={[styles.dropChip, { backgroundColor: '#dbeafe' }]} onPress={() => handleRemoveChip3(parseInt(idx))}>
@@ -837,7 +949,7 @@ export default function GameLevel2() {
           <View style={[styles.llmDropHeaderBox, { backgroundColor: '#fef3c7' }]}>
             <Text style={[styles.llmDropHeaderText, { color: '#92400e' }]}>🟡 Generativa</Text>
           </View>
-          <TouchableOpacity style={[styles.dropCol, { backgroundColor: '#fafafa' }]} onPress={() => handleDropZone3('gen')}>
+          <TouchableOpacity nativeID="drop3-zone-gen" style={[styles.dropCol, { backgroundColor: dragOver3Zone === 'gen' ? '#fffbeb' : '#fafafa', borderColor: dragOver3Zone === 'gen' ? '#f59e0b' : colors.borderLight }]} onPress={() => handleDropZone3('gen')}>
             <View style={styles.dropChips}>
               {Object.entries(drag3Placed).map(([idx, zone]) => zone === 'gen' ? (
                 <TouchableOpacity key={idx} style={[styles.dropChip, { backgroundColor: '#fef3c7' }]} onPress={() => handleRemoveChip3(parseInt(idx))}>
@@ -856,7 +968,7 @@ export default function GameLevel2() {
 
   const renderTheory2 = () => (
     <View style={styles.stepContainer}>
-      <Text style={[styles.tag, styles.tagTheory]}>📖 Módulo 4 de 15 · Tipos de IA</Text>
+      <Text style={[styles.tag, styles.tagTheory]}>📖 Módulo 4 de 16 · Tipos de IA</Text>
       <Text style={styles.title}>Los 4 tipos de IA que ya usas</Text>
       <Text style={styles.subtitle}>Ahora que los clasificaste, veamos cada tipo con más detalle.</Text>
       <View style={[styles.card, styles.cardGreen]}>
@@ -903,7 +1015,7 @@ export default function GameLevel2() {
 
   const renderMatching = () => (
     <View style={styles.stepContainer}>
-      <Text style={[styles.tag, styles.tagMatch]}>🔗 Módulo 5 de 15 · Conectar</Text>
+      <Text style={[styles.tag, styles.tagMatch]}>🔗 Módulo 5 de 16 · Conectar</Text>
       <Text style={styles.title}>App + tipo de IA</Text>
       <Text style={styles.subtitle}>Conecta cada app con la descripción exacta de la IA que usa.</Text>
       <View style={[styles.card, styles.cardSky]}>
@@ -949,7 +1061,7 @@ export default function GameLevel2() {
 
   const renderTheoryLLM = () => (
     <View style={styles.stepContainer}>
-      <Text style={[styles.tag, styles.tagTheory]}>📖 Módulo 6 de 15 · LLMs</Text>
+      <Text style={[styles.tag, styles.tagTheory]}>📖 Módulo 6 de 16 · LLMs</Text>
       <Text style={styles.title}>¿Qué son los Modelos de Lenguaje (LLMs)?</Text>
       <Text style={styles.bodyText}>LLM significa <Text style={styles.bold}>Large Language Model</Text> — Modelo de Lenguaje Grande. Son el tipo de IA detrás de ChatGPT, Claude, Gemini y Grok. Para entender qué son, primero hay que entender en qué se diferencian de Google.</Text>
       <View style={styles.vsGrid}>
@@ -987,7 +1099,7 @@ export default function GameLevel2() {
 
   const renderCase = () => (
     <View style={styles.stepContainer}>
-      <Text style={[styles.tag, styles.tagCase]}>🎯 Módulo 7 de 15 · Caso real</Text>
+      <Text style={[styles.tag, styles.tagCase]}>🎯 Módulo 7 de 16 · Caso real</Text>
       <Text style={styles.title}>Sebastián: estudiante de 15 años en Medellín</Text>
       <Text style={styles.subtitle}>Así es como un estudiante usa los LLMs en su vida real — los buenos y los malos usos.</Text>
       <View style={styles.scenarioBox}>
@@ -1038,7 +1150,7 @@ export default function GameLevel2() {
 
   const renderQuiz = () => (
     <View style={styles.stepContainer}>
-      <Text style={[styles.tag, styles.tagQuiz]}>❓ Módulo 8 de 15 · Quiz</Text>
+      <Text style={[styles.tag, styles.tagQuiz]}>❓ Módulo 8 de 16 · Quiz</Text>
       <Text style={styles.title}>¿Buscador o LLM? ¿Cuándo usar cuál?</Text>
       <Text style={styles.subtitle}>Cada situación requiere la herramienta correcta. Piensa antes de elegir.</Text>
       {quizQuestions.map((q, qIdx) => (
@@ -1068,16 +1180,74 @@ export default function GameLevel2() {
     </View>
   );
 
+  const renderLLMHowItWorks = () => (
+    <View style={styles.stepContainer}>
+      <Text style={[styles.tag, styles.tagTheory]}>📖 Módulo 9 de 16 · Cómo funciona</Text>
+      <Text style={styles.title}>5 conceptos que la IA usa para responderte</Text>
+      <Text style={styles.subtitle}>Cuando le escribes algo a ChatGPT, pasan cosas fascinantes por dentro. Conoce los 5 conceptos clave — los vas a necesitar después. 😉</Text>
+
+      <View style={[styles.conceptCard, { backgroundColor: '#f0f9ff', borderColor: '#bae6fd' }]}>
+        <View style={[styles.conceptHeader, { backgroundColor: '#0ea5e9' }]}>
+          <Text style={styles.conceptTitle}>✏️  El Prompt</Text>
+        </View>
+        <Text style={styles.conceptBody}>Es lo que <Text style={styles.bold}>tú escribes</Text> para pedirle algo a la IA. Puede ser una pregunta, una instrucción o una idea.</Text>
+        <View style={[styles.conceptExample, { backgroundColor: '#e0f2fe' }]}>
+          <Text style={styles.conceptExampleText}>💬 <Text style={styles.italic}>"Explícame los volcanes como si tuviera 10 años"</Text> — eso es un prompt</Text>
+        </View>
+      </View>
+
+      <View style={[styles.conceptCard, { backgroundColor: '#faf5ff', borderColor: '#ddd6fe' }]}>
+        <View style={[styles.conceptHeader, { backgroundColor: '#7c3aed' }]}>
+          <Text style={styles.conceptTitle}>✂️  Los Tokens</Text>
+        </View>
+        <Text style={styles.conceptBody}>La IA no lee tu texto de corrido. Lo <Text style={styles.bold}>parte en trocitos</Text> llamados tokens — como piezas de LEGO del lenguaje.</Text>
+        <View style={[styles.conceptExample, { backgroundColor: '#ede9fe' }]}>
+          <Text style={styles.conceptExampleText}>🧩 <Text style={styles.italic}>"extraordinario"</Text> = 3 tokens: <Text style={styles.bold}>"extra"</Text> + <Text style={styles.bold}>"ordi"</Text> + <Text style={styles.bold}>"nario"</Text></Text>
+        </View>
+      </View>
+
+      <View style={[styles.conceptCard, { backgroundColor: '#f0fdf4', borderColor: '#bbf7d0' }]}>
+        <View style={[styles.conceptHeader, { backgroundColor: '#16a34a' }]}>
+          <Text style={styles.conceptTitle}>📖  El Contexto</Text>
+        </View>
+        <Text style={styles.conceptBody}>Antes de responder, la IA <Text style={styles.bold}>revisa todo lo que hablaron antes</Text> en el chat para no perder el hilo.</Text>
+        <View style={[styles.conceptExample, { backgroundColor: '#dcfce7' }]}>
+          <Text style={styles.conceptExampleText}>🧠 Si al inicio dijiste "tengo 12 años", la IA ya sabe que eres joven y adapta su respuesta sin que lo repitas</Text>
+        </View>
+      </View>
+
+      <View style={[styles.conceptCard, { backgroundColor: '#fffbeb', borderColor: '#fde68a' }]}>
+        <View style={[styles.conceptHeader, { backgroundColor: '#d97706' }]}>
+          <Text style={styles.conceptTitle}>🔮  La Predicción</Text>
+        </View>
+        <Text style={styles.conceptBody}>La IA <Text style={styles.bold}>no piensa una respuesta entera de golpe</Text>. Elige la mejor palabra siguiente, una por una — como un autocorrector súper inteligente.</Text>
+        <View style={[styles.conceptExample, { backgroundColor: '#fef3c7' }]}>
+          <Text style={styles.conceptExampleText}>⚡ "El animal más rápido es el ___" → la IA predice: <Text style={styles.bold}>"guepardo"</Text> y luego sigue palabra por palabra</Text>
+        </View>
+      </View>
+
+      <View style={[styles.conceptCard, { backgroundColor: '#f0fdfa', borderColor: '#99f6e4' }]}>
+        <View style={[styles.conceptHeader, { backgroundColor: '#0d9488' }]}>
+          <Text style={styles.conceptTitle}>💬  La Respuesta</Text>
+        </View>
+        <Text style={styles.conceptBody}>Al final, la IA <Text style={styles.bold}>junta todos los tokens que predijo</Text> y te los muestra como texto completo y coherente.</Text>
+        <View style={[styles.conceptExample, { backgroundColor: '#ccfbf1' }]}>
+          <Text style={styles.conceptExampleText}>✅ Todas esas palabras elegidas una por una forman la respuesta que lees en pantalla</Text>
+        </View>
+      </View>
+    </View>
+  );
+
   const renderSort = () => (
     <View style={styles.stepContainer}>
-      <Text style={[styles.tag, styles.tagSort]}>↕️ Módulo 9 de 15 · Ordenar</Text>
-      <Text style={styles.title}>El camino de tu pregunta en un LLM</Text>
-      <Text style={styles.subtitle}>Estos son los 5 pasos que ocurren desde que escribes hasta que aparece la respuesta. Están mezclados — ponlos en orden con ▲▼.</Text>
+      <Text style={[styles.tag, styles.tagSort]}>↕️ Módulo 10 de 16 · Ordenar</Text>
+      <Text style={styles.title}>¿En qué orden ocurre todo?</Text>
+      <Text style={styles.subtitle}>Ya conoces los 5 conceptos. Ahora ponlos en el orden en que ocurren dentro de la IA — de lo primero a lo último.</Text>
       <View style={styles.hintCard}>
-        <Text style={styles.hintCardText}>💡 Piensa: ¿qué necesita pasar <Text style={styles.italic}>primero</Text> para que el modelo pueda predecir algo? ¿Y qué es lo último que ocurre antes de que veas la respuesta?</Text>
+        <Text style={styles.hintCardText}>💡 Piensa: ¿qué necesita pasar <Text style={styles.italic}>antes</Text> de que la IA pueda predecir algo? ¿Y qué es lo último que ocurre?</Text>
       </View>
       {sortOrder.map((stepIdx, pos) => (
-        <View key={pos} style={styles.sortItem}>
+        <View key={pos} style={[styles.sortItem, sortWrongPositions.has(pos) && styles.sortItemWrong]}>
           <Text style={styles.sortNum}>{pos + 1}</Text>
           <Text style={styles.sortText}>
             <Text style={styles.bold}>{LLM_SORT_STEPS[stepIdx].bold}</Text>{LLM_SORT_STEPS[stepIdx].rest}
@@ -1100,7 +1270,7 @@ export default function GameLevel2() {
 
   const renderTF = () => (
     <View style={styles.stepContainer}>
-      <Text style={[styles.tag, styles.tagVF]}>✅ Módulo 10 de 15 · Verdadero o Falso</Text>
+      <Text style={[styles.tag, styles.tagVF]}>✅ Módulo 11 de 16 · Verdadero o Falso</Text>
       <Text style={styles.title}>Mitos y realidades de los LLMs</Text>
       <Text style={styles.subtitle}>Muchas ideas sobre los LLMs son falsas. Separa los mitos de la realidad.</Text>
       {tfItems.map((item, idx) => (
@@ -1129,7 +1299,7 @@ export default function GameLevel2() {
 
   const renderLLMCompare = () => (
     <View style={styles.stepContainer}>
-      <Text style={[styles.tag, styles.tagTheory]}>📖 Módulo 11 de 15 · Los 4 LLMs</Text>
+      <Text style={[styles.tag, styles.tagTheory]}>📖 Módulo 12 de 16 · Los 4 LLMs</Text>
       <Text style={styles.title}>ChatGPT, Claude, Gemini y Grok</Text>
       <Text style={styles.subtitle}>No todos los LLMs son iguales. Cada uno tiene fortalezas distintas. Conocerlos te permite elegir el correcto para cada tarea.</Text>
       {/* ChatGPT */}
@@ -1200,7 +1370,7 @@ export default function GameLevel2() {
 
   const renderLLMDrag = () => (
     <View style={styles.stepContainer}>
-      <Text style={[styles.tag, styles.tagActivity]}>🧩 Módulo 12 de 15 · ¿Qué LLM usarías?</Text>
+      <Text style={[styles.tag, styles.tagActivity]}>🧩 Módulo 13 de 16 · ¿Qué LLM usarías?</Text>
       <Text style={styles.title}>Asigna la herramienta correcta</Text>
       <Text style={styles.subtitle}>Basándote en lo que aprendiste, ¿qué LLM usarías para cada tarea?</Text>
       <View style={[styles.card, { backgroundColor: '#f8fafc', borderColor: '#e2e8f0' }]}>
@@ -1210,7 +1380,7 @@ export default function GameLevel2() {
         {llmItems.map((item, idx) => {
           if (llmPlaced[idx] !== undefined) return null;
           return (
-            <TouchableOpacity key={idx} style={[styles.chip, llmSel === idx && styles.chipSelected]} onPress={() => handleChipPressLLM(idx)}>
+            <TouchableOpacity key={idx} nativeID={`llm-chip-${idx}`} style={[styles.chip, llmSel === idx && styles.chipSelected]} onPress={() => handleChipPressLLM(idx)}>
               <Text style={styles.chipText}>{item.text}</Text>
             </TouchableOpacity>
           );
@@ -1222,7 +1392,7 @@ export default function GameLevel2() {
           <View style={[styles.llmDropHeaderBox, { backgroundColor: '#fef3c7' }]}>
             <Text style={[styles.llmDropHeaderText, { color: '#92400e' }]}>🟡 Claude</Text>
           </View>
-          <TouchableOpacity style={[styles.dropCol, { borderColor: '#fde68a', backgroundColor: '#fffbeb', flex: 0 }]} onPress={() => handleDropZoneLLM('claude')}>
+          <TouchableOpacity nativeID="llm-zone-claude" style={[styles.dropCol, { borderColor: dragOverLLMZone === 'claude' ? '#0ea5e9' : '#fde68a', backgroundColor: dragOverLLMZone === 'claude' ? '#e0f2fe' : '#fffbeb', flex: 0 }]} onPress={() => handleDropZoneLLM('claude')}>
             <View style={styles.dropChips}>
               {Object.entries(llmPlaced).map(([idx, zone]) => zone === 'claude' ? (
                 <TouchableOpacity key={idx} style={[styles.dropChip, { backgroundColor: '#fde68a40' }]} onPress={() => handleRemoveChipLLM(parseInt(idx))}>
@@ -1236,7 +1406,7 @@ export default function GameLevel2() {
           <View style={[styles.llmDropHeaderBox, { backgroundColor: '#d1fae5' }]}>
             <Text style={[styles.llmDropHeaderText, { color: '#065f46' }]}>🟢 ChatGPT</Text>
           </View>
-          <TouchableOpacity style={[styles.dropCol, { borderColor: '#6ee7b7', backgroundColor: '#f0fdf4', flex: 0 }]} onPress={() => handleDropZoneLLM('chatgpt')}>
+          <TouchableOpacity nativeID="llm-zone-chatgpt" style={[styles.dropCol, { borderColor: dragOverLLMZone === 'chatgpt' ? '#0ea5e9' : '#6ee7b7', backgroundColor: dragOverLLMZone === 'chatgpt' ? '#e0f2fe' : '#f0fdf4', flex: 0 }]} onPress={() => handleDropZoneLLM('chatgpt')}>
             <View style={styles.dropChips}>
               {Object.entries(llmPlaced).map(([idx, zone]) => zone === 'chatgpt' ? (
                 <TouchableOpacity key={idx} style={[styles.dropChip, { backgroundColor: '#d1fae560' }]} onPress={() => handleRemoveChipLLM(parseInt(idx))}>
@@ -1251,7 +1421,7 @@ export default function GameLevel2() {
       <View style={[styles.llmDropHeaderBox, { backgroundColor: '#dbeafe' }]}>
         <Text style={[styles.llmDropHeaderText, { color: '#1e40af' }]}>🔵 Gemini</Text>
       </View>
-      <TouchableOpacity style={[styles.dropCol, { borderColor: '#93c5fd', backgroundColor: '#eff6ff' }]} onPress={() => handleDropZoneLLM('gemini')}>
+      <TouchableOpacity nativeID="llm-zone-gemini" style={[styles.dropCol, { borderColor: dragOverLLMZone === 'gemini' ? '#0ea5e9' : '#93c5fd', backgroundColor: dragOverLLMZone === 'gemini' ? '#e0f2fe' : '#eff6ff' }]} onPress={() => handleDropZoneLLM('gemini')}>
         <View style={styles.dropChips}>
           {Object.entries(llmPlaced).map(([idx, zone]) => zone === 'gemini' ? (
             <TouchableOpacity key={idx} style={[styles.dropChip, { backgroundColor: '#dbeafe60' }]} onPress={() => handleRemoveChipLLM(parseInt(idx))}>
@@ -1270,7 +1440,7 @@ export default function GameLevel2() {
     const parts = fillItem.sentence.split('<b>___</b>');
     return (
       <View style={styles.stepContainer}>
-        <Text style={[styles.tag, styles.tagVocab]}>💬 Módulo 13 de 15 · Vocabulario IA</Text>
+        <Text style={[styles.tag, styles.tagVocab]}>💬 Módulo 14 de 16 · Vocabulario IA</Text>
         <Text style={styles.title}>El vocabulario que necesitas</Text>
         <Text style={styles.subtitle}>Los expertos en IA usan términos específicos. Aprende el más importante de este nivel.</Text>
         <View style={[styles.card, { backgroundColor: '#faf5ff', borderColor: '#e9d5ff' }]}>
@@ -1315,38 +1485,44 @@ export default function GameLevel2() {
 
   const renderPromptCompare = () => (
     <View style={styles.stepContainer}>
-      <Text style={[styles.tag, styles.tagPrompt]}>🔍 Módulo 14 de 15 · Prompts</Text>
+      <Text style={[styles.tag, styles.tagPrompt]}>🔍 Módulo 15 de 16 · Prompts</Text>
       <Text style={styles.title}>¿Cuál prompt es mejor?</Text>
       <Text style={styles.subtitle}>Para la misma tarea, un buen prompt da resultados 10x mejores que uno vago. ¿Puedes identificar cuál es cuál?</Text>
       <View style={styles.hintCard}>
         <Text style={styles.hintCardText}>👆 Toca el prompt que crees que daría mejor resultado en cada situación</Text>
       </View>
-      {promptItems.map((item, idx) => (
-        <View key={idx} style={styles.promptSet}>
-          <Text style={styles.promptTask}>🎯 Tarea: {item.task}</Text>
-          <TouchableOpacity
-            style={[styles.promptCard, promptSels[idx] === 'bad' && styles.promptCardSelected]}
-            onPress={() => selectPrompt(idx, 'bad')}
-            disabled={promptsChecked}
-          >
-            <Text style={[styles.promptLabel, { color: '#ef4444' }]}>Prompt A:</Text>
-            <Text style={styles.promptText}>{item.bad}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.promptCard, promptSels[idx] === 'good' && styles.promptCardSelected]}
-            onPress={() => selectPrompt(idx, 'good')}
-            disabled={promptsChecked}
-          >
-            <Text style={[styles.promptLabel, { color: '#10b981' }]}>Prompt B:</Text>
-            <Text style={styles.promptText}>{item.good}</Text>
-          </TouchableOpacity>
-          {promptsChecked && (
-            <View style={[styles.resultBanner, promptSels[idx] === 'good' ? styles.resultBannerOk : styles.resultBannerErr]}>
-              <Text style={styles.resultBannerText}>{promptSels[idx] === 'good' ? `✓ ¡Correcto! El Prompt B es mucho mejor. ${item.explain}` : `✗ El Prompt B es el correcto. ${item.explain}`}</Text>
-            </View>
-          )}
-        </View>
-      ))}
+      {promptItems.map((item, idx) => {
+        const flipped = promptFlipped[idx];
+        const optA = { text: flipped ? item.good : item.bad, kind: flipped ? 'good' : 'bad' as 'good' | 'bad' };
+        const optB = { text: flipped ? item.bad : item.good, kind: flipped ? 'bad' : 'good' as 'good' | 'bad' };
+        const correctLabel = flipped ? 'A' : 'B';
+        return (
+          <View key={idx} style={styles.promptSet}>
+            <Text style={styles.promptTask}>🎯 Tarea: {item.task}</Text>
+            <TouchableOpacity
+              style={[styles.promptCard, promptSels[idx] === optA.kind && styles.promptCardSelected]}
+              onPress={() => selectPrompt(idx, optA.kind)}
+              disabled={promptsChecked}
+            >
+              <Text style={[styles.promptLabel, { color: '#0ea5e9' }]}>Prompt A:</Text>
+              <Text style={styles.promptText}>{optA.text}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.promptCard, promptSels[idx] === optB.kind && styles.promptCardSelected]}
+              onPress={() => selectPrompt(idx, optB.kind)}
+              disabled={promptsChecked}
+            >
+              <Text style={[styles.promptLabel, { color: '#0ea5e9' }]}>Prompt B:</Text>
+              <Text style={styles.promptText}>{optB.text}</Text>
+            </TouchableOpacity>
+            {promptsChecked && (
+              <View style={[styles.resultBanner, promptSels[idx] === 'good' ? styles.resultBannerOk : styles.resultBannerErr]}>
+                <Text style={styles.resultBannerText}>{promptSels[idx] === 'good' ? `✓ ¡Correcto! El Prompt ${correctLabel} es el mejor. ${item.explain}` : `✗ El Prompt ${correctLabel} era el correcto. ${item.explain}`}</Text>
+              </View>
+            )}
+          </View>
+        );
+      })}
       <View style={styles.highlightBoxBlue}>
         <Text style={styles.highlightTextBlue}><Text style={styles.bold}>💡 Lo que vas a aprender en el Nivel 3:</Text> El arte del prompting completo — cómo darle rol, contexto, formato y restricciones a un LLM para obtener exactamente lo que necesitas.</Text>
       </View>
@@ -1433,34 +1609,48 @@ export default function GameLevel2() {
       case 6: return renderTheoryLLM();
       case 7: return renderCase();
       case 8: return renderQuiz();
-      case 9: return renderSort();
-      case 10: return renderTF();
-      case 11: return renderLLMCompare();
-      case 12: return renderLLMDrag();
-      case 13: return renderVocab();
-      case 14: return renderPromptCompare();
-      case 15: return renderReflect();
-      case 16: return renderCompletion();
+      case 9: return renderLLMHowItWorks();
+      case 10: return renderSort();
+      case 11: return renderTF();
+      case 12: return renderLLMCompare();
+      case 13: return renderLLMDrag();
+      case 14: return renderVocab();
+      case 15: return renderPromptCompare();
+      case 16: return renderReflect();
+      case 17: return renderCompletion();
       default: return null;
     }
   };
 
   const progressPercent = (step / (TOTAL_STEPS - 1)) * 100;
-  const showNextButton = step < TOTAL_STEPS - 1 && ![3, 5, 8, 9, 10, 12, 13, 14, 15].includes(step);
+  const showNextButton = step < TOTAL_STEPS - 1 && ![3, 5, 8, 10, 11, 13, 14, 15, 16].includes(step);
   const getNextLabel = (s: number): string => {
     if (s === 0) return '¡Empecemos! 🚀';
-    if ([1, 4, 11].includes(s)) return 'Entendido →';
+    if ([1, 4, 9, 12].includes(s)) return 'Entendido →';
     if (s === 2) return '¡Las vi todas! →';
     if (s === 6) return 'Entendido, sigamos →';
     return 'Continuar →';
   };
-  const THEORY_STEPS_L2 = new Set([1, 2, 4, 6, 7, 11]);
+  const THEORY_STEPS_L2 = new Set([1, 2, 4, 6, 7, 9, 12]);
   const showBackButton = step > 0 && THEORY_STEPS_L2.has(step) && showNextButton;
   const goToPrevStep = () => { setStepResult(null); setStep(s => s - 1); };
 
   const progLabel = step === 0 ? 'Introducción'
     : step < TOTAL_STEPS - 1 ? `Módulo ${step} de ${CONTENT_STEPS}`
     : '¡Nivel completado!';
+
+  const getBtnNote = (): string => {
+    if (step === 0) return 'Tiempo estimado: 40-50 min · hasta 160 XP';
+    if (step === 2) return 'Toca cada app para ver qué hace la IA por dentro 👆';
+    if (step === 3) return 'Toca un chip → toca la columna. O arrástralo directo. 👇';
+    if (step === 8 && !quizChecked) return `Responde las ${quizQuestions.length} preguntas · hasta ${quizQuestions.length * 8} XP`;
+    if (step === 11 && !tfChecked) return `Responde las ${tfItems.length} afirmaciones · hasta ${tfItems.length * 5} XP`;
+    if (step === 13) return 'Toca un chip → toca el modelo correcto. 👇';
+    if (step === 14 && !fillChecked) return 'Elige la palabra que completa la frase · +10 XP';
+    if (step === 15 && !promptsChecked) return `Elige el mejor prompt en cada situación · hasta ${promptItems.length * 8} XP`;
+    if (step === 16) return 'Escribe al menos 70 caracteres · +15 XP';
+    return '';
+  };
 
   return (
     <View style={styles.screen}>
@@ -1485,16 +1675,21 @@ export default function GameLevel2() {
         </View>
       )}
       {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} />}
-      <View style={styles.footerRow}>
-        {showBackButton && (
-          <TouchableOpacity style={styles.backButton} onPress={goToPrevStep}>
-            <Text style={styles.backButtonText}>← Volver</Text>
-          </TouchableOpacity>
-        )}
-        {showNextButton && (
-          <TouchableOpacity style={[styles.nextButton, showBackButton && styles.nextButtonFlex]} onPress={goToNextStep}>
-            <Text style={styles.nextButtonText}>{getNextLabel(step)}</Text>
-          </TouchableOpacity>
+      <View style={styles.btnRow}>
+        <View style={styles.btnRowInner}>
+          {showBackButton && (
+            <TouchableOpacity style={styles.backButton} onPress={goToPrevStep}>
+              <Text style={styles.backButtonText}>← Volver</Text>
+            </TouchableOpacity>
+          )}
+          {showNextButton && (
+            <TouchableOpacity style={styles.nextButton} onPress={goToNextStep}>
+              <Text style={styles.nextButtonText}>{getNextLabel(step)}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+        {getBtnNote() !== '' && (
+          <Text style={styles.btnNote}>{getBtnNote()}</Text>
         )}
       </View>
     </View>
@@ -1557,15 +1752,16 @@ const styles = StyleSheet.create({
   highlightBoxAmber: { borderLeftWidth: 3, borderLeftColor: '#f59e0b', padding: 11, backgroundColor: '#fffbeb', marginVertical: 10, borderRadius: 4 },
   highlightTextAmber: { ...typography.regular, fontSize: 13, color: '#92400e', lineHeight: 20 },
   // Expandable app cards (módulo 2)
-  exCard: { borderRadius: 14, borderWidth: 1, borderColor: colors.border, marginBottom: 8, padding: 12, backgroundColor: colors.surface },
+  exCard: { borderRadius: 14, borderWidth: 1, borderColor: '#e2e8f0', marginBottom: 8, padding: 12, backgroundColor: colors.surface },
+  exCardOpen: { borderColor: '#0ea5e9', backgroundColor: '#f0f9ff' },
   exHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  exEmoji: { width: 40, height: 40, backgroundColor: colors.surfaceVariant, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+  exEmoji: { width: 40, height: 40, backgroundColor: '#f1f5f9', borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
   exEmojiText: { fontSize: 22 },
   exInfo: { flex: 1 },
-  exName: { ...typography.bold, fontSize: 13, color: colors.textPrimary },
-  exSub: { ...typography.regular, fontSize: 11, color: colors.textSecondary, marginTop: 1 },
-  exArr: { fontSize: 17, color: colors.textSecondary },
-  exBody: { marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.border },
+  exName: { ...typography.bold, fontSize: 13, color: '#0f172a' },
+  exSub: { ...typography.regular, fontSize: 11, color: '#64748b', marginTop: 1 },
+  exArr: { fontSize: 17, color: '#94a3b8' },
+  exBody: { marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#e0f2fe' },
   exTag: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, fontSize: 10, fontWeight: '700', marginBottom: 8 },
   exHow: { ...typography.regular, fontSize: 12, color: colors.textPrimary, lineHeight: 19, marginBottom: 8 },
   exFact: { backgroundColor: '#fffbeb', padding: 8, borderRadius: 8, borderWidth: 1, borderColor: '#fde68a' },
@@ -1627,10 +1823,27 @@ const styles = StyleSheet.create({
   quizOptText: { flex: 1, ...typography.regular, fontSize: 13, color: colors.textPrimary },
   // Sort
   sortItem: { flexDirection: 'row', alignItems: 'center', padding: 11, backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.border, marginBottom: 8 },
+  sortItemWrong: { borderColor: '#ef4444', backgroundColor: '#fff1f2' },
   sortNum: { width: 26, height: 26, borderRadius: 13, backgroundColor: '#0ea5e9', color: '#fff', textAlign: 'center', lineHeight: 26, ...typography.bold, fontSize: 11, marginRight: 9 },
   sortText: { flex: 1, ...typography.regular, fontSize: 12, color: colors.textPrimary },
   sortArrows: { flexDirection: 'column', gap: 3 },
   sortBtn: { width: 28, height: 26, borderRadius: 7, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, justifyContent: 'center', alignItems: 'center' },
+  conceptCard: { borderRadius: 12, borderWidth: 1, marginBottom: 10, overflow: 'hidden' },
+  conceptHeader: { paddingVertical: 9, paddingHorizontal: 12 },
+  conceptTitle: { ...typography.bold, fontSize: 13, color: '#fff' },
+  conceptBody: { ...typography.regular, fontSize: 12, color: '#334155', padding: 12, paddingBottom: 8, lineHeight: 18 },
+  conceptExample: { backgroundColor: 'rgba(0,0,0,0.05)', marginHorizontal: 10, marginBottom: 10, padding: 9, borderRadius: 8 },
+  conceptExampleText: { ...typography.regular, fontSize: 11, color: '#475569', lineHeight: 17 },
+  sortTheory: { backgroundColor: '#f0f9ff', borderRadius: 12, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: '#bae6fd' },
+  sortTheoryRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 8 },
+  sortTheoryBadge: { width: 22, height: 22, borderRadius: 11, backgroundColor: '#0ea5e9', justifyContent: 'center', alignItems: 'center', flexShrink: 0, marginTop: 2 },
+  sortTheoryBadgeText: { ...typography.bold, fontSize: 10, color: '#fff' },
+  sortTheoryEmoji: { fontSize: 15, marginTop: 2 },
+  sortTheoryInfo: { flex: 1 },
+  sortTheoryLabel: { ...typography.bold, fontSize: 12, color: '#0f172a' },
+  sortTheoryDesc: { ...typography.regular, fontSize: 11, color: '#64748b', marginTop: 1 },
+  sortChallenge: { backgroundColor: '#fef3c7', borderRadius: 10, padding: 9, marginBottom: 10, borderWidth: 1, borderColor: '#fcd34d' },
+  sortChallengeText: { ...typography.bold, fontSize: 12, color: '#92400e', textAlign: 'center' },
   // TF
   tfSet: { marginBottom: 14 },
   tfQuestion: { ...typography.bold, fontSize: 13, color: colors.textPrimary, marginBottom: 8, padding: 11, backgroundColor: colors.surfaceVariant, borderRadius: 10 },
@@ -1684,10 +1897,11 @@ const styles = StyleSheet.create({
   resultBannerErr: { backgroundColor: '#fee2e2', borderColor: colors.error },
   resultBannerText: { ...typography.bold, fontSize: 13, color: colors.textPrimary, lineHeight: 20 },
   // Footer
-  footerRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 16, gap: 8 },
-  nextButton: { backgroundColor: '#0ea5e9', padding: 14, margin: 16, borderRadius: 11, alignItems: 'center' },
-  nextButtonText: { ...typography.bold, color: '#fff', fontSize: 15 },
-  nextButtonFlex: { flex: 1, margin: 0 },
-  backButton: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, padding: 14, borderRadius: 11, alignItems: 'center', paddingHorizontal: 20 },
-  backButtonText: { ...typography.bold, color: colors.textSecondary, fontSize: 15 },
+  btnRow: { paddingVertical: 12, paddingHorizontal: 13, borderTopWidth: 1, borderTopColor: '#f1f5f9', backgroundColor: '#fafcff' },
+  btnRowInner: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+  nextButton: { flex: 1, backgroundColor: '#0ea5e9', padding: 13, borderRadius: 12, alignItems: 'center', justifyContent: 'center', minHeight: 48 },
+  nextButtonText: { ...typography.bold, color: '#fff', fontSize: 14, letterSpacing: 0.01 },
+  backButton: { backgroundColor: '#f1f5f9', borderWidth: 1.5, borderColor: '#e2e8f0', paddingVertical: 13, paddingHorizontal: 16, borderRadius: 12, alignItems: 'center', justifyContent: 'center', minHeight: 48 },
+  backButtonText: { ...typography.bold, color: '#64748b', fontSize: 14 },
+  btnNote: { fontSize: 11, color: '#94a3b8', textAlign: 'center', marginTop: 5, minHeight: 15 },
 });

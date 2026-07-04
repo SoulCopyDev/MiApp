@@ -17,23 +17,9 @@ import { colors, typography } from '../theme';
 import XPToast from '../components/XPToast';
 
 // ---------- Tipos y constantes ----------
-interface Question {
-  q: string;
-  opts: string[];
-  correct: number;
-  explain: string;
-}
-
 interface TFItem {
   stmt: string;
   correct: boolean;
-  explain: string;
-}
-
-interface PromptItem {
-  task: string;
-  bad: string;
-  good: string;
   explain: string;
 }
 
@@ -52,6 +38,7 @@ interface BuilderArea {
 }
 
 const TOTAL_STEPS = 20; // 0:intro, 1-18: módulos, 19: complete
+const CONTENT_STEPS = 18;
 
 // Pools de datos extraídos del HTML
 const CREATION_TYPES: CreationType[] = [
@@ -82,21 +69,22 @@ const COMPARE_TASK = {
   task: 'Ayúdame a escribir una disculpa sincera para un amigo con el que me peleé',
   resultA: 'Lamentablemente, entiendo que hayan tenido un conflicto. Te sugiero expresar tus sentimientos de forma honesta y empática, reconociendo tu parte en el malentendido.',
   resultB: '"Oye, quería hablar contigo. Sé que dije cosas que te hirieron y no era mi intención. Valoro mucho nuestra amistad. ¿Podemos hablar?"',
+  options: ['Respuesta A — más formal y elaborada', 'Respuesta B — directa y lista para usar', 'Ambas son igual de útiles', 'Ninguna, el prompt era malo'],
   correct: 1, // B es correcta
   explain: 'La B es directamente usable — ya es el texto que se pidió. La A da consejos en lugar de escribir la disculpa. El mismo prompt en distintas herramientas puede dar utilidades muy diferentes.',
 };
 
 const VF_POOL: TFItem[] = [
-  { stmt: 'Si la IA da una respuesta que no te gusta, no tiene sentido intentarlo de nuevo.', correct: false, explain: 'Falso. Reformular el prompt o pedir que "mejore" la respuesta anterior casi siempre da mejores resultados.' },
-  { stmt: 'La IA puede crear imágenes con solo una descripción en texto.', correct: true, explain: 'Verdadero. Herramientas como DALL-E, Midjourney o Adobe Firefly generan imágenes a partir de texto.' },
-  { stmt: 'Es imposible usar IA para estudiar materias escolares.', correct: false, explain: 'Falso. La IA es una de las mejores herramientas para estudiar: explica conceptos, da ejemplos, hace preguntas de práctica.' },
-  { stmt: 'Pedirle a la IA que "mejore" su propia respuesta puede dar mejores resultados.', correct: true, explain: 'Verdadero. Frases como "hazlo más corto" o "agrega un ejemplo práctico" activan el refinamiento.' },
-  { stmt: 'La IA recuerda todo lo que le contaste en sesiones anteriores.', correct: false, explain: 'Falso. Cada sesión nueva empieza desde cero.' },
+  { stmt: 'Si la IA da una respuesta que no te gusta, no tiene sentido intentarlo de nuevo.', correct: false, explain: 'Falso. Reformular el prompt o pedir que "mejore" la respuesta anterior casi siempre da mejores resultados. La iteración es parte fundamental del proceso.' },
+  { stmt: 'La IA puede crear imágenes con solo una descripción en texto.', correct: true, explain: 'Verdadero. Herramientas como DALL-E, Midjourney o Adobe Firefly generan imágenes a partir de texto. Más detalle = mejor resultado.' },
+  { stmt: 'Es imposible usar IA para estudiar materias escolares.', correct: false, explain: 'Falso. La IA es una de las mejores herramientas para estudiar: explica conceptos de formas distintas, da ejemplos, hace preguntas de práctica y resume textos largos.' },
+  { stmt: 'Pedirle a la IA que "mejore" su propia respuesta puede dar mejores resultados.', correct: true, explain: 'Verdadero. Frases como "hazlo más corto" o "agrega un ejemplo práctico" activan el refinamiento. Es una de las habilidades más útiles del prompting.' },
+  { stmt: 'La IA recuerda todo lo que le contaste en sesiones anteriores.', correct: false, explain: 'Falso. Cada sesión nueva empieza desde cero. Si cierras la ventana, la IA no recuerda la conversación anterior.' },
   { stmt: 'Cuanto más específico es tu prompt, más útil suele ser la respuesta.', correct: true, explain: 'Verdadero. Especificar rol, audiencia, formato y objetivo es la regla de oro del prompting.' },
-  { stmt: 'Si le pides a la IA información del futuro, dirá claramente que no sabe.', correct: false, explain: 'Falso. La IA puede alucinar información inventada. Siempre verifica datos factuales.' },
-  { stmt: 'Solo adultos con conocimientos técnicos pueden usar herramientas de IA generativa.', correct: false, explain: 'Falso. Las interfaces están diseñadas para cualquier persona.' },
-  { stmt: 'Un prompt muy largo siempre da mejor resultado que uno corto.', correct: false, explain: 'Falso. La calidad depende de la claridad, no del largo.' },
-  { stmt: 'La IA puede ayudarte a crear un personaje de videojuego con poderes, historia y apariencia.', correct: true, explain: 'Verdadero. Puedes pedir nombre, backstory, habilidades, debilidades y frase icónica.' },
+  { stmt: 'Si le pides a la IA información del futuro, dirá claramente que no sabe.', correct: false, explain: 'Falso. Este es el fenómeno de alucinación. La IA puede generar texto que suena plausible pero es inventado. Siempre verifica datos factuales importantes.' },
+  { stmt: 'Solo adultos con conocimientos técnicos pueden usar herramientas de IA generativa.', correct: false, explain: 'Falso. Las interfaces de ChatGPT, Claude y Gemini están diseñadas para cualquier persona. Solo necesitas una cuenta y saber escribir lo que quieres.' },
+  { stmt: 'Un prompt muy largo siempre da mejor resultado que uno corto.', correct: false, explain: 'Falso. La calidad depende de la claridad, no del largo. Un prompt de 15 palabras bien construido supera a uno de 200 palabras confuso.' },
+  { stmt: 'La IA puede ayudarte a crear un personaje de videojuego con poderes, historia y apariencia.', correct: true, explain: 'Verdadero. Es uno de los usos más creativos. Puedes pedir nombre, backstory, habilidades, debilidades y frase icónica — todo en un prompt.' },
 ];
 
 const SPRINT_TASKS_1 = [
@@ -107,12 +95,102 @@ const SPRINT_TASKS_1 = [
   '🦁 Prompt para que la IA explique qué sueñan los leones',
 ];
 
+const GIFTS = [
+  '🎁 Regalo 1: ¿Para quién? Diseña el prompt de su regalo digital',
+  '🎁 Regalo 2: Otra persona querida — ¿qué le crearías con IA?',
+  '🎁 Regalo 3: Un mensaje especial — construye el prompt para sorprenderle',
+];
+
 const pickN = <T,>(arr: T[], n: number): T[] => {
   const shuffled = [...arr].sort(() => Math.random() - 0.5);
   return shuffled.slice(0, n);
 };
 
-export default function World1Level4() {
+
+const TAG_STYLES: Record<string, { bg: string; color: string }> = {
+  intro: { bg: '#ecfdf5', color: '#065f46' },
+  theory: { bg: '#fdf4ff', color: '#7e22ce' },
+  lab: { bg: '#eff6ff', color: '#1e40af' },
+  build: { bg: '#fef9c3', color: '#713f12' },
+  cases: { bg: '#fff7ed', color: '#c2410c' },
+  sprint: { bg: '#fdf2f8', color: '#9d174d' },
+  compare: { bg: '#f0fdf4', color: '#166534' },
+  vf: { bg: '#fff1f2', color: '#9f1239' },
+  reflect: { bg: '#f8fafc', color: '#475569' },
+  gallery: { bg: '#f5f3ff', color: '#5b21b6' },
+};
+
+const CARD_STYLES: Record<string, { bg: string; border: string }> = {
+  green: { bg: '#f0fdf4', border: '#bbf7d0' },
+  blue: { bg: '#eff6ff', border: '#bfdbfe' },
+  purple: { bg: '#faf5ff', border: '#e9d5ff' },
+  amber: { bg: '#fffbeb', border: '#fde68a' },
+  orange: { bg: '#fff7ed', border: '#fed7aa' },
+  red: { bg: '#fff1f2', border: '#fecdd3' },
+  slate: { bg: '#f8fafc', border: '#e2e8f0' },
+};
+
+const HL_STYLES: Record<string, { border: string; bg: string; color: string }> = {
+  green: { border: '#10b981', bg: '#f0fdf4', color: '#065f46' },
+  purple: { border: '#8b5cf6', bg: '#faf5ff', color: '#5b21b6' },
+  orange: { border: '#f97316', bg: '#fff7ed', color: '#c2410c' },
+  blue: { border: '#3b82f6', bg: '#eff6ff', color: '#1e40af' },
+  amber: { border: '#f59e0b', bg: '#fffbeb', color: '#92400e' },
+  red: { border: '#ef4444', bg: '#fff1f2', color: '#991b1b' },
+};
+
+// ---------- Subcomponentes ----------
+function Tag({ variant, children }: { variant: keyof typeof TAG_STYLES; children: React.ReactNode }) {
+  const t = TAG_STYLES[variant];
+  return (
+    <View style={[styles.tag, { backgroundColor: t.bg }]}>
+      <Text style={[styles.tagText, { color: t.color }]}>{children}</Text>
+    </View>
+  );
+}
+
+function Hl({ variant, children }: { variant: keyof typeof HL_STYLES; children: React.ReactNode }) {
+  const h = HL_STYLES[variant];
+  return (
+    <View style={{ borderLeftWidth: 3, borderLeftColor: h.border, backgroundColor: h.bg, padding: 12, borderRadius: 4, marginVertical: 10 }}>
+      <Text style={{ fontSize: 12, color: h.color, lineHeight: 20, fontWeight: '500' }}>{children}</Text>
+    </View>
+  );
+}
+
+function InfoCard({ variant, icon, iconBg, title, children }: { variant: keyof typeof CARD_STYLES; icon: string; iconBg: string; title: string; children: React.ReactNode }) {
+  const c = CARD_STYLES[variant];
+  return (
+    <View style={[styles.card, { backgroundColor: c.bg, borderColor: c.border }]}>
+      <View style={styles.cardRow}>
+        <View style={[styles.cardIcon, { backgroundColor: iconBg }]}><Text style={{ fontSize: 18 }}>{icon}</Text></View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.cardTitle}>{title}</Text>
+          <Text style={styles.cardText}>{children}</Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function TipBox({ children }: { children: React.ReactNode }) {
+  return (
+    <View style={styles.tipBox}>
+      <Text style={styles.tipBoxText}>{children}</Text>
+    </View>
+  );
+}
+
+interface LevelProps {
+  navigation?: any;
+  setAllowBack?: (allow: boolean) => void;
+}
+
+export default function World1Level4({ navigation: propsNavigation, setAllowBack }: LevelProps) {
+  const navigationFromHook = useNavigation();
+  const navigation = propsNavigation || navigationFromHook;
+
+
   const [step, setStep] = useState(0);
   const [xp, setXp] = useState(0);
   const completeLevel = useGameStore((state) => state.completeLevel);
@@ -147,20 +225,23 @@ export default function World1Level4() {
 
   // Sprint 1 (step 8)
   const [sprint1Started, setSprint1Started] = useState(false);
-  const [sprint1Idx, setSprint1Idx] = useState(0);
+  const [sprint1Done, setSprint1Done] = useState(0);
   const [sprint1Sec, setSprint1Sec] = useState(120);
   const [sprint1Finished, setSprint1Finished] = useState(false);
 
   // Compare (step 9)
   const [compareSelected, setCompareSelected] = useState<number | null>(null);
-  const [compareChecked, setCompareChecked] = useState(false);
+  const [compareAnswered, setCompareAnswered] = useState(false);
 
   // Reflexión 1 (step 10)
   const [reflect1, setReflect1] = useState('');
 
   // V/F (step 12)
-  const [tfAnswers, setTfAnswers] = useState<{ [key: number]: boolean }>({});
-  const [tfChecked, setTfChecked] = useState(false);
+  const [vfIdx, setVfIdx] = useState(0);
+  const [vfScore, setVfScore] = useState(0);
+  const [vfAnswered, setVfAnswered] = useState(false);
+  const [vfSelected, setVfSelected] = useState<boolean | null>(null);
+  const [vfDone, setVfDone] = useState(false);
 
   // Builder iteración (step 13)
   const [iterText, setIterText] = useState('');
@@ -168,7 +249,7 @@ export default function World1Level4() {
 
   // Sprint 2 (step 14)
   const [sprint2Started, setSprint2Started] = useState(false);
-  const [sprint2Idx, setSprint2Idx] = useState(0);
+  const [sprint2Done, setSprint2Done] = useState(0);
   const [sprint2Sec, setSprint2Sec] = useState(180);
   const [sprint2Finished, setSprint2Finished] = useState(false);
 
@@ -181,8 +262,9 @@ export default function World1Level4() {
   // Reflexión cierre (step 18)
   const [reflect3, setReflect3] = useState('');
 
-  // Modo examen (bloquear retroceso)
-  const isExamMode = ![0, 2, 6, 11, 16, 19].includes(step);
+  // Modo examen (bloquear retroceso) — coincide con THEORY_STEPS del HTML
+  const NON_EXAM = [0, 1, 2, 6, 11, 16];
+  const isExamMode = !NON_EXAM.includes(step);
   const THEORY_STEPS = new Set([1, 2, 6, 11, 16]);
   const goToPrevStep = () => { setStep(s => s - 1); };
 
@@ -304,42 +386,58 @@ export default function World1Level4() {
     addXP(10);
   };
 
+  // V/F handlers (secuencial)
+  const answerVF = (ans: boolean) => {
+    if (vfAnswered) return;
+    setVfSelected(ans);
+    setVfAnswered(true);
+    if (ans === vfItems[vfIdx].correct) setVfScore(prev => prev + 1);
+  };
+  const nextVF = () => {
+    if (vfIdx + 1 >= vfItems.length) {
+      setVfDone(true);
+      addXP(vfScore * 8);
+    } else {
+      setVfIdx(prev => prev + 1);
+      setVfAnswered(false);
+      setVfSelected(null);
+    }
+  };
+
+  // Sprint handlers
+  const sprint1Next = () => {
+    setSprint1Done(prev => {
+      const n = prev + 1;
+      if (n >= SPRINT_TASKS_1.length) setSprint1Finished(true);
+      return n;
+    });
+  };
+  const sprint2Next = () => {
+    setSprint2Done(prev => {
+      const n = prev + 1;
+      if (n >= GIFTS.length) setSprint2Finished(true);
+      return n;
+    });
+  };
+
   // ========== RENDERIZADO DE CADA PASO ==========
 
   const renderIntro = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.tag}>Nivel 4 · 18 módulos</Text>
+      <Tag variant="intro">Nivel 4 · 18 módulos</Tag>
       <View style={styles.iconContainer}><Text style={styles.iconEmoji}>🚀</Text></View>
       <Text style={styles.title}>¡Crea algo con IA Hoy!</Text>
-      <Text style={styles.subtitle}>Hasta ahora aprendiste qué es la IA y cómo hablarle. Hoy das el siguiente paso: crear algo real con ella.</Text>
-      <View style={styles.card}>
-        <View style={styles.cardRow}>
-          <Text style={styles.cardIcon}>🎯</Text>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.cardTitle}>Qué vas a hacer hoy</Text>
-            <Text style={styles.cardText}>Crear una historia · Generar una imagen con palabras · Pedir que te explique algo difícil · Comparar dos herramientas · Guardar tu galería de creaciones</Text>
-          </View>
-        </View>
-      </View>
-      <View style={styles.card}>
-        <View style={styles.cardRow}>
-          <Text style={styles.cardIcon}>⚡</Text>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.cardTitle}>Lo que necesitas</Text>
-            <Text style={styles.cardText}>Una cuenta en ChatGPT o Claude (gratis). Si aún no tienes, el módulo 2 te guía paso a paso.</Text>
-          </View>
-        </View>
-      </View>
-      <View style={styles.highlightBox}>
-        <Text style={styles.highlightText}><Text style={styles.bold}>De aprender sobre la IA a crear con ella.</Text> Este es el cambio más importante del curso.</Text>
-      </View>
+      <Text style={styles.subtitle}>Hasta ahora aprendiste <Text style={styles.italic}>qué</Text> es la IA y <Text style={styles.italic}>cómo</Text> hablarle. Hoy das el siguiente paso: crear algo real con ella.</Text>
+      <InfoCard variant="green" icon="🎯" iconBg="#bbf7d0" title="Qué vas a hacer hoy">Crear una historia · Generar una imagen con palabras · Pedir que te explique algo difícil · Comparar dos herramientas · Guardar tu galería de creaciones</InfoCard>
+      <InfoCard variant="blue" icon="⚡" iconBg="#bfdbfe" title="Lo que necesitas">Una cuenta en <Text style={styles.bold}>ChatGPT</Text> o <Text style={styles.bold}>Claude</Text> (gratis). Si aún no tienes, el módulo 2 te guía paso a paso.</InfoCard>
+      <Hl variant="green"><Text style={styles.bold}>De aprender sobre la IA a crear con ella.</Text> Este es el cambio más importante del curso.</Hl>
     </View>
   );
 
   const renderCreationSelector = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.tag}>🎨 Módulo 1 · Clasificador</Text>
-      <Text style={styles.title}>¿Qué puedo crear con IA?</Text>
+      <Tag variant="lab">🎨 Módulo 1 · Clasificador</Tag>
+      <Text style={styles.titleSm}>¿Qué puedo crear con IA?</Text>
       <Text style={styles.subtitle}>Toca los tipos de creación que más te llamen la atención.</Text>
       <View style={styles.grid2Cols}>
         {CREATION_TYPES.map((t, i) => (
@@ -357,52 +455,51 @@ export default function World1Level4() {
         ))}
       </View>
       {creationSel.length > 0 && (
-        <View style={styles.highlightBox}>
-          <Text style={styles.highlightText}><Text style={styles.bold}>{creationSel.length} tipo(s) seleccionado(s).</Text> Todos estos los crearás antes de terminar el curso.</Text>
-        </View>
+        <Hl variant="green"><Text style={styles.bold}>{creationSel.length} tipo{creationSel.length > 1 ? 's' : ''} seleccionado{creationSel.length > 1 ? 's' : ''}.</Text> Todos estos los crearás antes de terminar el curso.</Hl>
       )}
-      <TouchableOpacity
-        style={[styles.checkButton, (creationSel.length === 0 && !devMode) && styles.disabledButton]}
-        onPress={() => { if (devMode || creationSel.length > 0) { addXP(5); goToNextStep(); } }}
-        disabled={creationSel.length === 0 && !devMode}
-      >
-        <Text style={styles.checkButtonText}>Continuar →</Text>
-      </TouchableOpacity>
+      <View style={styles.inlineFooter}>
+        <TouchableOpacity style={styles.backButton} onPress={goToPrevStep}>
+          <Text style={styles.backButtonText}>← Volver</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.checkButtonFlex, (creationSel.length === 0 && !devMode) && styles.disabledButton]}
+          onPress={() => { if (devMode || creationSel.length > 0) goToNextStep(); }}
+          disabled={creationSel.length === 0 && !devMode}
+        >
+          <Text style={styles.checkButtonText}>Continuar →</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 
   const renderAccountGuide = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.tag}>📱 Módulo 2 · Guía práctica</Text>
-      <Text style={styles.title}>Tu primera cuenta en ChatGPT o Claude</Text>
+      <Tag variant="cases">📱 Módulo 2 · Guía práctica</Tag>
+      <Text style={styles.titleSm}>Tu primera cuenta en ChatGPT o Claude</Text>
       <Text style={styles.subtitle}>Ambas son gratuitas. Elige una y sigue los pasos.</Text>
       <View style={styles.stepList}>
-        {['Ve a chat.openai.com (ChatGPT) o claude.ai (Claude)', 'Toca "Sign up" o "Registrarse"', 'Ingresa tu correo y crea contraseña. No necesitas tarjeta.', 'Confirma tu correo (revisa tu bandeja de entrada)', '¡Listo! Escribe tu primer mensaje'].map((s, i) => (
+        {[
+          <Text key="s1"><Text style={styles.bold}>chat.openai.com</Text> (ChatGPT) o <Text style={styles.bold}>claude.ai</Text> (Claude)</Text>,
+          <Text key="s2">Toca <Text style={styles.bold}>"Sign up"</Text> o <Text style={styles.bold}>"Registrarse"</Text></Text>,
+          <Text key="s3">Ingresa tu correo y crea contraseña. No necesitas tarjeta.</Text>,
+          <Text key="s4">Confirma tu correo (revisa tu bandeja de entrada)</Text>,
+          <Text key="s5">¡Listo! Escribe tu primer mensaje</Text>,
+        ].map((s, i) => (
           <View key={i} style={styles.stepRow}>
             <View style={styles.stepNum}><Text style={styles.stepNumText}>{i + 1}</Text></View>
             <Text style={styles.stepText}>{s}</Text>
           </View>
         ))}
       </View>
-      <View style={styles.card}>
-        <View style={styles.cardRow}>
-          <Text style={styles.cardIcon}>💡</Text>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.cardTitle}>¿Cuál escoger?</Text>
-            <Text style={styles.cardText}>ChatGPT: el más popular, genera imágenes. Claude: excelente para textos y razonamiento. Puedes tener ambas cuentas gratis.</Text>
-          </View>
-        </View>
-      </View>
-      <View style={[styles.highlightBox, styles.highlightAmber]}>
-        <Text style={styles.highlightTextAmber}><Text style={styles.bold}>📌 Si eres menor de 13 años,</Text> pídele a un adulto que te ayude a crear la cuenta.</Text>
-      </View>
+      <InfoCard variant="green" icon="💡" iconBg="#bbf7d0" title="¿Cuál escoger?"><Text style={styles.bold}>ChatGPT</Text>: el más popular, genera imágenes. <Text style={styles.bold}>Claude</Text>: excelente para textos y razonamiento. Puedes tener ambas cuentas gratis.</InfoCard>
+      <Hl variant="amber"><Text style={styles.bold}>📌 Si eres menor de 13 años,</Text> pídele a un adulto que te ayude a crear la cuenta.</Hl>
     </View>
   );
 
   const renderBuilderArea = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.tag}>🛠️ Módulo 3 · Builder</Text>
-      <Text style={styles.title}>Pídele que te ayude con algo real</Text>
+      <Tag variant="build">🛠️ Módulo 3 · Builder</Tag>
+      <Text style={styles.titleSm}>Pídele que te ayude con algo real</Text>
       <Text style={styles.subtitle}>Elige un área y escribe un prompt usando los 4 ingredientes del N3.</Text>
       <View style={styles.grid2Cols}>
         {BUILDER_AREAS.map((a, i) => (
@@ -422,21 +519,17 @@ export default function World1Level4() {
           <TextInput
             style={styles.textArea}
             placeholder={BUILDER_AREAS[builderAreaIdx].placeholder}
+            placeholderTextColor="#b8bcc0"
             value={builderText}
             onChangeText={setBuilderText}
             multiline
           />
-          <View style={styles.highlightBox}>
-            <Text style={styles.highlightText}>
-              <Text style={styles.bold}>💡 Plantilla sugerida:</Text>
-              {'\n'}Actúa como un {BUILDER_AREAS[builderAreaIdx].rol}. {BUILDER_AREAS[builderAreaIdx].tarea}
-            </Text>
-          </View>
+          <Hl variant="green"><Text style={styles.bold}>💡 Plantilla sugerida:</Text>{'\n'}Actúa como un {BUILDER_AREAS[builderAreaIdx].rol}. {BUILDER_AREAS[builderAreaIdx].tarea}</Hl>
         </View>
       )}
       <TouchableOpacity
         style={[styles.checkButton, !devMode && (builderAreaIdx === null || builderText.trim().length < 15) && styles.disabledButton]}
-        onPress={() => { addXP(10); goToNextStep(); }}
+        onPress={goToNextStep}
         disabled={!devMode && (builderAreaIdx === null || builderText.trim().length < 15)}
       >
         <Text style={styles.checkButtonText}>Continuar →</Text>
@@ -446,17 +539,17 @@ export default function World1Level4() {
 
   const renderBuilderStory = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.tag}>📖 Módulo 4 · Builder</Text>
-      <Text style={styles.title}>Crea una historia corta</Text>
+      <Tag variant="build">📖 Módulo 4 · Builder</Tag>
+      <Text style={styles.titleSm}>Crea una historia corta</Text>
       <Text style={styles.subtitle}>Completa los 4 ingredientes y armaremos el prompt.</Text>
       <Text style={styles.builderLabel}>🎭 Género</Text>
-      <TextInput style={styles.input} placeholder="misterio, aventura, comedia, terror..." value={storyGenre} onChangeText={setStoryGenre} />
+      <TextInput style={styles.input} placeholder="misterio, aventura, comedia, terror..." placeholderTextColor="#b8bcc0" value={storyGenre} onChangeText={setStoryGenre} />
       <Text style={styles.builderLabel}>🦸 Personaje principal</Text>
-      <TextInput style={styles.input} placeholder="una científica de 14 años, un robot perdido..." value={storyChar} onChangeText={setStoryChar} />
+      <TextInput style={styles.input} placeholder="una científica de 14 años, un robot perdido..." placeholderTextColor="#b8bcc0" value={storyChar} onChangeText={setStoryChar} />
       <Text style={styles.builderLabel}>🌍 Lugar</Text>
-      <TextInput style={styles.input} placeholder="el metro de Bogotá, una estación espacial..." value={storyPlace} onChangeText={setStoryPlace} />
+      <TextInput style={styles.input} placeholder="el metro de Bogotá, una estación espacial..." placeholderTextColor="#b8bcc0" value={storyPlace} onChangeText={setStoryPlace} />
       <Text style={styles.builderLabel}>🌀 Giro final sorpresivo</Text>
-      <TextInput style={styles.input} placeholder="resulta que el villano era su mejor amigo..." value={storyTwist} onChangeText={setStoryTwist} />
+      <TextInput style={styles.input} placeholder="resulta que el villano era su mejor amigo..." placeholderTextColor="#b8bcc0" value={storyTwist} onChangeText={setStoryTwist} />
       {storyGenerated ? (
         <View style={styles.resultBox}>
           <Text style={styles.resultText}>{storyGenerated}</Text>
@@ -484,35 +577,23 @@ export default function World1Level4() {
 
   const renderBuilderImage = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.tag}>🖼️ Módulo 5 · Builder</Text>
-      <Text style={styles.title}>Describe la imagen que quieres ver</Text>
+      <Tag variant="build">🖼️ Módulo 5 · Builder</Tag>
+      <Text style={styles.titleSm}>Describe la imagen que quieres ver</Text>
       <Text style={styles.subtitle}>IAs como DALL-E o Midjourney generan imágenes desde texto. Practica el prompt aquí.</Text>
-      <View style={[styles.card, { backgroundColor: '#faf5ff', borderColor: '#e9d5ff' }]}>
-        <View style={styles.cardRow}>
-          <Text style={styles.cardIcon}>🎨</Text>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.cardTitle}>Fórmula de un prompt de imagen</Text>
-            <Text style={styles.cardText}>Objeto/personaje + estilo visual + colores + mood</Text>
-          </View>
-        </View>
-      </View>
+      <InfoCard variant="purple" icon="🎨" iconBg="#e9d5ff" title="Fórmula de un prompt de imagen"><Text style={styles.bold}>Objeto/personaje</Text> + <Text style={styles.bold}>estilo visual</Text> + <Text style={styles.bold}>colores</Text> + <Text style={styles.bold}>mood</Text></InfoCard>
       <Text style={styles.builderLabel}>Describe tu imagen en detalle (mínimo 20 palabras)</Text>
       <TextInput
         style={styles.textArea}
         placeholder="Ej: Un gato astronauta flotando en el espacio, estilo ilustración infantil, colores pastel suaves, mood tranquilo y soñador"
+        placeholderTextColor="#b8bcc0"
         value={imgText}
         onChangeText={setImgText}
         multiline
       />
-      <View style={[styles.highlightBox, styles.highlightPurple]}>
-        <Text style={styles.highlightTextPurple}>
-          <Text style={styles.bold}>💡 Palabras que potencian el prompt:</Text>
-          {'\n'}cinematic · vibrant · minimalist · hyper-detailed · soft light · watercolor · anime style
-        </Text>
-      </View>
+      <Hl variant="purple"><Text style={styles.bold}>💡 Palabras que potencian el prompt:</Text>{'\n'}<Text style={styles.italic}>cinematic · vibrant · minimalist · hyper-detailed · soft light · watercolor · anime style</Text></Hl>
       <TouchableOpacity
         style={[styles.checkButton, (imgText.trim().length < 20 && !devMode) && styles.disabledButton]}
-        onPress={() => { addXP(10); goToNextStep(); }}
+        onPress={goToNextStep}
         disabled={imgText.trim().length < 20 && !devMode}
       >
         <Text style={styles.checkButtonText}>Continuar →</Text>
@@ -520,50 +601,46 @@ export default function World1Level4() {
     </View>
   );
 
-  const renderStudyCases = () => (
-    <View style={styles.stepContainer}>
-      <Text style={styles.tag}>📚 Módulo 6 · Casos reales</Text>
-      <Text style={styles.title}>La IA como compañero de estudio</Text>
-      <Text style={styles.subtitle}>El mismo tema, prompts distintos = resultados completamente diferentes.</Text>
-      {(() => {
-        const p = STUDY_PROMPTS[studyIdx];
-        return (
-          <View>
-            <View style={styles.cardRow}>
-              <Text style={styles.cardIcon}>{p.emoji}</Text>
-              <Text style={styles.cardTitle}>{p.subject}</Text>
-            </View>
-            <View style={styles.compareRow}>
-              <View style={[styles.comparePanel, styles.comparePanelBad]}>
-                <Text style={styles.compareLabel}>❌ Prompt básico</Text>
-                <Text style={styles.compareText}>{p.bad}</Text>
-              </View>
-              <View style={[styles.comparePanel, styles.comparePanelGood]}>
-                <Text style={styles.compareLabel}>✅ Prompt efectivo</Text>
-                <Text style={styles.compareText}>{p.good}</Text>
-              </View>
-            </View>
-            <View style={styles.highlightBox}>
-              <Text style={styles.highlightText}><Text style={styles.bold}>¿Por qué funciona mejor?</Text>{'\n'}{p.why}</Text>
-            </View>
-            {studyIdx < STUDY_PROMPTS.length - 1 && (
-              <TouchableOpacity style={styles.secondaryBtn} onPress={() => setStudyIdx(prev => Math.min(prev + 1, STUDY_PROMPTS.length - 1))}>
-                <Text style={styles.secondaryBtnText}>Ver siguiente materia →</Text>
-              </TouchableOpacity>
-            )}
+  const renderStudyCases = () => {
+    const p = STUDY_PROMPTS[studyIdx];
+    return (
+      <View style={styles.stepContainer}>
+        <Tag variant="cases">📚 Módulo 6 · Casos reales</Tag>
+        <Text style={styles.titleSm}>La IA como compañero de estudio</Text>
+        <Text style={styles.subtitle}>El mismo tema, prompts distintos = resultados completamente diferentes.</Text>
+        <View style={[styles.card, { backgroundColor: '#f8fafc', borderColor: '#e2e8f0', marginBottom: 8 }]}>
+          <View style={styles.cardRow}>
+            <View style={[styles.cardIcon, { backgroundColor: '#e2e8f0' }]}><Text style={{ fontSize: 18 }}>{p.emoji}</Text></View>
+            <Text style={[styles.cardTitle, { alignSelf: 'center' }]}>{p.subject}</Text>
           </View>
-        );
-      })()}
-    </View>
-  );
+        </View>
+        <View style={styles.compareWrap}>
+          <View style={[styles.comparePanel, styles.comparePanelA]}>
+            <Text style={[styles.compareLabel, { color: '#c2410c' }]}>❌ PROMPT BÁSICO</Text>
+            <Text style={styles.compareText}>{p.bad}</Text>
+          </View>
+          <View style={[styles.comparePanel, styles.comparePanelB]}>
+            <Text style={[styles.compareLabel, { color: '#065f46' }]}>✅ PROMPT EFECTIVO</Text>
+            <Text style={styles.compareText}>{p.good}</Text>
+          </View>
+        </View>
+        <Hl variant="green"><Text style={styles.bold}>¿Por qué funciona mejor?</Text>{'\n'}{p.why}</Hl>
+        {studyIdx < STUDY_PROMPTS.length - 1 && (
+          <TouchableOpacity style={styles.secondaryBtn} onPress={() => setStudyIdx(prev => Math.min(prev + 1, STUDY_PROMPTS.length - 1))}>
+            <Text style={styles.secondaryBtnText}>Ver siguiente materia →</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    );
+  };
 
   const renderBuilderExplain = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.tag}>💡 Módulo 7 · Builder</Text>
-      <Text style={styles.title}>Haz que la IA te enseñe algo difícil</Text>
-      <Text style={styles.subtitle}>El prompt "explícame X como si tuviera 10 años" es uno de los más poderosos.</Text>
+      <Tag variant="build">💡 Módulo 7 · Builder</Tag>
+      <Text style={styles.titleSm}>Haz que la IA te enseñe algo difícil</Text>
+      <Text style={styles.subtitle}>El prompt <Text style={styles.italic}>"explícame X como si tuviera 10 años"</Text> es uno de los más poderosos.</Text>
       <Text style={styles.builderLabel}>¿Qué tema no entiendes bien?</Text>
-      <TextInput style={styles.input} placeholder="la relatividad especial, las derivadas, la guerra fría..." value={explainTopic} onChangeText={setExplainTopic} />
+      <TextInput style={styles.input} placeholder="la relatividad especial, las derivadas, la guerra fría..." placeholderTextColor="#b8bcc0" value={explainTopic} onChangeText={setExplainTopic} />
       {explainGenerated ? (
         <View style={styles.resultBox}>
           <Text style={styles.resultText}>{explainGenerated}</Text>
@@ -573,12 +650,7 @@ export default function World1Level4() {
           <Text style={styles.resultEmptyText}>Tu prompt aparecerá aquí...</Text>
         </View>
       )}
-      <View style={[styles.highlightBox, styles.highlightBlue]}>
-        <Text style={styles.highlightTextBlue}>
-          <Text style={styles.bold}>🧠 Por qué funciona:</Text>
-          {'\n'}Pedir explicación "para alguien de 10 años" obliga a la IA a eliminar jerga técnica y usar analogías.
-        </Text>
-      </View>
+      <Hl variant="blue"><Text style={styles.bold}>🧠 Por qué funciona:</Text>{'\n'}Pedir explicación "para alguien de 10 años" obliga a la IA a eliminar jerga técnica y usar analogías. La misma técnica que usan los mejores maestros del mundo.</Hl>
       {!explainGenerated ? (
         <TouchableOpacity
           style={[styles.checkButton, explainTopic.trim().length < 3 && styles.disabledButton]}
@@ -597,118 +669,113 @@ export default function World1Level4() {
 
   const renderSprint1 = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.tag}>⚡ Módulo 8 · Sprint creativo</Text>
-      <Text style={styles.title}>Sprint: 5 ideas en 2 minutos</Text>
-      <Text style={styles.subtitle}>Para cada tarea, escribe mentalmente el prompt que le darías a la IA.</Text>
-      <Text style={styles.sprintTimer}>
-        {Math.floor(sprint1Sec / 60)}:{String(sprint1Sec % 60).padStart(2, '0')}
-      </Text>
-      <View style={styles.sprintBar}>
-        <View style={[styles.sprintBarFill, { width: `${(sprint1Sec / 120) * 100}%` }]} />
-      </View>
-      <View style={styles.sprintTaskCard}>
-        <Text style={styles.sprintTaskText}>
-          {sprint1Finished ? '¡Completaste todas las tareas! 🎉' : SPRINT_TASKS_1[sprint1Idx] || '¡Completaste todas las tareas! 🎉'}
-        </Text>
-      </View>
-      <View style={styles.sprintBtns}>
-        {!sprint1Started && !sprint1Finished && (
-          <TouchableOpacity style={styles.sprintStartBtn} onPress={() => setSprint1Started(true)}>
-            <Text style={styles.sprintBtnText}>▶ Iniciar</Text>
-          </TouchableOpacity>
-        )}
-        {sprint1Started && !sprint1Finished && (
-          <TouchableOpacity
-            style={styles.sprintNextBtn}
-            onPress={() => {
-              if (sprint1Idx < SPRINT_TASKS_1.length - 1) {
-                setSprint1Idx(prev => prev + 1);
-              } else {
-                setSprint1Finished(true);
-              }
-            }}
-          >
-            <Text style={styles.sprintNextBtnText}>✓ Hecha →</Text>
-          </TouchableOpacity>
-        )}
-        {sprint1Finished && (
-          <TouchableOpacity style={styles.checkButton} onPress={() => { addXP(Math.min(sprint1Idx, 5) * 8); goToNextStep(); }}>
+      <Tag variant="sprint">⚡ Módulo 8 · Sprint creativo</Tag>
+      {sprint1Finished ? (
+        <View>
+          <Text style={styles.sprintDoneText}>🎉 {Math.min(sprint1Done, SPRINT_TASKS_1.length)} de {SPRINT_TASKS_1.length} tareas. +{Math.min(sprint1Done, 5) * 8} XP</Text>
+          <Hl variant="green"><Text style={styles.bold}>¡Cada prompt que escribiste fue una orden real a la IA.</Text> Cuantas más veces practiques, más rápido y preciso te vuelves.</Hl>
+          <TouchableOpacity style={styles.checkButton} onPress={() => { addXP(Math.min(sprint1Done, 5) * 8); goToNextStep(); }}>
             <Text style={styles.checkButtonText}>Continuar →</Text>
           </TouchableOpacity>
-        )}
-      </View>
+        </View>
+      ) : (
+        <View>
+          <Text style={styles.titleSm}>Sprint: 5 ideas en 2 minutos</Text>
+          <Text style={styles.subtitle}>Para cada tarea, escribe mentalmente el prompt que le darías a la IA.</Text>
+          <Text style={styles.sprintTimer}>{Math.floor(sprint1Sec / 60)}:{String(sprint1Sec % 60).padStart(2, '0')}</Text>
+          <View style={styles.sprintBar}>
+            <View style={[styles.sprintBarFill, { width: `${(sprint1Sec / 120) * 100}%` }]} />
+          </View>
+          <View style={styles.sprintTaskCard}>
+            <Text style={styles.sprintTaskText}>{sprint1Started ? SPRINT_TASKS_1[sprint1Done] : 'Toca "Iniciar" para comenzar'}</Text>
+          </View>
+          <View style={styles.sprintBtns}>
+            <TouchableOpacity style={[styles.sprintStartBtn, sprint1Started && styles.disabledButton]} onPress={() => setSprint1Started(true)} disabled={sprint1Started}>
+              <Text style={styles.sprintBtnText}>▶ Iniciar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.sprintNextBtn} onPress={sprint1Next} disabled={!sprint1Started}>
+              <Text style={styles.sprintNextBtnText}>✓ Hecha →</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </View>
   );
 
   const renderCompare = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.tag}>⚡ Módulo 9 · Compara herramientas</Text>
+      <Tag variant="compare">⚡ Módulo 9 · Compara herramientas</Tag>
       <Text style={styles.subtitle}>Le pedimos lo <Text style={styles.bold}>mismo</Text> a dos herramientas. ¿Cuál fue más útil?</Text>
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>📋 El prompt</Text>
-        <Text style={styles.cardText}>{COMPARE_TASK.task}</Text>
+      <View style={[styles.card, { backgroundColor: '#f8fafc', borderColor: '#e2e8f0' }]}>
+        <View style={styles.cardRow}>
+          <View style={[styles.cardIcon, { backgroundColor: '#dbeafe' }]}><Text style={{ fontSize: 18 }}>📋</Text></View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.cardTitle}>El prompt</Text>
+            <Text style={styles.cardText}>{COMPARE_TASK.task}</Text>
+          </View>
+        </View>
       </View>
-      <View style={styles.compareRow}>
-        <View style={[styles.comparePanel, styles.comparePanelBad]}>
-          <Text style={styles.compareLabel}>🟠 Herramienta A</Text>
+      <View style={styles.compareWrap}>
+        <View style={[styles.comparePanel, styles.comparePanelA]}>
+          <Text style={[styles.compareLabel, { color: '#c2410c' }]}>🟠 HERRAMIENTA A</Text>
           <Text style={styles.compareText}>{COMPARE_TASK.resultA}</Text>
         </View>
-        <View style={[styles.comparePanel, styles.comparePanelGood]}>
-          <Text style={styles.compareLabel}>🟢 Herramienta B</Text>
+        <View style={[styles.comparePanel, styles.comparePanelB]}>
+          <Text style={[styles.compareLabel, { color: '#065f46' }]}>🟢 HERRAMIENTA B</Text>
           <Text style={styles.compareText}>{COMPARE_TASK.resultB}</Text>
         </View>
       </View>
-      <Text style={styles.subtitle}><Text style={styles.bold}>¿Cuál fue más útil y por qué?</Text></Text>
-      {['Respuesta A — más formal y elaborada', 'Respuesta B — directa y lista para usar', 'Ambas son igual de útiles', 'Ninguna, el prompt era malo'].map((opt, i) => (
-        <TouchableOpacity
-          key={i}
-          style={[styles.quizOption, compareSelected === i && styles.quizOptionSelected]}
-          onPress={() => { if (!compareChecked) setCompareSelected(i); }}
-          disabled={compareChecked}
-        >
-          <Text style={styles.quizOptText}>{opt}</Text>
-        </TouchableOpacity>
-      ))}
-      {compareChecked && (
+      <Text style={[styles.subtitle, { marginBottom: 8 }]}><Text style={styles.bold}>¿Cuál fue más útil y por qué?</Text></Text>
+      {COMPARE_TASK.options.map((opt, i) => {
+        const dimmed = compareAnswered && compareSelected !== i;
+        return (
+          <TouchableOpacity
+            key={i}
+            style={[styles.quizOption, compareSelected === i && styles.quizOptionSelected, dimmed && { opacity: 0.45 }]}
+            onPress={() => {
+              if (compareAnswered) return;
+              setCompareSelected(i);
+              setCompareAnswered(true);
+              if (i === COMPARE_TASK.correct) addXP(15);
+            }}
+            disabled={compareAnswered}
+          >
+            <Text style={styles.quizOptText}>{opt}</Text>
+          </TouchableOpacity>
+        );
+      })}
+      {compareAnswered && (
         <View style={[styles.feedbackBar, compareSelected === COMPARE_TASK.correct ? styles.feedbackCorrect : styles.feedbackWrong]}>
           <Text style={compareSelected === COMPARE_TASK.correct ? styles.feedbackCorrectText : styles.feedbackWrongText}>
-            {compareSelected === COMPARE_TASK.correct ? '✅ ¡Correcto! ' : '❌ Incorrecto. '}
-            {COMPARE_TASK.explain}
+            {compareSelected === COMPARE_TASK.correct ? '✅ ' : '❌ '}{COMPARE_TASK.explain}
           </Text>
         </View>
       )}
-      {!compareChecked ? (
-        <TouchableOpacity
-          style={[styles.checkButton, compareSelected === null && styles.disabledButton]}
-          onPress={() => {
-            setCompareChecked(true);
-            if (compareSelected === COMPARE_TASK.correct) addXP(15);
-          }}
-          disabled={compareSelected === null}
-        >
-          <Text style={styles.checkButtonText}>Comprobar</Text>
-        </TouchableOpacity>
-      ) : (
-        <TouchableOpacity style={styles.checkButton} onPress={goToNextStep}>
-          <Text style={styles.checkButtonText}>Continuar →</Text>
-        </TouchableOpacity>
-      )}
+      <TouchableOpacity
+        style={[styles.checkButton, !compareAnswered && styles.disabledButton]}
+        onPress={goToNextStep}
+        disabled={!compareAnswered}
+      >
+        <Text style={styles.checkButtonText}>Continuar →</Text>
+      </TouchableOpacity>
     </View>
   );
 
   const renderReflect1 = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.tag}>💬 Módulo 10 · Reflexión</Text>
-      <Text style={styles.title}>Lo que más te sorprendió</Text>
+      <Tag variant="reflect">💬 Módulo 10 · Reflexión</Tag>
+      <Text style={styles.titleSm}>Lo que más te sorprendió</Text>
       <Text style={styles.subtitle}>¿Cuál fue la cosa más increíble o inesperada que la IA hizo por ti hoy?</Text>
       <TextInput
-        style={styles.textArea}
-        placeholder="Ej: Me sorprendió que pudiera escribir una historia con exactamente los personajes que pedí..."
+        style={styles.reflectArea}
+        placeholder="Ej: Me sorprendió que pudiera escribir una historia con exactamente los personajes que pedí, con un giro que no esperaba..."
+        placeholderTextColor="#b8bcc0"
         value={reflect1}
         onChangeText={setReflect1}
         multiline
       />
       <Text style={styles.charCount}>{reflect1.trim().length} / mínimo 50 caracteres</Text>
+      <TipBox>✅ Lo que te sorprende es donde está el aprendizaje real.</TipBox>
       <TouchableOpacity
         style={[styles.checkButton, (reflect1.trim().length < 50 && !devMode) && styles.disabledButton]}
         onPress={() => { addXP(10); goToNextStep(); }}
@@ -721,92 +788,69 @@ export default function World1Level4() {
 
   const renderFailedPrompts = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.tag}>⚠️ Módulo 11 · Casos reales</Text>
-      <Text style={styles.title}>Lo que no funcionó y por qué</Text>
+      <Tag variant="cases">⚠️ Módulo 11 · Casos reales</Tag>
+      <Text style={styles.titleSm}>Lo que no funcionó y por qué</Text>
       <Text style={styles.subtitle}>3 prompts que dan resultados decepcionantes — y la razón exacta.</Text>
-      {[
-        { title: '"Hazme una presentación"', text: 'No dice el tema, la audiencia, el número de slides ni el tono. La IA hace algo genérico inútil.' },
-        { title: '"Dame información sobre Colombia"', text: 'Colombia tiene historia, geografía, economía, cultura... La IA no sabe qué aspecto te interesa.' },
-        { title: '"Escríbeme algo bonito"', text: '"Bonito" no significa nada para la IA. ¿Poema? ¿Carta? ¿Para quién? ¿Qué emoción?' },
-      ].map((item, i) => (
-        <View key={i} style={[styles.card, { borderColor: '#fecdd3', backgroundColor: '#fff1f2' }]}>
-          <View style={styles.cardRow}>
-            <Text style={styles.cardIcon}>❌</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.cardTitle}>{item.title}</Text>
-              <Text style={styles.cardText}>{item.text}</Text>
-            </View>
-          </View>
-        </View>
-      ))}
-      <View style={[styles.highlightBox, styles.highlightOrange]}>
-        <Text style={styles.highlightTextOrange}>
-          <Text style={styles.bold}>Regla de oro:</Text> Si tú mismo no sabes exactamente qué quieres al escribir el prompt, la IA tampoco lo sabrá.
-        </Text>
-      </View>
+      <InfoCard variant="red" icon="❌" iconBg="#fecdd3" title='"Hazme una presentación"'>No dice el <Text style={styles.bold}>tema</Text>, la <Text style={styles.bold}>audiencia</Text>, el <Text style={styles.bold}>número de slides</Text> ni el <Text style={styles.bold}>tono</Text>. La IA hace algo genérico inútil.</InfoCard>
+      <InfoCard variant="red" icon="❌" iconBg="#fecdd3" title='"Dame información sobre Colombia"'>Colombia tiene historia, geografía, economía, cultura... La IA no sabe <Text style={styles.bold}>qué aspecto</Text> te interesa.</InfoCard>
+      <InfoCard variant="red" icon="❌" iconBg="#fecdd3" title='"Escríbeme algo bonito"'>"Bonito" no significa nada para la IA. ¿Poema? ¿Carta? ¿Para quién? ¿Qué emoción?</InfoCard>
+      <Hl variant="orange"><Text style={styles.bold}>Regla de oro:</Text> Si tú mismo no sabes exactamente qué quieres al escribir el prompt, la IA tampoco lo sabrá.</Hl>
     </View>
   );
 
-  const renderVF = () => (
-    <View style={styles.stepContainer}>
-      <Text style={styles.tag}>✅ Módulo 12 · V/F</Text>
-      <Text style={styles.title}>Mitos y realidades de la creación con IA</Text>
-      {vfItems.map((item, idx) => (
-        <View key={idx} style={styles.tfSet}>
-          <Text style={styles.tfQuestion}>{idx + 1}. {item.stmt}</Text>
-          <View style={styles.tfOpts}>
-            <TouchableOpacity
-              style={[styles.tfBtn, tfAnswers[idx] === true && styles.tfBtnTrue]}
-              onPress={() => { if (!tfChecked) setTfAnswers(prev => ({ ...prev, [idx]: true })); }}
-              disabled={tfChecked}
-            >
-              <Text>✅ Verdadero</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.tfBtn, tfAnswers[idx] === false && styles.tfBtnFalse]}
-              onPress={() => { if (!tfChecked) setTfAnswers(prev => ({ ...prev, [idx]: false })); }}
-              disabled={tfChecked}
-            >
-              <Text>❌ Falso</Text>
-            </TouchableOpacity>
-          </View>
+  const renderVF = () => {
+    if (vfDone) {
+      const earned = vfScore * 8;
+      return (
+        <View style={styles.stepContainer}>
+          <Tag variant="vf">✅ Resultado</Tag>
+          <View style={styles.vfResultBox}><Text style={styles.vfResultText}>{vfScore}/{vfItems.length} correctas 🎯</Text></View>
+          <Hl variant="green"><Text style={styles.bold}>+{earned} XP.</Text> {vfScore >= 4 ? 'Tienes una visión clara de lo que la IA puede y no puede hacer.' : 'Con la práctica esto se vuelve instintivo.'}</Hl>
+          <TouchableOpacity style={styles.checkButton} onPress={goToNextStep}>
+            <Text style={styles.checkButtonText}>Continuar →</Text>
+          </TouchableOpacity>
         </View>
-      ))}
-      {!tfChecked ? (
-        <TouchableOpacity
-          style={[styles.checkButton, (Object.keys(tfAnswers).length < vfItems.length && !devMode) && styles.disabledButton]}
-          onPress={() => {
-            if (devMode) { setTfChecked(true); addXP(20); return; }
-            setTfChecked(true);
-            let correct = 0;
-            vfItems.forEach((item, idx) => { if (tfAnswers[idx] === item.correct) correct++; });
-            const earned = correct * 5;
-            if (earned > 0) addXP(earned);
-          }}
-          disabled={Object.keys(tfAnswers).length < vfItems.length && !devMode}
-        >
-          <Text style={styles.checkButtonText}>Comprobar</Text>
-        </TouchableOpacity>
-      ) : (
-        <TouchableOpacity style={styles.checkButton} onPress={goToNextStep}>
-          <Text style={styles.checkButtonText}>Continuar →</Text>
-        </TouchableOpacity>
-      )}
-    </View>
-  );
+      );
+    }
+    const item = vfItems[vfIdx];
+    const correct = vfAnswered && vfSelected === item.correct;
+    return (
+      <View style={styles.stepContainer}>
+        <Tag variant="vf">✔ Verdadero o Falso · {vfIdx + 1}/{vfItems.length}</Tag>
+        <View style={styles.vfStmt}><Text style={styles.vfStmtText}>{item.stmt}</Text></View>
+        <View style={styles.tfOpts}>
+          <TouchableOpacity style={[styles.vfBtn, styles.vfTrue, vfAnswered && styles.disabledButton]} onPress={() => answerVF(true)} disabled={vfAnswered}>
+            <Text style={styles.vfTrueText}>✅ Verdadero</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.vfBtn, styles.vfFalse, vfAnswered && styles.disabledButton]} onPress={() => answerVF(false)} disabled={vfAnswered}>
+            <Text style={styles.vfFalseText}>❌ Falso</Text>
+          </TouchableOpacity>
+        </View>
+        {vfAnswered && (
+          <View style={[styles.feedbackBar, correct ? styles.feedbackCorrect : styles.feedbackWrong]}>
+            <Text style={correct ? styles.feedbackCorrectText : styles.feedbackWrongText}>{correct ? '✅ ' : '❌ '}{item.explain}</Text>
+          </View>
+        )}
+        {vfAnswered && (
+          <TouchableOpacity style={styles.checkButton} onPress={nextVF}>
+            <Text style={styles.checkButtonText}>{vfIdx + 1 >= vfItems.length ? 'Ver resultado →' : 'Siguiente →'}</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    );
+  };
 
   const renderBuilderIter = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.tag}>🔄 Módulo 13 · Builder</Text>
-      <Text style={styles.title}>Pídele que mejore su propia respuesta</Text>
-      <Text style={styles.subtitle}>La iteración es la habilidad más subestimada del prompting.</Text>
-      <View style={styles.highlightBox}>
-        <Text style={styles.highlightText}>Cómo funciona: Describes la respuesta que ya tienes + le dices exactamente cómo mejorarla.</Text>
-      </View>
+      <Tag variant="build">🔄 Módulo 13 · Builder</Tag>
+      <Text style={styles.titleSm}>Pídele que mejore su propia respuesta</Text>
+      <Text style={styles.subtitle}>La iteración es la habilidad más subestimada del prompting. No te quedes con la primera respuesta.</Text>
+      <Hl variant="green"><Text style={styles.bold}>Cómo funciona:</Text> Describes la respuesta que ya tienes + le dices exactamente cómo mejorarla.</Hl>
       <Text style={styles.builderLabel}>Describe una respuesta que la IA te haya dado (o inventa una)</Text>
       <TextInput
         style={styles.textArea}
         placeholder="Ej: La IA me explicó la fotosíntesis en 4 párrafos técnicos muy largos con mucha jerga..."
+        placeholderTextColor="#b8bcc0"
         value={iterText}
         onChangeText={setIterText}
         multiline
@@ -838,72 +882,48 @@ export default function World1Level4() {
 
   const renderSprint2 = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.tag}>🎁 Módulo 14 · Sprint</Text>
-      <Text style={styles.title}>Crea algo para alguien que quieres</Text>
+      <Tag variant="sprint">🎁 Módulo 14 · Sprint</Tag>
+      <Text style={styles.titleSm}>Crea algo para alguien que quieres</Text>
       <Text style={styles.subtitle}>3 minutos para diseñar prompts de 3 regalos digitales.</Text>
-      <View style={styles.card}>
-        <View style={styles.cardRow}>
-          <Text style={styles.cardIcon}>💡</Text>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.cardTitle}>Ideas de regalos digitales</Text>
-            <Text style={styles.cardText}>Poema personalizado · Historia con su nombre · Mensaje de cumpleaños único · Receta inventada en su honor</Text>
-          </View>
-        </View>
-      </View>
-      <Text style={styles.sprintTimer}>
-        {Math.floor(sprint2Sec / 60)}:{String(sprint2Sec % 60).padStart(2, '0')}
-      </Text>
+      <InfoCard variant="green" icon="💡" iconBg="#bbf7d0" title="Ideas de regalos digitales">Poema personalizado · Historia con su nombre · Mensaje de cumpleaños único · Receta inventada en su honor</InfoCard>
+      <Text style={styles.sprintTimer}>{Math.floor(sprint2Sec / 60)}:{String(sprint2Sec % 60).padStart(2, '0')}</Text>
       <View style={styles.sprintBar}>
         <View style={[styles.sprintBarFill, { width: `${(sprint2Sec / 180) * 100}%` }]} />
       </View>
       <View style={styles.sprintTaskCard}>
         <Text style={styles.sprintTaskText}>
-          {sprint2Finished
-            ? '¡Completaste los 3 regalos! 🎉'
-            : `🎁 Regalo ${sprint2Idx + 1}: ¿Para quién? Diseña el prompt de su regalo digital`
-          }
+          {sprint2Finished ? '¡Completaste los 3 regalos! 🎉' : sprint2Started ? GIFTS[sprint2Done] : 'Piensa: ¿para quién creas el primer regalo?'}
         </Text>
       </View>
-      <View style={styles.sprintBtns}>
-        {!sprint2Started && !sprint2Finished && (
-          <TouchableOpacity style={styles.sprintStartBtn} onPress={() => setSprint2Started(true)}>
+      {sprint2Finished ? (
+        <TouchableOpacity style={styles.checkButton} onPress={() => { addXP(Math.min(sprint2Done, 3) * 8); goToNextStep(); }}>
+          <Text style={styles.checkButtonText}>Continuar →</Text>
+        </TouchableOpacity>
+      ) : (
+        <View style={styles.sprintBtns}>
+          <TouchableOpacity style={[styles.sprintStartBtn, sprint2Started && styles.disabledButton]} onPress={() => setSprint2Started(true)} disabled={sprint2Started}>
             <Text style={styles.sprintBtnText}>▶ Iniciar</Text>
           </TouchableOpacity>
-        )}
-        {sprint2Started && !sprint2Finished && (
-          <TouchableOpacity
-            style={styles.sprintNextBtn}
-            onPress={() => {
-              if (sprint2Idx < 2) {
-                setSprint2Idx(prev => prev + 1);
-              } else {
-                setSprint2Finished(true);
-              }
-            }}
-          >
+          <TouchableOpacity style={styles.sprintNextBtn} onPress={sprint2Next} disabled={!sprint2Started}>
             <Text style={styles.sprintNextBtnText}>✓ Listo →</Text>
           </TouchableOpacity>
-        )}
-        {sprint2Finished && (
-          <TouchableOpacity style={styles.checkButton} onPress={() => { addXP(Math.min(sprint2Idx, 3) * 8); goToNextStep(); }}>
-            <Text style={styles.checkButtonText}>Continuar →</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+        </View>
+      )}
     </View>
   );
 
   const renderGallery = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.tag}>🖼️ Módulo 15 · Galería</Text>
-      <Text style={styles.title}>Tu primera galería de creaciones</Text>
+      <Tag variant="gallery">🖼️ Módulo 15 · Galería</Tag>
+      <Text style={styles.titleSm}>Tu primera galería de creaciones</Text>
       <Text style={styles.subtitle}>Guarda las 3 creaciones de las que más te enorgulleces hoy.</Text>
       {[0, 1, 2].map(i => (
-        <View key={i} style={[styles.card, galleryTexts[i].trim().length >= 10 && styles.cardFilled]}>
+        <View key={i} style={[styles.galleryItem, galleryTexts[i].trim().length >= 10 && styles.galleryItemFilled]}>
           <Text style={styles.galleryNum}>Creación {i + 1}</Text>
           <TextInput
-            style={styles.textArea}
+            style={[styles.textArea, { marginBottom: 0 }]}
             placeholder="¿Qué pediste a la IA? ¿Qué resultado obtuviste?"
+            placeholderTextColor="#b8bcc0"
             value={galleryTexts[i]}
             onChangeText={t => {
               const newTexts = [...galleryTexts];
@@ -914,6 +934,7 @@ export default function World1Level4() {
           />
         </View>
       ))}
+      <TipBox><Text style={styles.bold}>✅ Esta galería queda en tu portafolio IA Explorer.</Text>{'\n'}Es evidencia real de que creaste con IA — no solo aprendiste sobre ella.</TipBox>
       <TouchableOpacity
         style={[styles.checkButton, (galleryTexts.filter(t => t.trim().length >= 10).length < 2 && !devMode) ? styles.disabledButton : {}]}
         onPress={() => { addXP(20); goToNextStep(); }}
@@ -926,44 +947,42 @@ export default function World1Level4() {
 
   const renderWhenNotAI = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.tag}>⚖️ Módulo 16 · Cuándo NO usar la IA</Text>
-      <Text style={styles.title}>La IA no siempre es la respuesta</Text>
+      <Tag variant="vf">⚖️ Módulo 16 · Cuándo NO usar la IA</Tag>
+      <Text style={styles.titleSm}>La IA no siempre es la respuesta</Text>
       <View style={[styles.card, { borderColor: '#fecdd3', backgroundColor: '#fff1f2' }]}>
         <View style={styles.cardRow}>
-          <Text style={styles.cardIcon}>🚫</Text>
+          <View style={[styles.cardIcon, { backgroundColor: '#fecdd3' }]}><Text style={{ fontSize: 18 }}>🚫</Text></View>
           <View style={{ flex: 1 }}>
             <Text style={styles.cardTitle}>Situaciones donde la IA NO ayuda bien</Text>
             <Text style={styles.cardText}>
               ❌ Información en tiempo real (noticias de hoy, precios actuales){'\n'}
-              ❌ Apoyo emocional en crisis personal{'\n'}
+              ❌ Apoyo emocional en crisis personal (duelo, emergencias){'\n'}
               ❌ Diagnósticos médicos sin revisión profesional{'\n'}
               ❌ Aprender algo de verdad (copiarle la tarea ≠ entenderla){'\n'}
-              ❌ Cuando el proceso de hacerlo es parte del valor
+              ❌ Cuando el proceso de hacerlo es parte del valor (dibujo a mano para regalar)
             </Text>
           </View>
         </View>
       </View>
-      <View style={[styles.highlightBox, styles.highlightAmber]}>
-        <Text style={styles.highlightTextAmber}>
-          <Text style={styles.bold}>La regla:</Text> La IA amplifica lo que ya sabes hacer. Si no entiendes el resultado, no puedes saber si es bueno o malo.
-        </Text>
-      </View>
+      <Hl variant="amber"><Text style={styles.bold}>La regla:</Text> La IA amplifica lo que ya sabes hacer. Si no entiendes el resultado, no puedes saber si es bueno o malo.</Hl>
     </View>
   );
 
   const renderReflect2 = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.tag}>🤝 Módulo 17 · Reflexión</Text>
-      <Text style={styles.title}>Muéstrale algo a alguien hoy</Text>
+      <Tag variant="reflect">🤝 Módulo 17 · Reflexión</Tag>
+      <Text style={styles.titleSm}>Muéstrale algo a alguien hoy</Text>
       <Text style={styles.subtitle}>¿A quién le mostrarías una de tus creaciones y por qué?</Text>
       <TextInput
-        style={styles.textArea}
-        placeholder="Ej: Le mostraría a mi mamá el poema que la IA escribió para ella..."
+        style={styles.reflectArea}
+        placeholder="Ej: Le mostraría a mi mamá el poema que la IA escribió para ella. Le diría cómo armé el prompt..."
+        placeholderTextColor="#b8bcc0"
         value={reflect2}
         onChangeText={setReflect2}
         multiline
       />
       <Text style={styles.charCount}>{reflect2.trim().length} / mínimo 50 caracteres</Text>
+      <Hl variant="green"><Text style={styles.bold}>💡 Por qué importa compartir:</Text>{'\n'}Cuando le explicas a alguien lo que hiciste, consolidas lo que aprendiste.</Hl>
       <TouchableOpacity
         style={[styles.checkButton, (reflect2.trim().length < 50 && !devMode) && styles.disabledButton]}
         onPress={() => { addXP(10); goToNextStep(); }}
@@ -976,19 +995,21 @@ export default function World1Level4() {
 
   const renderReflect3 = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.tag}>✨ Módulo 18 · Reflexión de cierre</Text>
-      <Text style={styles.title}>¿Qué creaste hoy que antes sentías imposible?</Text>
+      <Tag variant="reflect">✨ Módulo 18 · Reflexión de cierre</Tag>
+      <Text style={styles.titleSm}>¿Qué creaste hoy que antes sentías imposible?</Text>
       <TextInput
-        style={styles.textArea}
-        placeholder="Ej: Nunca creí que podría inventar una historia con mis propios personajes tan rápido..."
+        style={styles.reflectArea}
+        placeholder="Ej: Nunca creí que podría inventar una historia con mis propios personajes tan rápido. Hoy lo hice en 3 minutos. También noté que el prompt importa más de lo que pensaba..."
+        placeholderTextColor="#b8bcc0"
         value={reflect3}
         onChangeText={setReflect3}
         multiline
       />
       <Text style={styles.charCount}>{reflect3.trim().length} / mínimo 50 caracteres</Text>
+      <TipBox><Text style={styles.bold}>✅ Esta reflexión queda en tu portafolio IA Explorer.</Text>{'\n'}Es la prueba de que hoy no solo aprendiste — creaste.</TipBox>
       <TouchableOpacity
-        style={[styles.checkButton, (reflect3.trim().length < 50 && !devMode) && styles.disabledButton]}
-        onPress={() => { addXP(10); goToNextStep(); }}
+        style={[styles.checkButtonBlue, (reflect3.trim().length < 50 && !devMode) && styles.disabledButton]}
+        onPress={goToNextStep}
         disabled={reflect3.trim().length < 50 && !devMode}
       >
         <Text style={styles.checkButtonText}>Completar nivel →</Text>
@@ -998,7 +1019,7 @@ export default function World1Level4() {
 
   const renderCompletion = () => (
     <View style={styles.completeContainer}>
-      <Text style={styles.completeBadgeText}>🚀</Text>
+      <View style={styles.completeBadge}><Text style={styles.completeBadgeText}>🚀</Text></View>
       <Text style={styles.completeTitle}>¡Nivel 4 completado!</Text>
       <Text style={styles.completeSub}>Terminaste "¡Crea algo con IA Hoy!". Hoy no solo aprendiste — creaste. Con texto, con prompts, con intención. Eso es lo que hacen los creadores.</Text>
       <View style={styles.skillList}>
@@ -1010,9 +1031,12 @@ export default function World1Level4() {
         ))}
       </View>
       <View style={styles.nextHint}>
-        <Text style={styles.nextHintText}>⚖️ Nivel 5: IA y Ética{'\n\n'}Ahora que ya creas con IA, vas a explorar las preguntas más importantes: ¿Qué usos son problemáticos? ¿Cómo te afecta la privacidad? ¿Qué pasa con los deepfakes?</Text>
+        <Text style={styles.nextHintText}>⚖️ <Text style={styles.bold}>Nivel 5: IA y Ética</Text>{'\n\n'}Ahora que ya creas con IA, vas a explorar las preguntas más importantes: ¿Qué usos son problemáticos? ¿Cómo te afecta la privacidad? ¿Qué pasa con los deepfakes?</Text>
       </View>
-      <Text style={styles.xpEarnedText}>⭐ {xp} XP ganados en este nivel</Text>
+      <View style={styles.lvlBarWrap}>
+        <Text style={styles.lvlBarLabel}>Nivel 4 de 36 completado · Mundo 1 — ¿Qué es la IA?</Text>
+        <View style={styles.lvlBarOuter}><View style={styles.lvlBarInner} /></View>
+      </View>
       <TouchableOpacity style={styles.finishButton} onPress={handleFinish}>
         <Text style={styles.finishButtonText}>Siguiente nivel →</Text>
       </TouchableOpacity>
@@ -1046,17 +1070,31 @@ export default function World1Level4() {
   };
 
   const progressPercent = (step / (TOTAL_STEPS - 1)) * 100;
-  const showNextButton = step !== 19 && [0, 2, 6, 11, 16].includes(step);
+  const progLabel = step === 0 ? 'Introducción' : step < TOTAL_STEPS - 1 ? `Módulo ${step} de ${CONTENT_STEPS}` : '¡Nivel completado!';
+  const stepsCounter = step === 0 ? '' : step < TOTAL_STEPS - 1 ? `${step} de ${CONTENT_STEPS} módulos completados` : `${CONTENT_STEPS} de ${CONTENT_STEPS} módulos completados`;
+
+  // Steps de teoría con botón de footer (Continuar). Módulo 1 tiene su propio footer inline.
+  const FOOTER_STEPS = [0, 2, 6, 11, 16];
+  const showNextButton = FOOTER_STEPS.includes(step);
   const showBackButton = step > 0 && THEORY_STEPS.has(step) && showNextButton;
+
+  const nextBtnLabel = () => {
+    if (step === 0) return '¡Empezar! →';
+    if (step === 2) return '¡Ya tengo mi cuenta! →';
+    return 'Continuar →';
+  };
 
   return (
     <View style={styles.screen}>
       <View style={styles.progressBar}>
         <TouchableOpacity onPress={handleClose} style={styles.closeBtn}>
-          <MaterialIcons name="close" size={24} color={colors.textSecondary} />
+          <MaterialIcons name="close" size={22} color="#065f46" />
         </TouchableOpacity>
-        <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, { width: `${progressPercent}%` }]} />
+        <View style={styles.progWrap}>
+          <View style={styles.progressTrack}>
+            <View style={[styles.progressFill, { width: `${progressPercent}%` }]} />
+          </View>
+          <Text style={styles.progLabel}>{progLabel}</Text>
         </View>
         <Text style={styles.xpText}>{xp} XP</Text>
       </View>
@@ -1064,127 +1102,155 @@ export default function World1Level4() {
         {renderContent()}
       </ScrollView>
       {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} />}
-      <View style={styles.footerRow}>
-        {showBackButton && (
-          <TouchableOpacity style={styles.backButton} onPress={goToPrevStep}>
-            <Text style={styles.backButtonText}>← Volver</Text>
-          </TouchableOpacity>
-        )}
-        {showNextButton && (
-          <TouchableOpacity style={[styles.nextButton, showBackButton && styles.nextButtonFlex]} onPress={goToNextStep}>
-            <Text style={styles.nextButtonText}>Continuar →</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+      {step < TOTAL_STEPS - 1 && (
+        <View style={styles.btnRow}>
+          {(showNextButton || step !== 19) && (
+            <View style={styles.footerRow}>
+              {showBackButton && (
+                <TouchableOpacity style={styles.backButton} onPress={goToPrevStep}>
+                  <Text style={styles.backButtonText}>← Volver</Text>
+                </TouchableOpacity>
+              )}
+              {showNextButton && (
+                <TouchableOpacity style={[styles.nextButton, showBackButton && styles.nextButtonFlex]} onPress={goToNextStep}>
+                  <Text style={styles.nextButtonText}>{nextBtnLabel()}</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+          <View style={styles.dotsRow}>
+            {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
+              <View key={i} style={[styles.dot, i === step && styles.dotActive, i < step && styles.dotDone]} />
+            ))}
+          </View>
+          {!!stepsCounter && <Text style={styles.stepsCounter}>{stepsCounter}</Text>}
+        </View>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.background },
-  progressBar: { flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
-  closeBtn: { padding: 4 },
-  progressTrack: { flex: 1, height: 6, backgroundColor: colors.borderLight, borderRadius: 3, marginHorizontal: 12 },
-  progressFill: { height: '100%', backgroundColor: colors.success, borderRadius: 3 },
-  xpText: { ...typography.bold, fontSize: 14, color: colors.accentDark },
+  screen: { flex: 1, backgroundColor: colors.surface },
+  progressBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 13, paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: '#ecfdf5', backgroundColor: '#ecfdf5' },
+  closeBtn: { minWidth: 42, minHeight: 42, borderRadius: 10, backgroundColor: '#a7f3d040', borderWidth: 1, borderColor: '#a7f3d0', justifyContent: 'center', alignItems: 'center' },
+  progWrap: { flex: 1, marginHorizontal: 9 },
+  progressTrack: { height: 8, backgroundColor: '#a7f3d066', borderRadius: 4, overflow: 'hidden' },
+  progressFill: { height: '100%', backgroundColor: '#10b981', borderRadius: 4 },
+  progLabel: { fontSize: 10, color: '#94a3b8', marginTop: 3, fontWeight: '500' },
+  xpText: { ...typography.bold, fontSize: 12, color: '#065f46', backgroundColor: '#a7f3d0', paddingHorizontal: 11, paddingVertical: 4, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: '#6ee7b7' },
   scrollView: { flex: 1 },
-  scrollContent: { padding: 16, paddingBottom: 40 },
+  scrollContent: { padding: 15, paddingBottom: 30 },
   stepContainer: { flex: 1 },
-  tag: { fontSize: 11, fontWeight: '600', color: colors.primary, backgroundColor: '#eef2ff', alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, marginBottom: 12 },
-  iconContainer: { width: 60, height: 60, borderRadius: 18, backgroundColor: '#dcfce7', justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
-  iconEmoji: { fontSize: 30 },
-  title: { ...typography.extraBold, fontSize: 19, color: colors.textPrimary, marginBottom: 6 },
-  subtitle: { ...typography.regular, fontSize: 13, color: colors.textSecondary, marginBottom: 14, lineHeight: 18 },
-  bodyText: { ...typography.regular, fontSize: 13, color: colors.textPrimary, lineHeight: 20, marginBottom: 12 },
-  bold: { fontWeight: 'bold' },
-  card: { backgroundColor: colors.surface, borderRadius: 14, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: colors.border },
-  cardRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  cardIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#dbeafe', textAlign: 'center', lineHeight: 36, fontSize: 18 },
-  cardTitle: { ...typography.bold, fontSize: 13, color: colors.textPrimary, marginBottom: 4 },
-  cardText: { ...typography.regular, fontSize: 12, color: colors.textSecondary, lineHeight: 18 },
-  cardFilled: { borderColor: colors.success, backgroundColor: '#f0fdf4' },
-  highlightBox: { borderLeftWidth: 3, borderLeftColor: colors.success, padding: 11, backgroundColor: '#f0fdf4', marginVertical: 10, borderRadius: 4 },
-  highlightText: { ...typography.regular, fontSize: 13, color: '#065f46', lineHeight: 20 },
-  highlightAmber: { borderLeftColor: '#f59e0b', backgroundColor: '#fffbeb' },
-  highlightTextAmber: { ...typography.regular, fontSize: 13, color: '#92400e', lineHeight: 20 },
-  highlightPurple: { borderLeftColor: '#8b5cf6', backgroundColor: '#faf5ff' },
-  highlightTextPurple: { ...typography.regular, fontSize: 13, color: '#5b21b6', lineHeight: 20 },
-  highlightBlue: { borderLeftColor: '#3b82f6', backgroundColor: '#eff6ff' },
-  highlightTextBlue: { ...typography.regular, fontSize: 13, color: '#1e40af', lineHeight: 20 },
-  highlightOrange: { borderLeftColor: '#f97316', backgroundColor: '#fff7ed' },
-  highlightTextOrange: { ...typography.regular, fontSize: 13, color: '#c2410c', lineHeight: 20 },
-  grid2Cols: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  classBtn: { width: '48%', padding: 11, borderRadius: 12, borderWidth: 2, borderColor: colors.border, backgroundColor: colors.surface, alignItems: 'center' },
-  classBtnSelected: { borderColor: colors.success, backgroundColor: '#ecfdf5' },
-  classIcon: { fontSize: 24, marginBottom: 4 },
-  classLabel: { ...typography.bold, fontSize: 11, color: colors.textPrimary },
-  classDesc: { fontSize: 10, color: colors.textSecondary, textAlign: 'center' },
-  stepList: { gap: 8, marginBottom: 14 },
+  tag: { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, marginBottom: 11 },
+  tagText: { fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4 },
+  iconContainer: { width: 68, height: 68, borderRadius: 20, backgroundColor: '#a7f3d0', justifyContent: 'center', alignItems: 'center', marginBottom: 13 },
+  iconEmoji: { fontSize: 34 },
+  title: { ...typography.extraBold, fontSize: 19, color: '#0f172a', marginBottom: 7, lineHeight: 25 },
+  titleSm: { ...typography.extraBold, fontSize: 16, color: '#0f172a', marginBottom: 7, lineHeight: 22 },
+  subtitle: { ...typography.regular, fontSize: 13, color: '#64748b', marginBottom: 13, lineHeight: 20 },
+  bold: { fontWeight: '700', color: '#0f172a' },
+  italic: { fontStyle: 'italic', color: '#64748b' },
+  card: { borderRadius: 14, padding: 13, marginBottom: 9, borderWidth: 1, borderColor: '#e2e8f0' },
+  cardRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 11 },
+  cardIcon: { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+  cardTitle: { ...typography.bold, fontSize: 12, color: '#0f172a', marginBottom: 3 },
+  cardText: { ...typography.regular, fontSize: 12, color: '#334155', lineHeight: 18 },
+  tipBox: { backgroundColor: '#ecfdf5', borderWidth: 1, borderColor: '#a7f3d0', borderRadius: 10, padding: 11, marginTop: 10 },
+  tipBoxText: { fontSize: 12, color: '#065f46', lineHeight: 18 },
+  grid2Cols: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
+  classBtn: { width: '48.5%', padding: 11, borderRadius: 12, borderWidth: 2, borderColor: '#e2e8f0', backgroundColor: '#f8fafc', alignItems: 'center', marginBottom: 8 },
+  classBtnSelected: { borderColor: '#10b981', backgroundColor: '#ecfdf5' },
+  classIcon: { fontSize: 22, marginBottom: 5 },
+  classLabel: { ...typography.bold, fontSize: 11, color: '#334155' },
+  classDesc: { fontSize: 10, color: '#64748b', textAlign: 'center', fontWeight: '400' },
+  stepList: { gap: 8, marginBottom: 12 },
   stepRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
-  stepNum: { width: 24, height: 24, borderRadius: 12, backgroundColor: colors.success, justifyContent: 'center', alignItems: 'center' },
+  stepNum: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#10b981', justifyContent: 'center', alignItems: 'center', marginTop: 2 },
   stepNumText: { color: '#fff', fontWeight: '700', fontSize: 10 },
-  stepText: { flex: 1, ...typography.regular, fontSize: 12, color: colors.textPrimary, lineHeight: 18 },
+  stepText: { flex: 1, ...typography.regular, fontSize: 12, color: '#334155', lineHeight: 18 },
   builderLabel: { ...typography.bold, fontSize: 11, color: '#065f46', marginBottom: 4, marginTop: 10 },
-  input: { borderWidth: 1.5, borderColor: colors.border, borderRadius: 10, padding: 10, fontSize: 12, color: colors.textPrimary, backgroundColor: '#f0fdf4', marginBottom: 8 },
-  textArea: { borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 12, ...typography.regular, fontSize: 13, color: colors.textPrimary, textAlignVertical: 'top', minHeight: 80, backgroundColor: '#fafafa', marginBottom: 8 },
-  resultBox: { backgroundColor: '#ecfdf5', borderColor: colors.success, borderWidth: 1.5, borderRadius: 12, padding: 12, marginBottom: 10 },
+  input: { borderWidth: 1.5, borderColor: '#a7f3d0', borderRadius: 10, padding: 10, fontSize: 12, color: '#0f172a', backgroundColor: '#f0fdf4', marginBottom: 8 },
+  textArea: { borderWidth: 1.5, borderColor: '#a7f3d0', borderRadius: 10, padding: 12, ...typography.regular, fontSize: 13, color: '#0f172a', textAlignVertical: 'top', minHeight: 80, backgroundColor: '#f0fdf4', marginBottom: 8 },
+  reflectArea: { borderWidth: 1.5, borderColor: '#a7f3d0', borderRadius: 12, padding: 12, ...typography.regular, fontSize: 13, color: '#0f172a', textAlignVertical: 'top', minHeight: 90, backgroundColor: '#f0fdf4', lineHeight: 20 },
+  resultBox: { backgroundColor: '#ecfdf5', borderColor: '#a7f3d0', borderWidth: 1.5, borderRadius: 12, padding: 12, marginBottom: 10, marginTop: 10 },
   resultText: { ...typography.regular, fontSize: 12, color: '#065f46', lineHeight: 18 },
-  resultBoxEmpty: { backgroundColor: '#f8fafc', borderColor: colors.border, borderWidth: 1.5, borderRadius: 12, padding: 12, marginBottom: 10, minHeight: 60, justifyContent: 'center' },
+  resultBoxEmpty: { backgroundColor: '#f8fafc', borderColor: '#e2e8f0', borderWidth: 1.5, borderRadius: 12, padding: 12, marginBottom: 10, marginTop: 10, minHeight: 60, justifyContent: 'center' },
   resultEmptyText: { ...typography.regular, fontSize: 12, color: '#94a3b8', fontStyle: 'italic' },
-  checkButton: { backgroundColor: colors.success, padding: 12, borderRadius: 11, alignItems: 'center', marginTop: 16 },
-  checkButtonText: { ...typography.bold, color: '#fff' },
+  checkButton: { backgroundColor: '#10b981', padding: 13, borderRadius: 12, alignItems: 'center', marginTop: 16, minHeight: 48, justifyContent: 'center' },
+  checkButtonBlue: { backgroundColor: '#2563eb', padding: 13, borderRadius: 12, alignItems: 'center', marginTop: 16, minHeight: 48, justifyContent: 'center' },
+  checkButtonFlex: { flex: 1, backgroundColor: '#10b981', padding: 13, borderRadius: 12, alignItems: 'center', minHeight: 48, justifyContent: 'center' },
+  checkButtonText: { ...typography.bold, color: '#fff', fontSize: 14 },
   disabledButton: { opacity: 0.4 },
-  nextButton: { backgroundColor: colors.success, padding: 14, margin: 16, borderRadius: 11, alignItems: 'center' },
+  inlineFooter: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16 },
+  nextButton: { flex: 1, backgroundColor: '#10b981', padding: 14, borderRadius: 12, alignItems: 'center', minHeight: 48, justifyContent: 'center' },
   nextButtonText: { ...typography.bold, color: '#fff', fontSize: 15 },
-  secondaryBtn: { padding: 10, borderRadius: 10, borderWidth: 1.5, borderColor: colors.success, backgroundColor: '#ecfdf5', alignItems: 'center', marginTop: 8 },
+  secondaryBtn: { padding: 10, borderRadius: 10, borderWidth: 1.5, borderColor: '#a7f3d0', backgroundColor: '#ecfdf5', alignItems: 'center', marginTop: 4 },
   secondaryBtnText: { ...typography.bold, fontSize: 12, color: '#065f46' },
-  compareRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
-  comparePanel: { flex: 1, borderRadius: 12, padding: 12, borderWidth: 1.5 },
-  comparePanelBad: { backgroundColor: '#fff7ed', borderColor: '#fed7aa' },
-  comparePanelGood: { backgroundColor: '#ecfdf5', borderColor: '#a7f3d0' },
-  compareLabel: { ...typography.bold, fontSize: 10, textTransform: 'uppercase', marginBottom: 6 },
-  compareText: { ...typography.regular, fontSize: 11, color: colors.textPrimary, fontStyle: 'italic', lineHeight: 16 },
-  quizOption: { padding: 12, borderWidth: 1.5, borderColor: colors.border, borderRadius: 11, marginBottom: 6, backgroundColor: colors.surface },
-  quizOptionSelected: { borderColor: colors.success, backgroundColor: '#ecfdf5' },
-  quizOptText: { ...typography.regular, fontSize: 12, color: colors.textPrimary },
-  feedbackBar: { padding: 10, borderRadius: 10, marginTop: 8 },
+  compareWrap: { flexDirection: 'column', gap: 8, marginVertical: 10 },
+  comparePanel: { borderRadius: 12, padding: 12, borderWidth: 1.5 },
+  comparePanelA: { backgroundColor: '#fff7ed', borderColor: '#fed7aa' },
+  comparePanelB: { backgroundColor: '#ecfdf5', borderColor: '#a7f3d0' },
+  compareLabel: { ...typography.bold, fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 },
+  compareText: { ...typography.regular, fontSize: 11, color: '#334155', fontStyle: 'italic', lineHeight: 16 },
+  quizOption: { padding: 12, borderWidth: 2, borderColor: '#e2e8f0', borderRadius: 11, marginBottom: 7, backgroundColor: '#f8fafc' },
+  quizOptionSelected: { borderColor: '#10b981', backgroundColor: '#ecfdf5' },
+  quizOptText: { ...typography.regular, fontSize: 12, color: '#334155', fontWeight: '600' },
+  feedbackBar: { padding: 11, borderRadius: 10, marginTop: 8 },
   feedbackCorrect: { backgroundColor: '#ecfdf5', borderColor: '#a7f3d0', borderWidth: 1 },
-  feedbackCorrectText: { color: '#065f46', ...typography.bold, fontSize: 12 },
+  feedbackCorrectText: { color: '#065f46', fontSize: 12, fontWeight: '600', lineHeight: 18 },
   feedbackWrong: { backgroundColor: '#fff1f2', borderColor: '#fecdd3', borderWidth: 1 },
-  feedbackWrongText: { color: '#991b1b', ...typography.bold, fontSize: 12 },
-  charCount: { ...typography.regular, fontSize: 10, color: colors.textSecondary, textAlign: 'right', marginTop: 4 },
-  sprintTimer: { fontSize: 28, fontWeight: '800', color: colors.success, textAlign: 'center', marginVertical: 8 },
-  sprintBar: { height: 6, backgroundColor: colors.borderLight, borderRadius: 3, overflow: 'hidden', marginBottom: 12 },
-  sprintBarFill: { height: '100%', backgroundColor: colors.success, borderRadius: 3 },
+  feedbackWrongText: { color: '#991b1b', fontSize: 12, fontWeight: '600', lineHeight: 18 },
+  charCount: { ...typography.regular, fontSize: 10, color: '#94a3b8', textAlign: 'right', marginTop: 4 },
+  sprintTimer: { fontSize: 28, fontWeight: '800', color: '#10b981', textAlign: 'center', marginTop: 8, marginBottom: 4 },
+  sprintBar: { height: 8, backgroundColor: '#e2e8f0', borderRadius: 4, overflow: 'hidden', marginBottom: 12 },
+  sprintBarFill: { height: '100%', backgroundColor: '#10b981', borderRadius: 4 },
   sprintTaskCard: { backgroundColor: '#f0fdf4', borderRadius: 12, borderWidth: 1.5, borderColor: '#a7f3d0', padding: 14, marginBottom: 10 },
-  sprintTaskText: { ...typography.bold, fontSize: 14, color: colors.textPrimary, textAlign: 'center', lineHeight: 20 },
+  sprintTaskText: { ...typography.bold, fontSize: 14, color: '#0f172a', textAlign: 'center', lineHeight: 20 },
+  sprintDoneText: { textAlign: 'center', fontSize: 14, fontWeight: '700', color: '#065f46', paddingVertical: 16 },
   sprintBtns: { flexDirection: 'row', gap: 8, marginTop: 8 },
-  sprintStartBtn: { flex: 1, padding: 11, borderRadius: 11, backgroundColor: colors.success, alignItems: 'center' },
+  sprintStartBtn: { flex: 1, padding: 11, borderRadius: 11, backgroundColor: '#10b981', alignItems: 'center' },
   sprintBtnText: { ...typography.bold, color: '#fff' },
   sprintNextBtn: { flex: 1, padding: 11, borderRadius: 11, backgroundColor: '#ecfdf5', borderWidth: 1.5, borderColor: '#a7f3d0', alignItems: 'center' },
   sprintNextBtnText: { ...typography.bold, color: '#065f46' },
-  tfSet: { marginBottom: 14 },
-  tfQuestion: { ...typography.bold, fontSize: 13, color: colors.textPrimary, marginBottom: 8, padding: 11, backgroundColor: colors.surfaceVariant, borderRadius: 10 },
-  tfOpts: { flexDirection: 'row', gap: 7 },
-  tfBtn: { flex: 1, padding: 12, borderRadius: 11, borderWidth: 2, borderColor: colors.border, backgroundColor: colors.surface, alignItems: 'center' },
-  tfBtnTrue: { borderColor: colors.success, backgroundColor: '#f0fdf4' },
-  tfBtnFalse: { borderColor: colors.error, backgroundColor: '#fff1f2' },
-  galleryNum: { fontSize: 10, fontWeight: '700', color: colors.success, textTransform: 'uppercase', marginBottom: 6 },
-  completeContainer: { alignItems: 'center', padding: 20 },
-  completeBadgeText: { fontSize: 44, marginBottom: 14 },
-  completeTitle: { ...typography.extraBold, fontSize: 21, color: colors.textPrimary, marginBottom: 6 },
-  completeSub: { ...typography.regular, fontSize: 12, color: colors.textSecondary, textAlign: 'center', lineHeight: 1.7, marginBottom: 16 },
+  vfStmt: { padding: 13, backgroundColor: '#f8fafc', borderRadius: 12, borderWidth: 1, borderColor: '#e2e8f0', marginBottom: 12 },
+  vfStmtText: { fontSize: 13, color: '#0f172a', fontWeight: '600', lineHeight: 20 },
+  tfOpts: { flexDirection: 'row', gap: 10 },
+  vfBtn: { flex: 1, padding: 12, borderRadius: 12, borderWidth: 2, alignItems: 'center' },
+  vfTrue: { borderColor: '#10b981', backgroundColor: '#ecfdf5' },
+  vfTrueText: { fontWeight: '700', fontSize: 14, color: '#065f46' },
+  vfFalse: { borderColor: '#ef4444', backgroundColor: '#fff1f2' },
+  vfFalseText: { fontWeight: '700', fontSize: 14, color: '#991b1b' },
+  vfResultBox: { padding: 16, backgroundColor: '#f8fafc', borderRadius: 12, borderWidth: 1, borderColor: '#e2e8f0', marginBottom: 4 },
+  vfResultText: { textAlign: 'center', fontSize: 15, fontWeight: '700', color: '#0f172a' },
+  galleryItem: { backgroundColor: '#f8fafc', borderWidth: 1.5, borderColor: '#e2e8f0', borderRadius: 12, padding: 12, marginBottom: 10 },
+  galleryItemFilled: { backgroundColor: '#ecfdf5', borderColor: '#a7f3d0' },
+  galleryNum: { fontSize: 10, fontWeight: '700', color: '#10b981', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 },
+  completeContainer: { alignItems: 'center', padding: 8 },
+  completeBadge: { width: 88, height: 88, borderRadius: 24, backgroundColor: '#a7f3d0', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
+  completeBadgeText: { fontSize: 46 },
+  completeTitle: { ...typography.extraBold, fontSize: 20, color: '#0f172a', marginBottom: 8, textAlign: 'center' },
+  completeSub: { ...typography.regular, fontSize: 12, color: '#64748b', textAlign: 'center', lineHeight: 18, marginBottom: 16 },
   skillList: { backgroundColor: '#f0fdf4', borderRadius: 12, padding: 13, marginBottom: 14, borderWidth: 1, borderColor: '#a7f3d0', width: '100%' },
-  skillRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 6 },
-  skillCheck: { color: colors.success, fontWeight: '700' },
-  skillText: { ...typography.regular, fontSize: 12, color: colors.textPrimary, flex: 1, lineHeight: 18 },
-  nextHint: { backgroundColor: '#f8fafc', borderRadius: 10, padding: 11, borderWidth: 1, borderColor: colors.border, width: '100%', marginBottom: 12 },
-  nextHintText: { ...typography.regular, fontSize: 12, color: colors.textSecondary, lineHeight: 18 },
-  xpEarnedText: { ...typography.bold, fontSize: 15, color: colors.accentDark, marginBottom: 14 },
-  finishButton: { backgroundColor: colors.primary, padding: 14, borderRadius: 11, width: '100%', alignItems: 'center' },
-  finishButtonText: { ...typography.bold, color: '#fff' },
-  footerRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 16, gap: 8 },
-  backButton: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, padding: 14, borderRadius: 11, alignItems: 'center', paddingHorizontal: 20 },
-  backButtonText: { ...typography.bold, color: colors.textSecondary, fontSize: 15 },
-  nextButtonFlex: { flex: 1, margin: 0 },
+  skillRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 7 },
+  skillCheck: { color: '#10b981', fontWeight: '700' },
+  skillText: { ...typography.regular, fontSize: 12, color: '#334155', flex: 1, lineHeight: 18 },
+  nextHint: { backgroundColor: '#f8fafc', borderRadius: 10, padding: 11, borderWidth: 1, borderColor: '#e2e8f0', width: '100%', marginBottom: 14 },
+  nextHintText: { ...typography.regular, fontSize: 12, color: '#334155', lineHeight: 18 },
+  lvlBarWrap: { width: '100%', marginBottom: 14 },
+  lvlBarLabel: { fontSize: 10, color: '#94a3b8', marginBottom: 4 },
+  lvlBarOuter: { height: 6, backgroundColor: '#e2e8f0', borderRadius: 3, overflow: 'hidden' },
+  lvlBarInner: { height: '100%', backgroundColor: '#10b981', borderRadius: 3, width: '11%' },
+  finishButton: { backgroundColor: '#2563eb', padding: 14, borderRadius: 12, width: '100%', alignItems: 'center' },
+  finishButtonText: { ...typography.bold, color: '#fff', fontSize: 15 },
+  btnRow: { paddingHorizontal: 13, paddingVertical: 12, borderTopWidth: 1, borderTopColor: '#f1f5f9', backgroundColor: '#fafcff' },
+  footerRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  backButton: { backgroundColor: '#f1f5f9', borderWidth: 1.5, borderColor: '#e2e8f0', paddingVertical: 13, paddingHorizontal: 16, borderRadius: 12, alignItems: 'center', minHeight: 48, justifyContent: 'center' },
+  backButtonText: { ...typography.bold, color: '#64748b', fontSize: 14 },
+  nextButtonFlex: { flex: 1 },
+  dotsRow: { flexDirection: 'row', gap: 3, justifyContent: 'center', flexWrap: 'wrap', paddingTop: 9 },
+  dot: { width: 5, height: 5, borderRadius: 3, backgroundColor: '#cbd5e1' },
+  dotActive: { backgroundColor: '#10b981', width: 14 },
+  dotDone: { backgroundColor: '#a7f3d0' },
+  stepsCounter: { fontSize: 10, color: '#94a3b8', textAlign: 'center', paddingTop: 4 },
 });
