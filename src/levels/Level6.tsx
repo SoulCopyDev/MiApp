@@ -265,7 +265,8 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
   const iterQuiz = useRef(pickN(ITER_QUIZ_POOL, 4).map(shuffleOpts)).current;
   const buildQuiz = useRef(pickN(BUILD_QUIZ_POOL, 5).map(shuffleOpts)).current;
   const ethicsItems = useRef(pickN(PROJ_ETHICS_POOL, 4)).current;
-  const sprintItems = useRef(SPRINT_PROJ).current;
+  // Barajado: el pool viene alternado V/F/V/F; sin mezclar, el usuario acierta solo alternando.
+  const sprintItems = useRef(pickN(SPRINT_PROJ, SPRINT_PROJ.length)).current;
 
   // ----- Estados de actividades -----
   const [tfAnswers, setTfAnswers] = useState<{ [key: number]: boolean }>({});
