@@ -402,7 +402,8 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
     else if (xp >= 130) stars = 2;
     else if (xp >= 60) stars = 1;
     completeLevel(6, stars, xp);
-    router.replace('/level/7');
+    // Fin del Mundo 1 → evaluación del Mundo 1 (luego se abre el Mundo 2, N7-N12)
+    router.replace('/eval/1');
   };
 
   const handleClose = () => {
@@ -1134,13 +1135,13 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
               ))}
             </View>
             <View style={styles.nextHint}>
-              <Text style={{ fontSize: 12, color: '#334155', lineHeight: 18 }}>🎯 <Text style={styles.bold}>Mundo 2: Domina el Prompting (N7–N12)</Text>{'\n\n'}Ahora que terminaste el Mundo 1, vas a dominar el prompting a fondo: contexto avanzado, prompts creativos, errores, cadenas y técnicas que usan los expertos. El Mundo 2 arranca con N7 — Prompting Intermedio.</Text>
+              <Text style={{ fontSize: 12, color: '#334155', lineHeight: 18 }}>🏁 <Text style={styles.bold}>¡Completaste el Mundo 1!</Text>{'\n\n'}Ahora te espera la <Text style={styles.bold}>Evaluación del Mundo 1</Text>, donde repasarás todo lo que aprendiste en los niveles 1 al 6.{'\n\n'}Al superarla se abre el <Text style={styles.bold}>Mundo 2: Domina el Prompting</Text>, con <Text style={styles.bold}>6 niveles nuevos</Text> (N7 a N12) para convertirte en un experto del prompting.</Text>
             </View>
             <View style={{ width: '100%', marginBottom: 14 }}>
-              <Text style={{ fontSize: 10, color: '#94a3b8', marginBottom: 4 }}>Nivel 6 de 36 completado · Mundo 1 completado · ¡Sigue a M2!</Text>
+              <Text style={{ fontSize: 10, color: '#94a3b8', marginBottom: 4 }}>Nivel 6 de 36 completado · Mundo 1 terminado · Sigue la Evaluación del Mundo 1</Text>
               <View style={{ height: 6, backgroundColor: '#e2e8f0', borderRadius: 3, overflow: 'hidden' }}><View style={{ height: '100%', width: '20%', backgroundColor: '#d97706', borderRadius: 3 }} /></View>
             </View>
-            <TouchableOpacity style={styles.primaryBtn} onPress={handleFinish}><Text style={styles.primaryBtnText}>Siguiente nivel →</Text></TouchableOpacity>
+            <TouchableOpacity style={styles.primaryBtn} onPress={handleFinish}><Text style={styles.primaryBtnText}>Vamos a la evaluación del Mundo 1 →</Text></TouchableOpacity>
           </View>
         );
 
