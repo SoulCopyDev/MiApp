@@ -329,6 +329,50 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
     return () => clearTimeout(timer);
   }, [sprintRunning, sprintSec, sprintOver]);
 
+  // ----- M4: drag & drop en web (además del tap-para-colocar) -----
+  const tipoPlacedRef = useRef(tipoPlaced);
+  useEffect(() => { tipoPlacedRef.current = tipoPlaced; }, [tipoPlaced]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || step !== 4) return;
+    const cleanups: Array<() => void> = [];
+    const setup = setTimeout(() => {
+      // Chips arrastrables
+      tipoItems.forEach((_, i) => {
+        const el = document.getElementById(`l6-chip-${i}`);
+        if (!el) return;
+        el.setAttribute('draggable', 'true');
+        (el.style as any).cursor = 'grab';
+        const onDragStart = (e: any) => {
+          (window as any)._l6drag = i;
+          if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
+        };
+        el.addEventListener('dragstart', onDragStart);
+        cleanups.push(() => el.removeEventListener('dragstart', onDragStart));
+      });
+      // Zonas receptoras
+      (['generador', 'asistente', 'automatizador'] as const).forEach((zone) => {
+        const zoneEl = document.getElementById(`l6-zone-${zone}`);
+        if (!zoneEl) return;
+        const onDragOver = (e: any) => e.preventDefault();
+        const onDrop = (e: any) => {
+          e.preventDefault();
+          const idx = (window as any)._l6drag;
+          if (idx == null) return;
+          if (tipoPlacedRef.current[idx] !== undefined) return;
+          setTipoPlaced((prev) => ({ ...prev, [idx]: zone }));
+          setTipoSelected(null);
+          setTipoFb(null);
+          (window as any)._l6drag = null;
+        };
+        zoneEl.addEventListener('dragover', onDragOver);
+        zoneEl.addEventListener('drop', onDrop);
+        cleanups.push(() => { zoneEl.removeEventListener('dragover', onDragOver); zoneEl.removeEventListener('drop', onDrop); });
+      });
+    }, 60);
+    return () => { clearTimeout(setup); cleanups.forEach((c) => c()); };
+  }, [step, tipoPlaced, tipoItems]);
+
   // ----- Helpers -----
   const addXP = (amount: number) => {
     setXp((prev) => prev + amount);
@@ -638,7 +682,7 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
             </InfoCard>
             <View style={styles.chipsPool}>
               {tipoItems.map((item, i) => (tipoPlaced[i] === undefined && (
-                <TouchableOpacity key={i} style={[styles.chip, tipoSelected === i && styles.chipActive]} onPress={() => setTipoSelected(tipoSelected === i ? null : i)}>
+                <TouchableOpacity key={i} {...({ nativeID: `l6-chip-${i}` } as any)} style={[styles.chip, tipoSelected === i && styles.chipActive]} onPress={() => setTipoSelected(tipoSelected === i ? null : i)}>
                   <Text style={{ fontSize: 11, color: tipoSelected === i ? '#92400e' : '#334155', fontWeight: '500' }}>{item.text}</Text>
                 </TouchableOpacity>
               )))}
@@ -648,7 +692,7 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
               const zBorder = zone === 'generador' ? '#d97706' : zone === 'asistente' ? '#7c3aed' : '#0ea5e9';
               const zBg = zone === 'generador' ? '#fffbeb' : zone === 'asistente' ? '#faf5ff' : '#f0f9ff';
               return (
-                <TouchableOpacity key={zone} style={[styles.dropCol, has && { borderStyle: 'solid', borderColor: zBorder, backgroundColor: zBg }]} onPress={() => dropTipoChip(zone)}>
+                <TouchableOpacity key={zone} {...({ nativeID: `l6-zone-${zone}` } as any)} style={[styles.dropCol, has && { borderStyle: 'solid', borderColor: zBorder, backgroundColor: zBg }]} onPress={() => dropTipoChip(zone)}>
                   <Text style={[styles.dropHeader, { backgroundColor: zone === 'generador' ? '#fef3c7' : zone === 'asistente' ? '#ede9fe' : '#dbeafe', color: zone === 'generador' ? '#92400e' : zone === 'asistente' ? '#5b21b6' : '#1e40af' }]}>
                     {zone === 'generador' ? '🟡 Generador' : zone === 'asistente' ? '🟣 Asistente' : '🔵 Automatizador'}
                   </Text>
@@ -1157,7 +1201,7 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
   const getNote = () => {
     switch (step) {
       case 2: return `Responde las ${viableTF.length} situaciones · hasta ${viableTF.length * 5} XP`;
-      case 4: return 'Toca un chip → luego toca la columna donde va';
+      case 4: return 'Arrastra un chip a su columna · o toca el chip y luego la columna';
       case 8: return builderComplete ? '¡Prompt listo! Puedes copiarlo y usarlo en cualquier LLM' : 'Completa los 5 selectores para ensamblar tu prompt';
       case 10: return `Responde las ${iterQuiz.length} preguntas · hasta ${iterQuiz.length * 8} XP`;
       case 12: return 'Completa todos los espacios · +6 XP cada uno';
