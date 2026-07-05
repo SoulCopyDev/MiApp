@@ -186,6 +186,16 @@ const HEADLINES: Headline[] = [
 // ---------- Helper ----------
 const pickN = <T,>(arr: T[], n: number): T[] => [...arr].sort(() => Math.random() - 0.5).slice(0, n);
 
+// Baraja las opciones de una pregunta y reubica el índice correcto (evita que la respuesta caiga siempre en la misma posición)
+function shuffleOpts<T extends { opts: string[]; correct: number }>(q: T): T {
+  const paired = q.opts.map((opt, i) => ({ opt, isCorrect: i === q.correct }));
+  for (let j = paired.length - 1; j > 0; j--) {
+    const k = Math.floor(Math.random() * (j + 1));
+    [paired[j], paired[k]] = [paired[k], paired[j]];
+  }
+  return { ...q, opts: paired.map((p) => p.opt), correct: paired.findIndex((p) => p.isCorrect) };
+}
+
 const TOTAL_STEPS = 8; // 0:intro 1:quiz 2:drag 3:fake 4:builder 5:reflect 6:resultado 7:badge
 const PROG_LABELS = ['Evaluación Mundo 1', 'Parte 1 — Quiz', 'Parte 2 — Drag-drop', 'Parte 3 — Fake Detector', 'Parte 4 — Builder', 'Parte 5 — Reflexión', 'Resultado', '🏆 Badge'];
 
@@ -208,8 +218,8 @@ export default function World1Eval() {
   const completeLevel = useGameStore((s) => s.completeLevel);
   const devMode = useGameStore((s) => s.devMode);
 
-  // Datos aleatorizados por sesión
-  const [quizItems] = useState(() => pickN(QUIZ_POOL, 15));
+  // Datos aleatorizados por sesión (preguntas y opciones barajadas)
+  const [quizItems] = useState(() => pickN(QUIZ_POOL, 15).map(shuffleOpts));
 
   // Parte 1 — Quiz
   const [quizIdx, setQuizIdx] = useState(0);
@@ -494,12 +504,19 @@ export default function World1Eval() {
             <View>
               <View style={[styles.tag, styles.tagQuiz]}><Text style={styles.tagQuizText}>🧠 Parte 1 · Quiz · {quizIdx + 1}/{quizItems.length}</Text></View>
               <PartDots done={0} active={1} />
-              <View style={styles.quizQ}><Text style={styles.quizQText}>{item.q}</Text></View>
+              <View style={styles.quizQ}>
+                <View style={styles.quizQNum}><Text style={styles.quizQNumText}>{quizIdx + 1}</Text></View>
+                <Text style={styles.quizQText}>{item.q}</Text>
+              </View>
               {item.opts.map((o, i) => {
                 const correct = quizAnswered && i === item.correct;
                 const wrong = quizAnswered && i === quizSel && i !== item.correct;
+                const highlighted = correct || wrong;
                 return (
                   <TouchableOpacity key={i} style={[styles.quizOpt, correct && styles.quizOptCorrect, wrong && styles.quizOptWrong]} onPress={() => answerQuiz(i)} disabled={quizAnswered}>
+                    <View style={[styles.quizOptLetter, correct && styles.quizOptLetterOk, wrong && styles.quizOptLetterBad]}>
+                      <Text style={[styles.quizOptLetterText, highlighted && { color: '#fff' }]}>{String.fromCharCode(65 + i)}</Text>
+                    </View>
                     <Text style={[styles.quizOptText, correct && { color: '#065f46' }, wrong && { color: '#991b1b' }]}>{o}</Text>
                   </TouchableOpacity>
                 );
@@ -836,10 +853,16 @@ const styles = StyleSheet.create({
   hlRed: { borderLeftColor: '#ef4444', backgroundColor: '#fff1f2' }, hlRedText: { fontSize: 12, lineHeight: 20, fontWeight: '500', color: '#991b1b' },
 
   // Quiz
-  quizQ: { padding: 12, backgroundColor: '#f5f3ff', borderRadius: 12, borderWidth: 1, borderColor: '#c4b5fd', marginBottom: 12 },
-  quizQText: { fontSize: 13, fontWeight: '700', color: '#0f172a', lineHeight: 21 },
-  quizOpt: { paddingHorizontal: 13, paddingVertical: 11, borderRadius: 11, borderWidth: 2, borderColor: '#e2e8f0', backgroundColor: '#f8fafc', marginBottom: 7 },
-  quizOptText: { fontSize: 12, fontWeight: '600', color: '#334155', lineHeight: 17 },
+  quizQ: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, padding: 13, backgroundColor: '#f5f3ff', borderRadius: 12, borderWidth: 1.5, borderColor: '#c4b5fd', borderLeftWidth: 4, borderLeftColor: '#8b5cf6', marginBottom: 14 },
+  quizQNum: { width: 26, height: 26, borderRadius: 13, backgroundColor: '#8b5cf6', alignItems: 'center', justifyContent: 'center', marginTop: 1 },
+  quizQNumText: { fontSize: 13, fontWeight: '800', color: '#fff' },
+  quizQText: { flex: 1, fontSize: 13, fontWeight: '700', color: '#0f172a', lineHeight: 21 },
+  quizOpt: { flexDirection: 'row', alignItems: 'center', gap: 11, paddingHorizontal: 13, paddingVertical: 12, borderRadius: 11, borderWidth: 2, borderColor: '#e2e8f0', backgroundColor: '#fff', marginBottom: 8 },
+  quizOptLetter: { width: 26, height: 26, borderRadius: 8, backgroundColor: '#ede9fe', borderWidth: 1, borderColor: '#ddd6fe', alignItems: 'center', justifyContent: 'center' },
+  quizOptLetterText: { fontSize: 12, fontWeight: '800', color: '#5b21b6' },
+  quizOptLetterOk: { backgroundColor: '#10b981', borderColor: '#10b981' },
+  quizOptLetterBad: { backgroundColor: '#ef4444', borderColor: '#ef4444' },
+  quizOptText: { flex: 1, fontSize: 12, fontWeight: '600', color: '#334155', lineHeight: 17 },
   quizOptCorrect: { borderColor: '#10b981', backgroundColor: '#ecfdf5' },
   quizOptWrong: { borderColor: '#ef4444', backgroundColor: '#fff1f2' },
 
