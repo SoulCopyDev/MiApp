@@ -706,7 +706,7 @@ export default function World2Level1() {
                       <Text style={styles.tfBtnEmoji}>❌</Text><Text style={styles.tfBtnLabel}>Falso</Text>
                     </TouchableOpacity>
                   </View>
-                  {tfChecked && <FeedbackBar ok={isOk}>{(isOk ? '✅ ' : '❌ ') + item.explain}</FeedbackBar>}
+                  {tfChecked && <FeedbackBar ok={isOk}>{isOk ? `✅ ${item.explain}` : `❌ Incorrecto. La respuesta correcta es «${item.correct ? 'Verdadero' : 'Falso'}». ${item.explain}`}</FeedbackBar>}
                 </View>
               );
             })}
