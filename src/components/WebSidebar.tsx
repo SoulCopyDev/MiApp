@@ -125,8 +125,6 @@ export default function WebSidebar() {
       );
     };
 
-    const prevWorlds = worlds.filter(w => w.id < (worldId ?? 0));
-
     return (
       <View style={s.sidebar}>
         {/* Logo */}
@@ -144,38 +142,42 @@ export default function WebSidebar() {
         <ScrollView style={s.nav} showsVerticalScrollIndicator={false}>
           <Text style={s.navSection}>MI CAMINO</Text>
 
-          {/* Mundos anteriores — bandas desplegables */}
-          {prevWorlds.map(prevWorld => {
-            const expanded = expandedWorlds.has(prevWorld.id);
-            const firstN   = coordsToGlobalN(prevWorld.id, 1);
-            const lastN    = coordsToGlobalN(prevWorld.id, 6);
-            const allDone  = prevWorld.levels.every(l => l.status === 'completed');
+          {/* Mundo actual expandido + los demás mundos accesibles como bandas desplegables */}
+          {worlds.map(w => {
+            const isCurrent  = w.id === worldId;
+            const accessible = w.levels.some(l => l.status !== 'locked');
+
+            // Mundo en curso: sus niveles se listan directamente
+            if (isCurrent) {
+              return <View key={w.id}>{w.levels.map(level => renderLevelItem(w, level))}</View>;
+            }
+            // Mundo todavía bloqueado (no alcanzado): no se muestra
+            if (!accessible) return null;
+
+            // Otro mundo accesible (anterior o siguiente): banda desplegable
+            const expanded = expandedWorlds.has(w.id);
+            const firstN   = coordsToGlobalN(w.id, 1);
+            const lastN    = coordsToGlobalN(w.id, 6);
+            const allDone  = w.levels.every(l => l.status === 'completed');
             return (
-              <View key={prevWorld.id}>
-                <TouchableOpacity
-                  style={s.worldBand}
-                  onPress={() => toggleWorld(prevWorld.id)}
-                  activeOpacity={0.7}
-                >
+              <View key={w.id}>
+                <TouchableOpacity style={s.worldBand} onPress={() => toggleWorld(w.id)} activeOpacity={0.7}>
                   <View style={s.levelIconWrap}>
                     <MaterialIcons name={expanded ? 'expand-more' : 'chevron-right'} size={18} color={colors.textSecondary} />
                   </View>
                   <Text style={s.worldBandLabel} numberOfLines={1}>
-                    Mundo {prevWorld.id} (N{firstN} a N{lastN})
+                    Mundo {w.id} (N{firstN} a N{lastN})
                   </Text>
                   {allDone && <MaterialIcons name="check-circle" size={13} color={colors.success} />}
                 </TouchableOpacity>
                 {expanded && (
                   <View style={s.subLevelWrap}>
-                    {prevWorld.levels.filter(l => l.id <= 6).map(level => renderLevelItem(prevWorld, level))}
+                    {w.levels.filter(l => l.id <= 6).map(level => renderLevelItem(w, level))}
                   </View>
                 )}
               </View>
             );
           })}
-
-          {/* Niveles del mundo actual */}
-          {world.levels.map(level => renderLevelItem(world, level))}
 
           <View style={s.divider} />
 
