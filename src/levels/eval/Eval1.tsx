@@ -321,7 +321,8 @@ export default function World1Eval() {
     const overall = Math.round(((p1Score / 15) + (p2Score / 10) + (p3Score / 5)) / 3 * 100);
     const stars = overall >= 85 ? 3 : overall >= 60 ? 2 : 1;
     completeLevel(37, stars, xp);
-    router.back();
+    // Ir directo al primer nivel del Mundo 2 (N7)
+    router.replace('/level/7');
   };
 
   // ----- Parte 1: Quiz -----
