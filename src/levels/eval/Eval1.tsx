@@ -542,11 +542,11 @@ export default function World1Eval() {
                 <TouchableOpacity
                   key={i}
                   {...({ nativeID: `e1-chip-${i}` } as any)}
-                  style={[styles.chip, { backgroundColor: item.bg, borderColor: item.color + '40' }, ddSelected === i && styles.chipActive]}
+                  style={[styles.chip, ddSelected === i && styles.chipActive]}
                   onPress={() => setDdSelected(ddSelected === i ? null : i)}
                   disabled={ddChecked}
                 >
-                  <Text style={{ fontSize: 11, fontWeight: '700', color: item.color }}>{item.text}</Text>
+                  <Text style={[styles.chipText, ddSelected === i && styles.chipTextActive]}>{item.text}</Text>
                 </TouchableOpacity>
               )))}
               {Object.keys(ddPlaced).length === DD_ITEMS.length && <Text style={{ fontSize: 11, color: '#94a3b8' }}>Todas las tarjetas ubicadas ✓</Text>}
@@ -568,8 +568,8 @@ export default function World1Eval() {
                       {placedHere.map((idx) => {
                         const it = DD_ITEMS[idx];
                         return (
-                          <TouchableOpacity key={idx} onPress={() => removeDD(idx)} style={[styles.dropChip, { backgroundColor: it.bg, borderColor: it.color + '40' }]}>
-                            <Text style={{ fontSize: 10, fontWeight: '600', color: it.color }}>{it.text} ✕</Text>
+                          <TouchableOpacity key={idx} onPress={() => removeDD(idx)} style={styles.dropChip}>
+                            <Text style={styles.dropChipText}>{it.text} ✕</Text>
                           </TouchableOpacity>
                         );
                       })}
@@ -873,14 +873,17 @@ const styles = StyleSheet.create({
 
   // Drag-drop
   chipPool: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10, marginBottom: 14, minHeight: 36, padding: 8, backgroundColor: '#f8fafc', borderRadius: 12, borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#cbd5e1', alignItems: 'center' },
-  chip: { paddingHorizontal: 11, paddingVertical: 6, borderRadius: 14, borderWidth: 1.5 },
+  chip: { paddingHorizontal: 11, paddingVertical: 6, borderRadius: 14, borderWidth: 1.5, borderColor: '#cbd5e1', backgroundColor: '#f8fafc' },
   chipActive: { borderColor: '#6366f1', backgroundColor: '#eef2ff' },
+  chipText: { fontSize: 11, fontWeight: '700', color: '#334155' },
+  chipTextActive: { color: '#3730a3' },
   dropGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 },
   dropCol: { width: '47.5%', flexGrow: 1, borderRadius: 12, borderWidth: 2, borderStyle: 'dashed', borderColor: '#cbd5e1', minHeight: 80, padding: 7, backgroundColor: '#fafafa' },
   dropColHas: { borderStyle: 'solid' },
   dropHeader: { fontSize: 10, fontWeight: '700', textAlign: 'center', marginBottom: 6, paddingHorizontal: 6, paddingVertical: 4, borderRadius: 7, overflow: 'hidden' },
   dropArea: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
-  dropChip: { paddingHorizontal: 9, paddingVertical: 4, borderRadius: 12, borderWidth: 1.5 },
+  dropChip: { paddingHorizontal: 9, paddingVertical: 4, borderRadius: 12, borderWidth: 1.5, borderColor: '#cbd5e1', backgroundColor: '#f1f5f9' },
+  dropChipText: { fontSize: 10, fontWeight: '600', color: '#334155' },
 
   // Fake detector
   headlineCard: { backgroundColor: '#f8fafc', borderWidth: 1.5, borderColor: '#e2e8f0', borderRadius: 13, padding: 13, marginBottom: 10 },
