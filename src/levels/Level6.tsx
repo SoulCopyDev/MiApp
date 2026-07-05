@@ -12,6 +12,7 @@ import {
   Platform,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { useGameStore } from '../store/gameStore';
 import { colors, typography } from '../theme';
 import XPToast from '../components/XPToast';
@@ -345,7 +346,10 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
         (el.style as any).cursor = 'grab';
         const onDragStart = (e: any) => {
           (window as any)._l6drag = i;
-          if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
+          if (e.dataTransfer) {
+            e.dataTransfer.effectAllowed = 'move';
+            try { e.dataTransfer.setData('text/plain', String(i)); } catch { /* noop */ }
+          }
         };
         el.addEventListener('dragstart', onDragStart);
         cleanups.push(() => el.removeEventListener('dragstart', onDragStart));
