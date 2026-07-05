@@ -74,9 +74,9 @@ const ITER_QUIZ_POOL: QuizItem[] = [
 ];
 
 const README_SECTIONS: ReadmeSection[] = [
-  { parts: ['Mi proyecto se llama ', ' y está diseñado para ayudar a ', '.'], blanks: [{ opts: ['Asistente de Estudio', 'Código malicioso', 'Virus automático', 'Sistema de hackeo'], correct: 0 }, { opts: ['estudiantes a estudiar mejor', 'hackear sistemas ajenos', 'robar contraseñas', 'engañar a profesores'], correct: 0 }], explain: 'El nombre y la audiencia son lo primero. Un buen README siempre empieza con para qué sirve y para quién.' },
+  { parts: ['Mi proyecto se llama ', ' y está diseñado para ayudar a ', '.'], blanks: [{ opts: ['Asistente de Estudio', 'Código malicioso', 'Virus automático', 'Sistema de hackeo'], correct: 0 }, { opts: ['estudiantes a estudiar mejor', 'hackear sistemas ajenos', 'robar contraseñas', 'engañar a profesores'], correct: 0 }], explain: 'El nombre y la audiencia son lo primero. Una buena Ficha del proyecto siempre empieza con para qué sirve y para quién.' },
   { parts: ['Para usarlo, debes escribir tu pregunta en el chat y el modelo responderá usando el ', ' que le diste como contexto.'], blanks: [{ opts: ['contexto', 'virus', 'token', 'deepfake'], correct: 0 }], explain: 'El "contexto" es la información que incluyes en el prompt para que el modelo pueda responder con precisión sobre tu tema específico.' },
-  { parts: ['Este proyecto fue construido usando ', ' como herramienta de IA y puede mejorarse ', ' el prompt con más instrucciones.'], blanks: [{ opts: ['un LLM', 'una impresora', 'una calculadora', 'un virus'], correct: 0 }, { opts: ['iterando', 'borrando', 'copiando', 'ignorando'], correct: 0 }], explain: 'Todo README técnico menciona las herramientas usadas y cómo se puede mejorar el proyecto en el futuro.' },
+  { parts: ['Este proyecto fue construido usando ', ' como herramienta de IA y puede mejorarse ', ' el prompt con más instrucciones.'], blanks: [{ opts: ['un LLM', 'una impresora', 'una calculadora', 'un virus'], correct: 0 }, { opts: ['iterando', 'borrando', 'copiando', 'ignorando'], correct: 0 }], explain: 'Toda Ficha del proyecto menciona las herramientas usadas y cómo se puede mejorar el proyecto en el futuro.' },
 ];
 
 const PROJ_ETHICS_POOL: EthicsItem[] = [
@@ -92,7 +92,7 @@ const BUILD_QUIZ_POOL: QuizItem[] = [
   { q: '¿Cuál es el primer paso para construir un proyecto con IA?', opts: ['Elegir el LLM más caro disponible', 'Definir el problema concreto que vas a resolver y para quién', 'Escribir el código de la aplicación', 'Crear el diseño visual de la interfaz'], correct: 1, explain: 'Siempre primero el problema, luego la solución. Sin un problema claro y una audiencia definida, cualquier proyecto de IA será una solución en busca de problema.' },
   { q: '¿Qué es un "prompt base" en el contexto de un proyecto con LLM?', opts: ['El código fuente del modelo de lenguaje', 'El prompt inicial que define el comportamiento del sistema para todos los usuarios', 'La interfaz gráfica de la aplicación', 'El nombre del proyecto'], correct: 1, explain: 'El prompt base (o system prompt) es las instrucciones que le das al LLM para que se comporte como tu asistente específico. Define el rol, el tono, el alcance y las restricciones del sistema.' },
   { q: '¿Por qué es importante probar tu proyecto con usuarios reales antes de publicarlo?', opts: ['Para que más personas sepan que existe', 'Porque los usuarios reales hacen preguntas inesperadas que revelan fallos que tú no habías previsto', 'Para aumentar el número de seguidores en redes sociales', 'Porque los LLMs requieren muchos usuarios para funcionar'], correct: 1, explain: 'Los usuarios reales hacen preguntas de formas que nunca imaginaste. Sus "fallos" son los datos más valiosos para mejorar el proyecto. Siempre prueba con al menos 3-5 personas reales antes de publicar.' },
-  { q: '¿Qué información debería incluir el README de tu proyecto de IA?', opts: ['Solo el nombre del proyecto', 'Para qué sirve, quién lo usa, cómo usarlo, qué LLM usa y cómo se puede mejorar', 'Solo el código fuente', 'Solo los créditos de quién lo hizo'], correct: 1, explain: 'Un buen README permite que cualquier persona entienda tu proyecto en 2 minutos sin preguntarte nada. Incluye propósito, audiencia, instrucciones de uso, tecnología y posibles mejoras.' },
+  { q: '¿Qué información debería incluir la Ficha de tu proyecto de IA?', opts: ['Solo el nombre del proyecto', 'Para qué sirve, quién lo usa, cómo usarlo, qué LLM usa y cómo se puede mejorar', 'Solo el código fuente', 'Solo los créditos de quién lo hizo'], correct: 1, explain: 'Una buena Ficha del proyecto permite que cualquier persona entienda tu proyecto en 2 minutos sin preguntarte nada. Incluye propósito, audiencia, instrucciones de uso, tecnología y posibles mejoras.' },
   { q: 'Tu asistente funciona bien para preguntas en español pero muy mal en inglés. ¿Qué solución es más directa?', opts: ['Cambiar el LLM por uno diferente', 'Agregar en el prompt base: "Responde siempre en español, incluso si la pregunta viene en otro idioma."', 'Contratar un traductor', 'Publicar el proyecto solo en países hispanohablantes'], correct: 1, explain: 'El prompt base controla el comportamiento del modelo. Especificar el idioma de respuesta es una instrucción simple y efectiva que resuelve el problema en un solo ajuste.' },
   { q: '¿Qué significa "documentar" un proyecto de IA?', opts: ['Filmar un video del proceso de construcción', 'Escribir de forma clara qué hace el proyecto, cómo funciona, cómo se usa y cómo se puede mejorar', 'Guardar el historial de conversaciones con el LLM', 'Crear un folleto de marketing del proyecto'], correct: 1, explain: 'Documentar es dejar un registro claro para que otros (o tu yo del futuro) puedan entender, usar y mejorar el proyecto. Es una habilidad profesional fundamental en tecnología.' },
   { q: '¿Cuál de estos describe mejor un proyecto de IA bien diseñado para estudiantes?', opts: ['Resuelve todos los problemas del mundo automáticamente', 'Tiene un propósito específico, audiencia definida, prompt refinado, documentación y consideraciones éticas', 'Es el más complejo técnicamente posible', 'Usa la mayor cantidad de herramientas de IA simultáneamente'], correct: 1, explain: 'La simplicidad enfocada vence a la complejidad difusa. Un proyecto bien diseñado hace una cosa muy bien, para una audiencia clara, con límites éticos definidos.' },
@@ -102,7 +102,7 @@ const BUILD_QUIZ_POOL: QuizItem[] = [
 const SPRINT_PROJ: SprintItem[] = [
   { stmt: 'Antes de publicar tu proyecto, debes probarlo con usuarios reales', correct: true },
   { stmt: 'Si el prompt funciona a la primera, no hace falta iterarlo', correct: false },
-  { stmt: 'Un README explica qué hace el proyecto y cómo usarlo', correct: true },
+  { stmt: 'La Ficha del proyecto explica qué hace el proyecto y cómo usarlo', correct: true },
   { stmt: 'Puedes usar fotos de tus compañeros sin permiso en tu proyecto de IA', correct: false },
   { stmt: 'Incluir el contexto relevante en el prompt mejora las respuestas del LLM', correct: true },
   { stmt: 'Un proyecto de IA que no define su audiencia generalmente funciona mejor', correct: false },
@@ -725,7 +725,7 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
               <StepRow n={2}><Text style={styles.bold}>Diseña el prompt base:</Text> Escribe el primer prompt con rol, contexto, tarea y formato. No tiene que ser perfecto — tiene que ser un punto de partida.</StepRow>
               <StepRow n={3}><Text style={styles.bold}>Prueba y evalúa:</Text> Ejecuta el prompt en un LLM real. ¿La respuesta es útil para el usuario final? ¿Qué falla específicamente?</StepRow>
               <StepRow n={4}><Text style={styles.bold}>Itera y mejora:</Text> Ajusta el prompt según lo que falló. Prueba de nuevo. Repite hasta que funcione bien. Promedio: 3-5 iteraciones para un proyecto simple.</StepRow>
-              <StepRow n={5}><Text style={styles.bold}>Documenta y comparte:</Text> Escribe un README claro. ¿Qué hace? ¿Para quién? ¿Cómo se usa? ¿Qué LLM usar? ¿Cómo se puede mejorar?</StepRow>
+              <StepRow n={5}><Text style={styles.bold}>Documenta y comparte:</Text> Escribe una Ficha del proyecto clara. ¿Qué hace? ¿Para quién? ¿Cómo se usa? ¿Qué LLM usar? ¿Cómo se puede mejorar?</StepRow>
             </View>
             <Hl variant="amber"><Text style={styles.bold}>💡 El paso que más se salta:</Text>{'\n'}El paso 3 — probar con usuarios reales. Es tentador asumir que si a ti te funciona, funciona para todos. Siempre prueba con al menos 3 personas que no saben cómo hiciste el proyecto.</Hl>
             <InfoCard variant="orange" icon="⚡" iconBg="#fed7aa" title="¿Cuánto tarda un proyecto básico?">Con práctica: <Text style={styles.bold}>30-60 minutos</Text> para tener la versión 1 funcionando. Las primeras iteraciones toman más. Con el tiempo, el proceso se vuelve natural e intuitivo.</InfoCard>
@@ -874,25 +874,25 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
       case 11:
         return (
           <View style={styles.stepContainer}>
-            <Tag variant="theory">📖 Módulo 11 de 18 · README</Tag>
-            <Text style={styles.titleL}>El README: la tarjeta de presentación de tu proyecto</Text>
-            <Text style={styles.bodyText}>Un README es el documento que explica tu proyecto. Es lo primero que alguien ve cuando llega a tu proyecto. Un buen README puede hacer que otros lo usen, lo mejoren o te inviten a colaborar.</Text>
+            <Tag variant="theory">📖 Módulo 11 de 18 · Ficha del proyecto</Tag>
+            <Text style={styles.titleL}>La Ficha del proyecto: la tarjeta de presentación de tu proyecto</Text>
+            <Text style={styles.bodyText}>Una Ficha del proyecto es el documento que explica tu proyecto. Es lo primero que alguien ve cuando llega a tu proyecto. Una buena Ficha puede hacer que otros lo usen, lo mejoren o te inviten a colaborar.</Text>
             <View style={[styles.card, { backgroundColor: '#fffbeb', borderColor: '#fde68a' }]}>
-              <Text style={[styles.cardTitle, { marginBottom: 8 }]}>📄 Template de README básico:</Text>
+              <Text style={[styles.cardTitle, { marginBottom: 8 }]}>📄 Plantilla de Ficha del proyecto:</Text>
               <View style={{ backgroundColor: '#fff', borderRadius: 8, padding: 11, borderWidth: 1, borderColor: '#fde68a' }}>
                 <Text style={styles.readmeMono}><Text style={{ color: '#d97706', fontWeight: '700' }}># Nombre del proyecto</Text>{'\n'}Una descripción de una oración de qué hace y para quién.{'\n\n'}<Text style={{ color: '#d97706', fontWeight: '700' }}>## ¿Para qué sirve?</Text>{'\n'}Explica el problema que resuelve en 2-3 oraciones.{'\n\n'}<Text style={{ color: '#d97706', fontWeight: '700' }}>## ¿Cómo usarlo?</Text>{'\n'}1. Abre [LLM] y empieza una conversación nueva{'\n'}2. Pega el prompt base al inicio{'\n'}3. Escribe tu pregunta y obtén la respuesta{'\n\n'}<Text style={{ color: '#d97706', fontWeight: '700' }}>## Tecnología</Text>{'\n'}LLM: Claude / ChatGPT / Gemini{'\n'}Prompt base: [incluir el prompt aquí]{'\n\n'}<Text style={{ color: '#d97706', fontWeight: '700' }}>## Mejoras futuras</Text>{'\n'}- Agregar más contexto sobre [tema]{'\n'}- Iterar el formato de respuesta</Text>
               </View>
             </View>
-            <Hl variant="orange"><Text style={styles.bold}>💡 Por qué documentar importa:</Text>{'\n'}Sin README, tu proyecto solo existe en tu cabeza. Con un buen README, cualquier persona puede usarlo, cualquier colaborador puede mejorarlo, y tú en 6 meses puedes recordar cómo funciona.</Hl>
+            <Hl variant="orange"><Text style={styles.bold}>💡 Por qué documentar importa:</Text>{'\n'}Sin una Ficha, tu proyecto solo existe en tu cabeza. Con una buena Ficha del proyecto, cualquier persona puede usarlo, cualquier colaborador puede mejorarlo, y tú en 6 meses puedes recordar cómo funciona.</Hl>
           </View>
         );
 
       case 12:
         return (
           <View style={styles.stepContainer}>
-            <Tag variant="fill">📄 Módulo 12 de 18 · Completa el README</Tag>
+            <Tag variant="fill">📄 Módulo 12 de 18 · Completa la Ficha</Tag>
             <Text style={styles.titleL}>¿Qué va en cada sección?</Text>
-            <Text style={styles.subtitle}>Completa las frases del README eligiendo la palabra correcta.</Text>
+            <Text style={styles.subtitle}>Completa las frases de la Ficha del proyecto eligiendo la palabra correcta.</Text>
             {README_SECTIONS.map((section, si) => {
               const sectionDone = section.blanks.every((_, bi) => readmeDone.has(`${si}-${bi}`));
               return (
@@ -981,7 +981,7 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
           <View style={styles.stepContainer}>
             <Tag variant="quiz">❓ Módulo 14 de 18 · Quiz de construcción</Tag>
             <Text style={styles.titleL}>Construir con IA: ¿qué aprendiste?</Text>
-            <Text style={styles.subtitle}>Todo lo del método, el prompt, la iteración y el README en un quiz.</Text>
+            <Text style={styles.subtitle}>Todo lo del método, el prompt, la iteración y la Ficha del proyecto en un quiz.</Text>
             {buildQuiz.map((q, i) => (
               <View key={i} style={{ marginBottom: 16 }}>
                 <Text style={styles.quizQ}>{i + 1}. {q.q}</Text>
@@ -1116,7 +1116,7 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
                 'Aplico el método de 5 pasos para construir proyectos con IA',
                 'Construyo prompts base con rol, propósito, formato, contexto y restricciones',
                 'Itero prompts de forma sistemática basándome en resultados reales',
-                'Documento proyectos con un README claro y completo',
+                'Documento proyectos con una Ficha del proyecto clara y completa',
                 'Evalúo proyectos antes de publicar con un filtro ético',
               ].map((skill, i) => (
                 <View key={i} style={styles.skillRow}><Text style={styles.skillCheck}>✓</Text><Text style={styles.skillText}>{skill}</Text></View>
