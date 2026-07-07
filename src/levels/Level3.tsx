@@ -77,6 +77,7 @@ type MissionSubject = {
 };
 
 const TOTAL_STEPS = 20; // 0:intro + 18 módulos + 1:complete
+const CONTENT_STEPS = 18;
 
 // Función helper
 const pickN = <T,>(arr: T[], n: number): T[] => {

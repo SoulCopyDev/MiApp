@@ -27,6 +27,7 @@ type EticaFillItem = { sentence: string; allOpts: string[]; correct: number; exp
 type SprintEticaItem = { stmt: string; correct: boolean };
 
 const TOTAL_STEPS = 19; // 0:intro + 17 módulos + 1:complete
+const CONTENT_STEPS = 18;
 
 const pickN = <T,>(arr: T[], n: number): T[] => {
   const shuffled = [...arr].sort(() => Math.random() - 0.5);

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { router, usePathname } from 'expo-router';
@@ -58,6 +58,15 @@ export default function WebSidebar() {
   const maxXP       = useGameStore(s => s.maxXP);
   const rankInfo    = getRankInfo(totalStars);
 
+  // Mundos anteriores desplegables en el sidebar de nivel
+  const [expandedWorlds, setExpandedWorlds] = useState<Set<number>>(new Set());
+  const toggleWorld = (id: number) =>
+    setExpandedWorlds(prev => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      return n;
+    });
+
   const xpPct = maxXP > 0 ? (currentXP / maxXP) * 100 : 0;
 
   const { worldId, activeN, activeEvalId } = parseLevelContext(pathname);
@@ -69,6 +78,52 @@ export default function WebSidebar() {
   // ─── Sidebar de nivel: Mi camino + Herramientas ───
   if (world) {
     const subtitle = activeN ? `N${activeN} — en curso` : world.name;
+
+    const renderLevelItem = (w: NonNullable<typeof world>, level: (typeof w)['levels'][number]) => {
+      const globalN = level.id <= 6 ? coordsToGlobalN(w.id, level.id) : null;
+      const isItemActive =
+        w.id === worldId && (
+          (globalN !== null && globalN === activeN) ||
+          (activeEvalId !== null && level.id === activeEvalId)
+        );
+      const isLocked = level.status === 'locked';
+      const isDone   = level.status === 'completed';
+      const labelText =
+        level.id === 8 ? `EF — ${level.name}` :
+        level.id === 7 ? `Eval — ${level.name}` :
+        `N${globalN} — ${level.name}`;
+
+      return (
+        <TouchableOpacity
+          key={`${w.id}-${level.id}`}
+          style={[s.levelItem, isItemActive && s.levelItemActive, isLocked && s.levelItemLocked]}
+          onPress={() => {
+            if (isLocked) return;
+            if (level.id === 8)      router.push('/eval/final');
+            else if (level.id === 7) router.push(`/eval/${w.id}`);
+            else if (globalN)        router.push(`/level/${globalN}`);
+          }}
+          activeOpacity={isLocked ? 1 : 0.7}
+        >
+          <View style={[s.levelIconWrap, isItemActive && s.levelIconWrapActive]}>
+            <MaterialIcons
+              name={level.icon as any}
+              size={15}
+              color={isItemActive ? colors.primary : isLocked ? colors.textDisabled : colors.textSecondary}
+            />
+          </View>
+          <Text
+            style={[s.levelLabel, isItemActive && s.levelLabelActive, isLocked && s.levelLabelLocked]}
+            numberOfLines={1}
+          >
+            {labelText}
+          </Text>
+          {isDone && !isItemActive && (
+            <MaterialIcons name="check-circle" size={13} color={colors.success} />
+          )}
+        </TouchableOpacity>
+      );
+    };
 
     return (
       <View style={s.sidebar}>
@@ -87,60 +142,40 @@ export default function WebSidebar() {
         <ScrollView style={s.nav} showsVerticalScrollIndicator={false}>
           <Text style={s.navSection}>MI CAMINO</Text>
 
-          {world.levels.map(level => {
-            const globalN     = level.id <= 6 ? coordsToGlobalN(world.id, level.id) : null;
-            const isItemActive =
-              (globalN !== null && globalN === activeN) ||
-              (activeEvalId !== null && level.id === activeEvalId);
-            const isLocked    = level.status === 'locked';
-            const isDone      = level.status === 'completed';
+          {/* Mundo actual expandido + los demás mundos accesibles como bandas desplegables */}
+          {worlds.map(w => {
+            const isCurrent  = w.id === worldId;
+            const accessible = w.levels.some(l => l.status !== 'locked');
 
-            const labelText =
-              level.id === 8 ? `EF — ${level.name}` :
-              level.id === 7 ? `Eval — ${level.name}` :
-              `N${globalN} — ${level.name}`;
+            // Mundo en curso: sus niveles se listan directamente
+            if (isCurrent) {
+              return <View key={w.id}>{w.levels.map(level => renderLevelItem(w, level))}</View>;
+            }
+            // Mundo todavía bloqueado (no alcanzado): no se muestra
+            if (!accessible) return null;
 
+            // Otro mundo accesible (anterior o siguiente): banda desplegable
+            const expanded = expandedWorlds.has(w.id);
+            const firstN   = coordsToGlobalN(w.id, 1);
+            const lastN    = coordsToGlobalN(w.id, 6);
+            const allDone  = w.levels.every(l => l.status === 'completed');
             return (
-              <TouchableOpacity
-                key={level.id}
-                style={[
-                  s.levelItem,
-                  isItemActive && s.levelItemActive,
-                  isLocked && s.levelItemLocked,
-                ]}
-                onPress={() => {
-                  if (isLocked) return;
-                  if (level.id === 8)      router.push('/eval/final');
-                  else if (level.id === 7) router.push(`/eval/${world.id}`);
-                  else if (globalN)        router.push(`/level/${globalN}`);
-                }}
-                activeOpacity={isLocked ? 1 : 0.7}
-              >
-                <View style={[s.levelIconWrap, isItemActive && s.levelIconWrapActive]}>
-                  <MaterialIcons
-                    name={level.icon as any}
-                    size={15}
-                    color={
-                      isItemActive ? colors.primary :
-                      isLocked     ? colors.textDisabled :
-                      colors.textSecondary
-                    }
-                  />
-                </View>
-                <Text
-                  style={[
-                    s.levelLabel,
-                    isItemActive && s.levelLabelActive,
-                    isLocked     && s.levelLabelLocked,
-                  ]}
-                  numberOfLines={1}
-                >
-                  {labelText}
-                </Text>
-                {isDone && !isItemActive && (
-                  <MaterialIcons name="check-circle" size={13} color={colors.success} />
+              <View key={w.id}>
+                <TouchableOpacity style={s.worldBand} onPress={() => toggleWorld(w.id)} activeOpacity={0.7}>
+                  <View style={s.levelIconWrap}>
+                    <MaterialIcons name={expanded ? 'expand-more' : 'chevron-right'} size={18} color={colors.textSecondary} />
+                  </View>
+                  <Text style={s.worldBandLabel} numberOfLines={1}>
+                    Mundo {w.id} (N{firstN} a N{lastN})
+                  </Text>
+                  {allDone && <MaterialIcons name="check-circle" size={13} color={colors.success} />}
+                </TouchableOpacity>
+                {expanded && (
+                  <View style={s.subLevelWrap}>
+                    {w.levels.filter(l => l.id <= 6).map(level => renderLevelItem(w, level))}
+                  </View>
                 )}
-              </TouchableOpacity>
+              </View>
             );
           })}
 
@@ -344,6 +379,31 @@ const s = StyleSheet.create({
     backgroundColor: colors.border,
     marginHorizontal: 10,
     marginVertical: 8,
+  },
+
+  // ─── Banda de mundo anterior (desplegable) ───
+  worldBand: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    borderRadius: 10,
+    marginBottom: 2,
+    backgroundColor: colors.surfaceVariant,
+  },
+  worldBandLabel: {
+    ...typography.bold,
+    fontSize: 12,
+    color: colors.textPrimary,
+    flex: 1,
+  },
+  subLevelWrap: {
+    marginLeft: 12,
+    paddingLeft: 8,
+    borderLeftWidth: 1,
+    borderLeftColor: colors.border,
+    marginBottom: 4,
   },
 
   // ─── Tools (disabled) ───

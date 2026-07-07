@@ -12,6 +12,7 @@ import {
   Platform,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { useGameStore } from '../store/gameStore';
 import { colors, typography } from '../theme';
 import XPToast from '../components/XPToast';
@@ -62,20 +63,20 @@ const SORT_METODO = [
 ];
 
 const ITER_QUIZ_POOL: QuizItem[] = [
-  { q: 'Pruebas tu prompt y el LLM da una respuesta demasiado larga y técnica. ¿Qué haces primero?', opts: ['Borrar todo y empezar desde cero con otro LLM', 'Agregar al prompt: "responde en máximo 3 oraciones simples para alguien de 14 años"', 'Aceptar la respuesta y usarla tal como está', 'Preguntarle al LLM si cree que su respuesta es buena'], correct: 1, explain: 'La iteración inteligente es agregar instrucciones específicas de formato y audiencia al prompt. Raramente necesitas empezar desde cero — casi siempre es más eficiente refinar lo que tienes.' },
-  { q: 'Tu asistente de preguntas frecuentes da respuestas incorrectas sobre el horario del colegio. ¿Por qué ocurre esto?', opts: ['El LLM es defectuoso y debes cambiarlo', 'El LLM no tiene información del horario — necesitas incluirla en el prompt o contexto', 'Los LLMs nunca pueden responder preguntas sobre horarios', 'Necesitas pagar el plan premium del LLM'], correct: 1, explain: 'Los LLMs solo saben lo que les dices. Si el horario del colegio no está en el prompt o en documentos adjuntos, el modelo no puede saberlo. La solución es incluir la información relevante en el contexto.' },
-  { q: '¿Cuántas veces deberías iterar un prompt antes de considerarlo "terminado"?', opts: ['Exactamente 3 veces — ni más ni menos', 'Hasta que la respuesta sea útil para el usuario final, sin importar cuántas veces tome', 'Solo una vez — si no funciona a la primera, el proyecto no es viable', '5 veces exactamente como en la metodología estándar'], correct: 1, explain: 'No hay un número mágico. Iteras hasta que la respuesta sea genuinamente útil. Proyectos simples pueden tomar 2-3 iteraciones; proyectos complejos pueden tomar 10-20.' },
-  { q: 'Tienes un generador de ideas para proyectos de arte que funciona bien en general. ¿Cómo lo harías más específico para tu colegio?', opts: ['No se puede hacer más específico una vez que funciona', 'Agregar al prompt el grado, los materiales disponibles en el colegio y el tiempo de entrega típico', 'Cambiar completamente el tipo de proyecto', 'Pedirle al LLM que sea más creativo sin más contexto'], correct: 1, explain: 'La especificidad del contexto mejora exponencialmente la calidad. Cuanto más sabe el modelo sobre tu situación específica (grado, recursos, restricciones), más útiles serán las ideas que genera.' },
-  { q: 'Alguien te dice que su proyecto de IA "no funciona". ¿Cuál es la primera pregunta que deberías hacerle?', opts: ['¿Qué LLM usaste?', '¿Cuánto dinero gastaste?', '¿Qué prompt exacto usaste y qué resultado esperabas vs. qué obtuviste?', '¿Cuántos años llevas programando?'], correct: 2, explain: 'El diagnóstico siempre comienza por entender la diferencia entre expectativa y resultado real. Sin saber el prompt exacto y la expectativa, es imposible saber qué mejorar.' },
-  { q: 'Tu prompt para un generador de nombres creativos da siempre el mismo tipo de nombres. ¿Qué ajuste haría la mayor diferencia?', opts: ['Copiar el prompt y pegarlo dos veces', 'Agregar ejemplos de nombres en estilos diferentes que NO quieres, para que el modelo los evite', 'Cambiar de Claude a ChatGPT', 'Usar más mayúsculas en el prompt'], correct: 1, explain: 'Los ejemplos negativos (lo que NO quieres) son muy efectivos para guiar la creatividad. También puedes agregar "dame 10 opciones en estilos muy diferentes entre sí" para forzar variedad.' },
-  { q: '¿Qué significa que un proyecto de IA sea "iterativo"?', opts: ['Que usa muchos modelos de IA al mismo tiempo', 'Que se construye en ciclos: probar, evaluar, ajustar y volver a probar', 'Que tiene muchos usuarios simultáneos', 'Que el código se ejecuta en un loop infinito'], correct: 1, explain: 'Iterativo viene de "iterar" — repetir. En proyectos de IA, construyes una versión mínima, la pruebas, aprendes qué falla, mejoras y repites. Es el método más efectivo para llegar a algo que realmente funcione.' },
-  { q: 'Construiste un asistente de estudio con LLM que responde sobre historia de Colombia. Un amigo lo prueba y le pregunta sobre química. El asistente intenta responder pero da información incorrecta. ¿Qué harías?', opts: ['Expandir el asistente para que sepa de todos los temas', 'Agregar al prompt: "Si la pregunta no es sobre historia de Colombia, responde: Esta herramienta es solo para historia de Colombia. Para otras materias, busca en Google."', 'Eliminar el proyecto porque no funciona bien', 'Permitir que el asistente responda todo, aunque se equivoque'], correct: 1, explain: 'Limitar el alcance del proyecto es una decisión de diseño inteligente. Es mejor un asistente excelente en un tema que uno mediocre en todos. Las restricciones explícitas en el prompt controlan el comportamiento del modelo.' },
+  { q: 'Pruebas tu prompt y el LLM da una respuesta demasiado larga y técnica. ¿Qué haces primero?', opts: ['Borrar el prompt entero y empezar otra vez desde cero probando con un modelo distinto', 'Agregar al prompt que responda en máximo 3 oraciones simples, pensadas para alguien de 14 años', 'Aceptar la respuesta tal como está, porque el modelo sabe mejor que tú qué formato conviene', 'Pedirle al mismo modelo que evalúe su propia respuesta y decida solo si debería acortarla'], correct: 1, explain: 'La iteración inteligente es agregar instrucciones específicas de formato y audiencia al prompt. Raramente necesitas empezar desde cero — casi siempre es más eficiente refinar lo que tienes.' },
+  { q: 'Tu asistente de preguntas frecuentes da respuestas incorrectas sobre el horario del colegio. ¿Por qué ocurre esto?', opts: ['El modelo está defectuoso o dañado, así que lo mejor es reemplazarlo por otro diferente', 'El modelo no tiene el horario — necesitas incluir esa información en el prompt o el contexto', 'Los LLMs no están capacitados para responder preguntas sobre horarios ni fechas de ningún tipo', 'Necesitas pagar la versión premium del modelo para que pueda acceder a los datos del colegio'], correct: 1, explain: 'Los LLMs solo saben lo que les dices. Si el horario del colegio no está en el prompt o en documentos adjuntos, el modelo no puede saberlo. La solución es incluir la información relevante en el contexto.' },
+  { q: '¿Cuántas veces deberías iterar un prompt antes de considerarlo "terminado"?', opts: ['Exactamente 3 veces, porque esa es la cantidad ideal para cualquier proyecto sin excepción', 'Hasta que la respuesta sea realmente útil para el usuario final, sin importar cuántas veces tome', 'Solo una vez: si no funciona a la primera, significa que el proyecto simplemente no es viable', 'Siempre 5 veces exactas, tal como lo indica la metodología estándar de todos los proyectos'], correct: 1, explain: 'No hay un número mágico. Iteras hasta que la respuesta sea genuinamente útil. Proyectos simples pueden tomar 2-3 iteraciones; proyectos complejos pueden tomar 10-20.' },
+  { q: 'Tienes un generador de ideas para proyectos de arte que funciona bien en general. ¿Cómo lo harías más específico para tu colegio?', opts: ['No se puede hacer más específico una vez que el generador ya funciona bien de forma general', 'Agregar al prompt el grado, los materiales disponibles en el colegio y el tiempo de entrega típico', 'Cambiar por completo el tipo de proyecto y empezar de nuevo con una idea totalmente distinta', 'Pedirle al modelo que sea mucho más creativo, sin darle ningún contexto ni detalle adicional'], correct: 1, explain: 'La especificidad del contexto mejora exponencialmente la calidad. Cuanto más sabe el modelo sobre tu situación específica (grado, recursos, restricciones), más útiles serán las ideas que genera.' },
+  { q: 'Alguien te dice que su proyecto de IA "no funciona". ¿Cuál es la primera pregunta que deberías hacerle?', opts: ['¿Qué modelo de IA usaste y por qué elegiste precisamente ese en lugar de cualquier otro?', '¿Cuánto dinero gastaste en total y qué plan de pago contrataste para armar tu proyecto?', '¿Qué prompt exacto usaste y qué resultado esperabas comparado con el que realmente obtuviste?', '¿Cuántos años llevas programando y qué lenguajes de programación dominas mejor hasta ahora?'], correct: 2, explain: 'El diagnóstico siempre comienza por entender la diferencia entre expectativa y resultado real. Sin saber el prompt exacto y la expectativa, es imposible saber qué mejorar.' },
+  { q: 'Tu prompt para un generador de nombres creativos da siempre el mismo tipo de nombres. ¿Qué ajuste haría la mayor diferencia?', opts: ['Copiar el prompt completo y pegarlo dos veces seguidas para reforzar tu pedido ante el modelo', 'Agregar ejemplos de nombres en estilos distintos que NO quieres, para que el modelo los evite', 'Cambiar de un modelo a otro, por ejemplo de Claude a ChatGPT, esperando obtener más variedad', 'Usar muchas más mayúsculas en el prompt para que el modelo entienda mejor lo que le pides'], correct: 1, explain: 'Los ejemplos negativos (lo que NO quieres) son muy efectivos para guiar la creatividad. También puedes agregar "dame 10 opciones en estilos muy diferentes entre sí" para forzar variedad.' },
+  { q: '¿Qué significa que un proyecto de IA sea "iterativo"?', opts: ['Que utiliza muchos modelos de IA distintos, funcionando todos al mismo tiempo en paralelo', 'Que se construye en ciclos: probar, evaluar, ajustar y volver a probar hasta que funcione bien', 'Que soporta a muchísimos usuarios usándolo todos a la vez sin que el sistema falle nunca', 'Que el código del proyecto se ejecuta dentro de un bucle que se repite de forma infinita'], correct: 1, explain: 'Iterativo viene de "iterar" — repetir. En proyectos de IA, construyes una versión mínima, la pruebas, aprendes qué falla, mejoras y repites. Es el método más efectivo para llegar a algo que realmente funcione.' },
+  { q: 'Construiste un asistente de estudio con LLM que responde sobre historia de Colombia. Un amigo lo prueba y le pregunta sobre química. El asistente intenta responder pero da información incorrecta. ¿Qué harías?', opts: ['Expandir el asistente para que aprenda y responda absolutamente todos los temas de todas las materias', 'Agregar al prompt una regla: si la pregunta no es de historia de Colombia, que lo avise y sugiera buscarlo en otro lado', 'Eliminar el proyecto por completo, porque evidentemente no funciona bien ni sirve para nada útil', 'Permitir que el asistente intente responder cualquier materia, aunque a veces entregue datos incorrectos'], correct: 1, explain: 'Limitar el alcance del proyecto es una decisión de diseño inteligente. Es mejor un asistente excelente en un tema que uno mediocre en todos. Las restricciones explícitas en el prompt controlan el comportamiento del modelo.' },
 ];
 
 const README_SECTIONS: ReadmeSection[] = [
-  { parts: ['Mi proyecto se llama ', ' y está diseñado para ayudar a ', '.'], blanks: [{ opts: ['Asistente de Estudio', 'Código malicioso', 'Virus automático', 'Sistema de hackeo'], correct: 0 }, { opts: ['estudiantes a estudiar mejor', 'hackear sistemas ajenos', 'robar contraseñas', 'engañar a profesores'], correct: 0 }], explain: 'El nombre y la audiencia son lo primero. Un buen README siempre empieza con para qué sirve y para quién.' },
+  { parts: ['Mi proyecto se llama ', ' y está diseñado para ayudar a ', '.'], blanks: [{ opts: ['Asistente de Estudio', 'Código malicioso', 'Virus automático', 'Sistema de hackeo'], correct: 0 }, { opts: ['estudiantes a estudiar mejor', 'hackear sistemas ajenos', 'robar contraseñas', 'engañar a profesores'], correct: 0 }], explain: 'El nombre y la audiencia son lo primero. Una buena Ficha del proyecto siempre empieza con para qué sirve y para quién.' },
   { parts: ['Para usarlo, debes escribir tu pregunta en el chat y el modelo responderá usando el ', ' que le diste como contexto.'], blanks: [{ opts: ['contexto', 'virus', 'token', 'deepfake'], correct: 0 }], explain: 'El "contexto" es la información que incluyes en el prompt para que el modelo pueda responder con precisión sobre tu tema específico.' },
-  { parts: ['Este proyecto fue construido usando ', ' como herramienta de IA y puede mejorarse ', ' el prompt con más instrucciones.'], blanks: [{ opts: ['un LLM', 'una impresora', 'una calculadora', 'un virus'], correct: 0 }, { opts: ['iterando', 'borrando', 'copiando', 'ignorando'], correct: 0 }], explain: 'Todo README técnico menciona las herramientas usadas y cómo se puede mejorar el proyecto en el futuro.' },
+  { parts: ['Este proyecto fue construido usando ', ' como herramienta de IA y puede mejorarse ', ' el prompt con más instrucciones.'], blanks: [{ opts: ['un LLM', 'una impresora', 'una calculadora', 'un virus'], correct: 0 }, { opts: ['iterando', 'borrando', 'copiando', 'ignorando'], correct: 0 }], explain: 'Toda Ficha del proyecto menciona las herramientas usadas y cómo se puede mejorar el proyecto en el futuro.' },
 ];
 
 const PROJ_ETHICS_POOL: EthicsItem[] = [
@@ -88,20 +89,20 @@ const PROJ_ETHICS_POOL: EthicsItem[] = [
 ];
 
 const BUILD_QUIZ_POOL: QuizItem[] = [
-  { q: '¿Cuál es el primer paso para construir un proyecto con IA?', opts: ['Elegir el LLM más caro disponible', 'Definir el problema concreto que vas a resolver y para quién', 'Escribir el código de la aplicación', 'Crear el diseño visual de la interfaz'], correct: 1, explain: 'Siempre primero el problema, luego la solución. Sin un problema claro y una audiencia definida, cualquier proyecto de IA será una solución en busca de problema.' },
-  { q: '¿Qué es un "prompt base" en el contexto de un proyecto con LLM?', opts: ['El código fuente del modelo de lenguaje', 'El prompt inicial que define el comportamiento del sistema para todos los usuarios', 'La interfaz gráfica de la aplicación', 'El nombre del proyecto'], correct: 1, explain: 'El prompt base (o system prompt) es las instrucciones que le das al LLM para que se comporte como tu asistente específico. Define el rol, el tono, el alcance y las restricciones del sistema.' },
-  { q: '¿Por qué es importante probar tu proyecto con usuarios reales antes de publicarlo?', opts: ['Para que más personas sepan que existe', 'Porque los usuarios reales hacen preguntas inesperadas que revelan fallos que tú no habías previsto', 'Para aumentar el número de seguidores en redes sociales', 'Porque los LLMs requieren muchos usuarios para funcionar'], correct: 1, explain: 'Los usuarios reales hacen preguntas de formas que nunca imaginaste. Sus "fallos" son los datos más valiosos para mejorar el proyecto. Siempre prueba con al menos 3-5 personas reales antes de publicar.' },
-  { q: '¿Qué información debería incluir el README de tu proyecto de IA?', opts: ['Solo el nombre del proyecto', 'Para qué sirve, quién lo usa, cómo usarlo, qué LLM usa y cómo se puede mejorar', 'Solo el código fuente', 'Solo los créditos de quién lo hizo'], correct: 1, explain: 'Un buen README permite que cualquier persona entienda tu proyecto en 2 minutos sin preguntarte nada. Incluye propósito, audiencia, instrucciones de uso, tecnología y posibles mejoras.' },
-  { q: 'Tu asistente funciona bien para preguntas en español pero muy mal en inglés. ¿Qué solución es más directa?', opts: ['Cambiar el LLM por uno diferente', 'Agregar en el prompt base: "Responde siempre en español, incluso si la pregunta viene en otro idioma."', 'Contratar un traductor', 'Publicar el proyecto solo en países hispanohablantes'], correct: 1, explain: 'El prompt base controla el comportamiento del modelo. Especificar el idioma de respuesta es una instrucción simple y efectiva que resuelve el problema en un solo ajuste.' },
-  { q: '¿Qué significa "documentar" un proyecto de IA?', opts: ['Filmar un video del proceso de construcción', 'Escribir de forma clara qué hace el proyecto, cómo funciona, cómo se usa y cómo se puede mejorar', 'Guardar el historial de conversaciones con el LLM', 'Crear un folleto de marketing del proyecto'], correct: 1, explain: 'Documentar es dejar un registro claro para que otros (o tu yo del futuro) puedan entender, usar y mejorar el proyecto. Es una habilidad profesional fundamental en tecnología.' },
-  { q: '¿Cuál de estos describe mejor un proyecto de IA bien diseñado para estudiantes?', opts: ['Resuelve todos los problemas del mundo automáticamente', 'Tiene un propósito específico, audiencia definida, prompt refinado, documentación y consideraciones éticas', 'Es el más complejo técnicamente posible', 'Usa la mayor cantidad de herramientas de IA simultáneamente'], correct: 1, explain: 'La simplicidad enfocada vence a la complejidad difusa. Un proyecto bien diseñado hace una cosa muy bien, para una audiencia clara, con límites éticos definidos.' },
-  { q: 'Alguien te dice que tu asistente "da respuestas muy formales y aburridas". ¿Cómo lo mejoras?', opts: ['Cambiar de LLM inmediatamente', 'Agregar al prompt: "Usa un tono amigable, casual y motivador. Como si fuera un compañero de clase que te ayuda."', 'Eliminar el proyecto y empezar uno nuevo', 'Decirle a la persona que el LLM siempre habla así'], correct: 1, explain: 'El tono y el estilo se controlan con el prompt. Describir la persona del asistente ("como un compañero de clase") es más efectivo que simplemente pedir "sé amigable".' },
+  { q: '¿Cuál es el primer paso para construir un proyecto con IA?', opts: ['Elegir el modelo de IA más caro y potente que puedas encontrar disponible en el mercado', 'Definir con claridad el problema concreto que vas a resolver y para quién lo vas a resolver', 'Escribir de inmediato todo el código de la aplicación antes de ponerte a pensar en otra cosa', 'Crear primero el diseño visual completo, los colores y los botones de la interfaz del proyecto'], correct: 1, explain: 'Siempre primero el problema, luego la solución. Sin un problema claro y una audiencia definida, cualquier proyecto de IA será una solución en busca de problema.' },
+  { q: '¿Qué es un "prompt base" en el contexto de un proyecto con LLM?', opts: ['El código fuente interno con el que fue programado y entrenado originalmente el modelo de lenguaje', 'El prompt inicial que define el comportamiento del sistema y las reglas para todos los usuarios', 'La interfaz gráfica con los botones que el usuario ve al abrir la aplicación de tu proyecto', 'El nombre y el logotipo que le pones a tu proyecto para presentarlo mejor ante los demás'], correct: 1, explain: 'El prompt base (o system prompt) es las instrucciones que le das al LLM para que se comporte como tu asistente específico. Define el rol, el tono, el alcance y las restricciones del sistema.' },
+  { q: '¿Por qué es importante probar tu proyecto con usuarios reales antes de publicarlo?', opts: ['Para que muchas más personas se enteren de que tu proyecto existe y empiecen a usarlo pronto', 'Porque los usuarios reales hacen preguntas inesperadas que revelan fallos que tú no habías previsto', 'Para aumentar tu número de seguidores en redes sociales y volverte más popular en internet', 'Porque los LLMs necesitan una gran cantidad de usuarios conectados a la vez para funcionar bien'], correct: 1, explain: 'Los usuarios reales hacen preguntas de formas que nunca imaginaste. Sus "fallos" son los datos más valiosos para mejorar el proyecto. Siempre prueba con al menos 3-5 personas reales antes de publicar.' },
+  { q: '¿Qué información debería incluir la Ficha de tu proyecto de IA?', opts: ['Únicamente el nombre del proyecto, sin ningún otro detalle ni información adicional que lo acompañe', 'Para qué sirve, quién lo usa, cómo usarlo, qué LLM usa y cómo se puede mejorar en el futuro', 'Solamente el código fuente completo, sin explicaciones ni instrucciones de uso de ningún tipo', 'Solamente los créditos con los nombres de todas las personas que participaron en construirlo'], correct: 1, explain: 'Una buena Ficha del proyecto permite que cualquier persona entienda tu proyecto en 2 minutos sin preguntarte nada. Incluye propósito, audiencia, instrucciones de uso, tecnología y posibles mejoras.' },
+  { q: 'Tu asistente funciona bien para preguntas en español pero muy mal en inglés. ¿Qué solución es más directa?', opts: ['Cambiar por completo el modelo de IA por otro distinto que maneje mejor los dos idiomas', 'Agregar en el prompt base una instrucción para que responda siempre en español, sin importar el idioma de la pregunta', 'Contratar a un traductor profesional que revise y traduzca cada una de las respuestas del asistente', 'Publicar el proyecto únicamente en países hispanohablantes para que nadie lo use nunca en inglés'], correct: 1, explain: 'El prompt base controla el comportamiento del modelo. Especificar el idioma de respuesta es una instrucción simple y efectiva que resuelve el problema en un solo ajuste.' },
+  { q: '¿Qué significa "documentar" un proyecto de IA?', opts: ['Filmar un video largo mostrando todo el proceso de construcción del proyecto de principio a fin', 'Escribir con claridad qué hace el proyecto, cómo funciona, cómo se usa y cómo se puede mejorar', 'Guardar el historial completo de todas las conversaciones que tuviste con el modelo de IA usado', 'Crear un folleto publicitario de marketing para promocionar y vender el proyecto ante el público'], correct: 1, explain: 'Documentar es dejar un registro claro para que otros (o tu yo del futuro) puedan entender, usar y mejorar el proyecto. Es una habilidad profesional fundamental en tecnología.' },
+  { q: '¿Cuál de estos describe mejor un proyecto de IA bien diseñado para estudiantes?', opts: ['Resuelve automáticamente todos los problemas del mundo sin que nadie tenga que intervenir nunca', 'Tiene propósito específico, audiencia definida, prompt refinado, documentación y cuidado ético', 'Es el proyecto más complejo y difícil técnicamente que se pueda construir con la tecnología actual', 'Usa la mayor cantidad posible de herramientas de IA distintas funcionando todas al mismo tiempo'], correct: 1, explain: 'La simplicidad enfocada vence a la complejidad difusa. Un proyecto bien diseñado hace una cosa muy bien, para una audiencia clara, con límites éticos definidos.' },
+  { q: 'Alguien te dice que tu asistente "da respuestas muy formales y aburridas". ¿Cómo lo mejoras?', opts: ['Cambiar de inmediato a un modelo de IA completamente diferente, esperando que hable más divertido', 'Agregar al prompt una instrucción de tono: que responda de forma amigable, casual y motivadora, como un compañero de clase', 'Eliminar el proyecto entero y empezar otro desde cero con una idea totalmente distinta a esta', 'Explicarle a la persona que los modelos de IA siempre hablan formal y que eso no se puede cambiar'], correct: 1, explain: 'El tono y el estilo se controlan con el prompt. Describir la persona del asistente ("como un compañero de clase") es más efectivo que simplemente pedir "sé amigable".' },
 ];
 
 const SPRINT_PROJ: SprintItem[] = [
   { stmt: 'Antes de publicar tu proyecto, debes probarlo con usuarios reales', correct: true },
   { stmt: 'Si el prompt funciona a la primera, no hace falta iterarlo', correct: false },
-  { stmt: 'Un README explica qué hace el proyecto y cómo usarlo', correct: true },
+  { stmt: 'La Ficha del proyecto explica qué hace el proyecto y cómo usarlo', correct: true },
   { stmt: 'Puedes usar fotos de tus compañeros sin permiso en tu proyecto de IA', correct: false },
   { stmt: 'Incluir el contexto relevante en el prompt mejora las respuestas del LLM', correct: true },
   { stmt: 'Un proyecto de IA que no define su audiencia generalmente funciona mejor', correct: false },
@@ -137,6 +138,17 @@ const BUILDER_LABELS: Record<string, string> = {
 const pickN = <T,>(arr: T[], n: number): T[] => {
   const shuffled = [...arr].sort(() => Math.random() - 0.5);
   return shuffled.slice(0, n);
+};
+
+// Baraja las opciones de una pregunta y recalcula el índice correcto,
+// para que la respuesta correcta no caiga siempre en la misma posición.
+const shuffleOpts = <T extends { opts: string[]; correct: number }>(q: T): T => {
+  const paired = q.opts.map((opt, i) => ({ opt, isCorrect: i === q.correct }));
+  for (let j = paired.length - 1; j > 0; j--) {
+    const k = Math.floor(Math.random() * (j + 1));
+    [paired[j], paired[k]] = [paired[k], paired[j]];
+  }
+  return { ...q, opts: paired.map((p) => p.opt), correct: paired.findIndex((p) => p.isCorrect) };
 };
 
 // ---------- Tags / cards / hl ----------
@@ -250,10 +262,11 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
   // Pools aleatorias (fijas al montar)
   const viableTF = useRef(pickN(VIABLE_TF_POOL, 5)).current;
   const tipoItems = useRef(pickN(TIPO_POOL, 7)).current;
-  const iterQuiz = useRef(pickN(ITER_QUIZ_POOL, 4)).current;
-  const buildQuiz = useRef(pickN(BUILD_QUIZ_POOL, 5)).current;
+  const iterQuiz = useRef(pickN(ITER_QUIZ_POOL, 4).map(shuffleOpts)).current;
+  const buildQuiz = useRef(pickN(BUILD_QUIZ_POOL, 5).map(shuffleOpts)).current;
   const ethicsItems = useRef(pickN(PROJ_ETHICS_POOL, 4)).current;
-  const sprintItems = useRef(SPRINT_PROJ).current;
+  // Barajado: el pool viene alternado V/F/V/F; sin mezclar, el usuario acierta solo alternando.
+  const sprintItems = useRef(pickN(SPRINT_PROJ, SPRINT_PROJ.length)).current;
 
   // ----- Estados de actividades -----
   const [tfAnswers, setTfAnswers] = useState<{ [key: number]: boolean }>({});
@@ -329,6 +342,53 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
     return () => clearTimeout(timer);
   }, [sprintRunning, sprintSec, sprintOver]);
 
+  // ----- M4: drag & drop en web (además del tap-para-colocar) -----
+  const tipoPlacedRef = useRef(tipoPlaced);
+  useEffect(() => { tipoPlacedRef.current = tipoPlaced; }, [tipoPlaced]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || step !== 4) return;
+    const cleanups: Array<() => void> = [];
+    const setup = setTimeout(() => {
+      // Chips arrastrables
+      tipoItems.forEach((_, i) => {
+        const el = document.getElementById(`l6-chip-${i}`);
+        if (!el) return;
+        el.setAttribute('draggable', 'true');
+        (el.style as any).cursor = 'grab';
+        const onDragStart = (e: any) => {
+          (window as any)._l6drag = i;
+          if (e.dataTransfer) {
+            e.dataTransfer.effectAllowed = 'move';
+            try { e.dataTransfer.setData('text/plain', String(i)); } catch { /* noop */ }
+          }
+        };
+        el.addEventListener('dragstart', onDragStart);
+        cleanups.push(() => el.removeEventListener('dragstart', onDragStart));
+      });
+      // Zonas receptoras
+      (['generador', 'asistente', 'automatizador'] as const).forEach((zone) => {
+        const zoneEl = document.getElementById(`l6-zone-${zone}`);
+        if (!zoneEl) return;
+        const onDragOver = (e: any) => e.preventDefault();
+        const onDrop = (e: any) => {
+          e.preventDefault();
+          const idx = (window as any)._l6drag;
+          if (idx == null) return;
+          if (tipoPlacedRef.current[idx] !== undefined) return;
+          setTipoPlaced((prev) => ({ ...prev, [idx]: zone }));
+          setTipoSelected(null);
+          setTipoFb(null);
+          (window as any)._l6drag = null;
+        };
+        zoneEl.addEventListener('dragover', onDragOver);
+        zoneEl.addEventListener('drop', onDrop);
+        cleanups.push(() => { zoneEl.removeEventListener('dragover', onDragOver); zoneEl.removeEventListener('drop', onDrop); });
+      });
+    }, 60);
+    return () => { clearTimeout(setup); cleanups.forEach((c) => c()); };
+  }, [step, tipoPlaced, tipoItems]);
+
   // ----- Helpers -----
   const addXP = (amount: number) => {
     setXp((prev) => prev + amount);
@@ -343,7 +403,8 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
     else if (xp >= 130) stars = 2;
     else if (xp >= 60) stars = 1;
     completeLevel(6, stars, xp);
-    router.replace('/level/7');
+    // Fin del Mundo 1 → evaluación del Mundo 1 (luego se abre el Mundo 2, N7-N12)
+    router.replace('/eval/1');
   };
 
   const handleClose = () => {
@@ -638,7 +699,7 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
             </InfoCard>
             <View style={styles.chipsPool}>
               {tipoItems.map((item, i) => (tipoPlaced[i] === undefined && (
-                <TouchableOpacity key={i} style={[styles.chip, tipoSelected === i && styles.chipActive]} onPress={() => setTipoSelected(tipoSelected === i ? null : i)}>
+                <TouchableOpacity key={i} {...({ nativeID: `l6-chip-${i}` } as any)} style={[styles.chip, tipoSelected === i && styles.chipActive]} onPress={() => setTipoSelected(tipoSelected === i ? null : i)}>
                   <Text style={{ fontSize: 11, color: tipoSelected === i ? '#92400e' : '#334155', fontWeight: '500' }}>{item.text}</Text>
                 </TouchableOpacity>
               )))}
@@ -648,7 +709,7 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
               const zBorder = zone === 'generador' ? '#d97706' : zone === 'asistente' ? '#7c3aed' : '#0ea5e9';
               const zBg = zone === 'generador' ? '#fffbeb' : zone === 'asistente' ? '#faf5ff' : '#f0f9ff';
               return (
-                <TouchableOpacity key={zone} style={[styles.dropCol, has && { borderStyle: 'solid', borderColor: zBorder, backgroundColor: zBg }]} onPress={() => dropTipoChip(zone)}>
+                <TouchableOpacity key={zone} {...({ nativeID: `l6-zone-${zone}` } as any)} style={[styles.dropCol, has && { borderStyle: 'solid', borderColor: zBorder, backgroundColor: zBg }]} onPress={() => dropTipoChip(zone)}>
                   <Text style={[styles.dropHeader, { backgroundColor: zone === 'generador' ? '#fef3c7' : zone === 'asistente' ? '#ede9fe' : '#dbeafe', color: zone === 'generador' ? '#92400e' : zone === 'asistente' ? '#5b21b6' : '#1e40af' }]}>
                     {zone === 'generador' ? '🟡 Generador' : zone === 'asistente' ? '🟣 Asistente' : '🔵 Automatizador'}
                   </Text>
@@ -677,7 +738,7 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
               <StepRow n={2}><Text style={styles.bold}>Diseña el prompt base:</Text> Escribe el primer prompt con rol, contexto, tarea y formato. No tiene que ser perfecto — tiene que ser un punto de partida.</StepRow>
               <StepRow n={3}><Text style={styles.bold}>Prueba y evalúa:</Text> Ejecuta el prompt en un LLM real. ¿La respuesta es útil para el usuario final? ¿Qué falla específicamente?</StepRow>
               <StepRow n={4}><Text style={styles.bold}>Itera y mejora:</Text> Ajusta el prompt según lo que falló. Prueba de nuevo. Repite hasta que funcione bien. Promedio: 3-5 iteraciones para un proyecto simple.</StepRow>
-              <StepRow n={5}><Text style={styles.bold}>Documenta y comparte:</Text> Escribe un README claro. ¿Qué hace? ¿Para quién? ¿Cómo se usa? ¿Qué LLM usar? ¿Cómo se puede mejorar?</StepRow>
+              <StepRow n={5}><Text style={styles.bold}>Documenta y comparte:</Text> Escribe una Ficha del proyecto clara. ¿Qué hace? ¿Para quién? ¿Cómo se usa? ¿Qué LLM usar? ¿Cómo se puede mejorar?</StepRow>
             </View>
             <Hl variant="amber"><Text style={styles.bold}>💡 El paso que más se salta:</Text>{'\n'}El paso 3 — probar con usuarios reales. Es tentador asumir que si a ti te funciona, funciona para todos. Siempre prueba con al menos 3 personas que no saben cómo hiciste el proyecto.</Hl>
             <InfoCard variant="orange" icon="⚡" iconBg="#fed7aa" title="¿Cuánto tarda un proyecto básico?">Con práctica: <Text style={styles.bold}>30-60 minutos</Text> para tener la versión 1 funcionando. Las primeras iteraciones toman más. Con el tiempo, el proceso se vuelve natural e intuitivo.</InfoCard>
@@ -826,25 +887,25 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
       case 11:
         return (
           <View style={styles.stepContainer}>
-            <Tag variant="theory">📖 Módulo 11 de 18 · README</Tag>
-            <Text style={styles.titleL}>El README: la tarjeta de presentación de tu proyecto</Text>
-            <Text style={styles.bodyText}>Un README es el documento que explica tu proyecto. Es lo primero que alguien ve cuando llega a tu proyecto. Un buen README puede hacer que otros lo usen, lo mejoren o te inviten a colaborar.</Text>
+            <Tag variant="theory">📖 Módulo 11 de 18 · Ficha del proyecto</Tag>
+            <Text style={styles.titleL}>La Ficha del proyecto: la tarjeta de presentación de tu proyecto</Text>
+            <Text style={styles.bodyText}>Una Ficha del proyecto es el documento que explica tu proyecto. Es lo primero que alguien ve cuando llega a tu proyecto. Una buena Ficha puede hacer que otros lo usen, lo mejoren o te inviten a colaborar.</Text>
             <View style={[styles.card, { backgroundColor: '#fffbeb', borderColor: '#fde68a' }]}>
-              <Text style={[styles.cardTitle, { marginBottom: 8 }]}>📄 Template de README básico:</Text>
+              <Text style={[styles.cardTitle, { marginBottom: 8 }]}>📄 Plantilla de Ficha del proyecto:</Text>
               <View style={{ backgroundColor: '#fff', borderRadius: 8, padding: 11, borderWidth: 1, borderColor: '#fde68a' }}>
                 <Text style={styles.readmeMono}><Text style={{ color: '#d97706', fontWeight: '700' }}># Nombre del proyecto</Text>{'\n'}Una descripción de una oración de qué hace y para quién.{'\n\n'}<Text style={{ color: '#d97706', fontWeight: '700' }}>## ¿Para qué sirve?</Text>{'\n'}Explica el problema que resuelve en 2-3 oraciones.{'\n\n'}<Text style={{ color: '#d97706', fontWeight: '700' }}>## ¿Cómo usarlo?</Text>{'\n'}1. Abre [LLM] y empieza una conversación nueva{'\n'}2. Pega el prompt base al inicio{'\n'}3. Escribe tu pregunta y obtén la respuesta{'\n\n'}<Text style={{ color: '#d97706', fontWeight: '700' }}>## Tecnología</Text>{'\n'}LLM: Claude / ChatGPT / Gemini{'\n'}Prompt base: [incluir el prompt aquí]{'\n\n'}<Text style={{ color: '#d97706', fontWeight: '700' }}>## Mejoras futuras</Text>{'\n'}- Agregar más contexto sobre [tema]{'\n'}- Iterar el formato de respuesta</Text>
               </View>
             </View>
-            <Hl variant="orange"><Text style={styles.bold}>💡 Por qué documentar importa:</Text>{'\n'}Sin README, tu proyecto solo existe en tu cabeza. Con un buen README, cualquier persona puede usarlo, cualquier colaborador puede mejorarlo, y tú en 6 meses puedes recordar cómo funciona.</Hl>
+            <Hl variant="orange"><Text style={styles.bold}>💡 Por qué documentar importa:</Text>{'\n'}Sin una Ficha, tu proyecto solo existe en tu cabeza. Con una buena Ficha del proyecto, cualquier persona puede usarlo, cualquier colaborador puede mejorarlo, y tú en 6 meses puedes recordar cómo funciona.</Hl>
           </View>
         );
 
       case 12:
         return (
           <View style={styles.stepContainer}>
-            <Tag variant="fill">📄 Módulo 12 de 18 · Completa el README</Tag>
+            <Tag variant="fill">📄 Módulo 12 de 18 · Completa la Ficha</Tag>
             <Text style={styles.titleL}>¿Qué va en cada sección?</Text>
-            <Text style={styles.subtitle}>Completa las frases del README eligiendo la palabra correcta.</Text>
+            <Text style={styles.subtitle}>Completa las frases de la Ficha del proyecto eligiendo la palabra correcta.</Text>
             {README_SECTIONS.map((section, si) => {
               const sectionDone = section.blanks.every((_, bi) => readmeDone.has(`${si}-${bi}`));
               return (
@@ -933,7 +994,7 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
           <View style={styles.stepContainer}>
             <Tag variant="quiz">❓ Módulo 14 de 18 · Quiz de construcción</Tag>
             <Text style={styles.titleL}>Construir con IA: ¿qué aprendiste?</Text>
-            <Text style={styles.subtitle}>Todo lo del método, el prompt, la iteración y el README en un quiz.</Text>
+            <Text style={styles.subtitle}>Todo lo del método, el prompt, la iteración y la Ficha del proyecto en un quiz.</Text>
             {buildQuiz.map((q, i) => (
               <View key={i} style={{ marginBottom: 16 }}>
                 <Text style={styles.quizQ}>{i + 1}. {q.q}</Text>
@@ -1068,20 +1129,20 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
                 'Aplico el método de 5 pasos para construir proyectos con IA',
                 'Construyo prompts base con rol, propósito, formato, contexto y restricciones',
                 'Itero prompts de forma sistemática basándome en resultados reales',
-                'Documento proyectos con un README claro y completo',
+                'Documento proyectos con una Ficha del proyecto clara y completa',
                 'Evalúo proyectos antes de publicar con un filtro ético',
               ].map((skill, i) => (
                 <View key={i} style={styles.skillRow}><Text style={styles.skillCheck}>✓</Text><Text style={styles.skillText}>{skill}</Text></View>
               ))}
             </View>
             <View style={styles.nextHint}>
-              <Text style={{ fontSize: 12, color: '#334155', lineHeight: 18 }}>🎯 <Text style={styles.bold}>Mundo 2: Domina el Prompting (N7–N12)</Text>{'\n\n'}Ahora que terminaste el Mundo 1, vas a dominar el prompting a fondo: contexto avanzado, prompts creativos, errores, cadenas y técnicas que usan los expertos. El Mundo 2 arranca con N7 — Prompting Intermedio.</Text>
+              <Text style={{ fontSize: 12, color: '#334155', lineHeight: 18 }}>🏁 <Text style={styles.bold}>¡Completaste el Mundo 1!</Text>{'\n\n'}Ahora te espera la <Text style={styles.bold}>Evaluación del Mundo 1</Text>, donde repasarás todo lo que aprendiste en los niveles 1 al 6.{'\n\n'}Al superarla se abre el <Text style={styles.bold}>Mundo 2: Domina el Prompting</Text>, con <Text style={styles.bold}>6 niveles nuevos</Text> (N7 a N12) para convertirte en un experto del prompting.</Text>
             </View>
             <View style={{ width: '100%', marginBottom: 14 }}>
-              <Text style={{ fontSize: 10, color: '#94a3b8', marginBottom: 4 }}>Nivel 6 de 36 completado · Mundo 1 completado · ¡Sigue a M2!</Text>
+              <Text style={{ fontSize: 10, color: '#94a3b8', marginBottom: 4 }}>Nivel 6 de 36 completado · Mundo 1 terminado · Sigue la Evaluación del Mundo 1</Text>
               <View style={{ height: 6, backgroundColor: '#e2e8f0', borderRadius: 3, overflow: 'hidden' }}><View style={{ height: '100%', width: '20%', backgroundColor: '#d97706', borderRadius: 3 }} /></View>
             </View>
-            <TouchableOpacity style={styles.primaryBtn} onPress={handleFinish}><Text style={styles.primaryBtnText}>Siguiente nivel →</Text></TouchableOpacity>
+            <TouchableOpacity style={styles.primaryBtn} onPress={handleFinish}><Text style={styles.primaryBtnText}>Vamos a la evaluación del Mundo 1 →</Text></TouchableOpacity>
           </View>
         );
 
@@ -1157,7 +1218,7 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
   const getNote = () => {
     switch (step) {
       case 2: return `Responde las ${viableTF.length} situaciones · hasta ${viableTF.length * 5} XP`;
-      case 4: return 'Toca un chip → luego toca la columna donde va';
+      case 4: return 'Arrastra un chip a su columna · o toca el chip y luego la columna';
       case 8: return builderComplete ? '¡Prompt listo! Puedes copiarlo y usarlo en cualquier LLM' : 'Completa los 5 selectores para ensamblar tu prompt';
       case 10: return `Responde las ${iterQuiz.length} preguntas · hasta ${iterQuiz.length * 8} XP`;
       case 12: return 'Completa todos los espacios · +6 XP cada uno';

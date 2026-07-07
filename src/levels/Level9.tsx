@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   TextInput,
   Alert,
   BackHandler,
+  Platform,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -238,6 +239,34 @@ const TONOS = [
   },
 ];
 
+// ===================== HELPERS DE UI =====================
+const HL_COLORS: Record<string, { border: string; bg: string; color: string }> = {
+  purple: { border: '#8b5cf6', bg: '#faf5ff', color: '#5b21b6' },
+  green: { border: '#10b981', bg: '#f0fdf4', color: '#065f46' },
+  amber: { border: '#f59e0b', bg: '#fffbeb', color: '#92400e' },
+  blue: { border: '#0ea5e9', bg: '#f0f9ff', color: '#0369a1' },
+  red: { border: '#ef4444', bg: '#fff1f2', color: '#991b1b' },
+};
+const Bold = ({ children }: { children: React.ReactNode }) => <Text style={{ fontWeight: '700', color: '#0f172a' }}>{children}</Text>;
+function Hl({ variant = 'purple', children }: { variant?: string; children: React.ReactNode }) {
+  const v = HL_COLORS[variant];
+  return (
+    <View style={[styles.hlBox, { borderLeftColor: v.border, backgroundColor: v.bg }]}>
+      <Text style={[styles.hlText, { color: v.color }]}>{children}</Text>
+    </View>
+  );
+}
+function TipBox({ children }: { children: React.ReactNode }) {
+  return <View style={styles.tipBox}><Text style={styles.tipText}>{children}</Text></View>;
+}
+function FeedbackBar({ ok, children }: { ok: boolean; children: React.ReactNode }) {
+  return (
+    <View style={[styles.fbBar, ok ? styles.fbOk : styles.fbWrong]}>
+      <Text style={[styles.fbText, { color: ok ? '#166534' : '#991b1b' }]}>{children}</Text>
+    </View>
+  );
+}
+
 // ===================== COMPONENTE =====================
 export default function World2Level3() {
   const navigation = useNavigation();
@@ -262,6 +291,8 @@ export default function World2Level3() {
   const genreKeys = Object.keys(genreItem.genres);
   const [shuffledGenres] = useState(() => [...genreKeys].sort(() => Math.random() - 0.5));
   const [genreAnswers, setGenreAnswers] = useState<Record<number, string>>({});
+  const [genreChecked, setGenreChecked] = useState(false);
+  const [genreScore, setGenreScore] = useState(0);
 
   // Fill-in-blank (módulo 3)
   const [fillAnswered, setFillAnswered] = useState(false);
@@ -359,10 +390,6 @@ export default function World2Level3() {
   const goToNextStep = () => { if (step < TOTAL_STEPS - 1) setStep(step + 1); };
   const goToPrevStep = () => { setStep(s => s - 1); };
 
-  const showResult = (_ok: boolean, _msg: string, andAdvance = false) => {
-    if (andAdvance) setTimeout(() => goToNextStep(), 1800);
-  };
-
   const handleClose = () => {
     if (isExamMode) {
       Alert.alert('Actividad en curso', 'Si sales perderás el progreso. ¿Seguro?', [
@@ -390,22 +417,19 @@ export default function World2Level3() {
 
   // Género matching (2)
   const selectGenre = (idx: number, val: string) => {
+    if (genreChecked) return;
     setGenreAnswers((prev) => ({ ...prev, [idx]: val }));
   };
 
   const checkGenre = () => {
-    if (Object.keys(genreAnswers).length < shuffledGenres.length) {
-      Alert.alert('Incompleto', 'Asigna un género a cada descripción.');
-      return false;
-    }
+    if (genreChecked) return true; // ya verificado → avanzar
+    if (Object.keys(genreAnswers).length < shuffledGenres.length) return false;
     let correct = 0;
-    shuffledGenres.forEach((k, i) => {
-      if (genreAnswers[i] === k) correct++;
-    });
-    const earned = correct * 8;
-    if (earned > 0) addXP(earned);
-    showResult(correct >= 3, `${correct >= 3 ? '✅ ¡Bien!' : '⚠️ Revisa'} ${correct}/${shuffledGenres.length} correctas. +${earned} XP. Cada género transforma el mismo tema en una historia completamente diferente.`, true);
-    return false;
+    shuffledGenres.forEach((k, i) => { if (genreAnswers[i] === k) correct++; });
+    setGenreScore(correct);
+    setGenreChecked(true);
+    if (correct > 0) addXP(correct * 8);
+    return false; // muestra feedback, no avanza aún
   };
 
   // Fill-in-blank (3)
@@ -413,9 +437,7 @@ export default function World2Level3() {
     if (fillAnswered) return;
     setFillAnswered(true);
     setFillSel(i);
-    const correct = i === fillItem.correct;
-    if (correct) addXP(12);
-    Alert.alert(correct ? '✅ ¡Correcto! +12 XP' : '❌ Incorrecto', fillItem.explain);
+    if (i === fillItem.correct) addXP(12);
   };
 
   // Compare (7)
@@ -423,9 +445,7 @@ export default function World2Level3() {
     if (compareAnswered) return;
     setCompareAnswered(true);
     setCompareSel(i);
-    const correct = i === COMPARE_PAIR.correct;
-    if (correct) addXP(12);
-    Alert.alert(correct ? '✅ ¡Correcto! +12 XP' : '❌ Incorrecto', COMPARE_PAIR.explain);
+    if (i === COMPARE_PAIR.correct) addXP(12);
   };
 
   // Style compare (11)
@@ -433,32 +453,36 @@ export default function World2Level3() {
     if (styleAnswered) return;
     setStyleAnswered(true);
     setStyleSel(i);
-    const correct = i === STYLE_COMPARE.correct;
-    if (correct) addXP(12);
-    Alert.alert(correct ? '✅ ¡Correcto! +12 XP' : '❌ Incorrecto', STYLE_COMPARE.explain);
+    if (i === STYLE_COMPARE.correct) addXP(12);
   };
 
-  // Emociones (12)
+  // Emociones (12) — máximo 3, se ignora en silencio si ya hay 3
   const toggleEmo = (tag: string) => {
     setEmoTags((prev) => {
       if (prev.includes(tag)) return prev.filter((t) => t !== tag);
-      if (prev.length >= 3) {
-        Alert.alert('Límite', 'Máximo 3 emociones.');
-        return prev;
-      }
+      if (prev.length >= 3) return prev;
       return [...prev, tag];
     });
   };
 
   // Sprint (14)
+  const sprintIdxRef = useRef(0);
+  useEffect(() => { sprintIdxRef.current = sprintIdx; }, [sprintIdx]);
+  const finishSprint = (tasksDone: number) => {
+    if (sprintTimer.current) clearInterval(sprintTimer.current);
+    const earned = Math.min(tasksDone, SPRINT_TASKS.length) * 10;
+    if (earned > 0) addXP(earned);
+    setSprintDone(true);
+  };
   const startSprint = () => {
     setSprintIdx(0);
+    sprintIdxRef.current = 0;
     setSprintSec(120);
     setSprintDone(false);
     sprintTimer.current = setInterval(() => {
       setSprintSec((prev) => {
         if (prev <= 1) {
-          clearInterval(sprintTimer.current!);
+          finishSprint(sprintIdxRef.current);
           return 0;
         }
         return prev - 1;
@@ -467,14 +491,9 @@ export default function World2Level3() {
   };
 
   const nextSprintTask = () => {
-    if (sprintIdx + 1 >= SPRINT_TASKS.length) {
-      clearInterval(sprintTimer.current!);
-      const earned = 3 * 10;
-      if (earned > 0) addXP(earned);
-      setSprintDone(true);
-    } else {
-      setSprintIdx((prev) => prev + 1);
-    }
+    const done = sprintIdx + 1;
+    if (done >= SPRINT_TASKS.length) finishSprint(done);
+    else setSprintIdx(done);
   };
 
   // Quiz inverso (16)
@@ -483,9 +502,7 @@ export default function World2Level3() {
     setQuizInvRevealed(true);
     setQuizInvSel(i);
     const item = QUIZ_INVERSO[quizInvIdx];
-    const correct = i === item.correct;
-    if (correct) setQuizInvScore((prev) => prev + 1);
-    Alert.alert(correct ? '✅ ¡Correcto!' : '❌ Incorrecto', item.explain);
+    if (i === item.correct) setQuizInvScore((prev) => prev + 1);
   };
 
   const nextQI = () => {
@@ -506,11 +523,13 @@ export default function World2Level3() {
   // ============ RENDER ============
   const renderIntro = () => (
     <View>
-      <View style={styles.iconCircle}><Text style={{ fontSize: 34 }}>✨</Text></View>
+      <View style={[styles.tag, { backgroundColor: '#d1fae5' }]}><Text style={[styles.tagText, { color: '#065f46' }]}>N9 · 18 módulos</Text></View>
+      <View style={[styles.iconCircle, { backgroundColor: '#e9d5ff' }]}><Text style={{ fontSize: 34 }}>✨</Text></View>
       <Text style={styles.title}>Prompts Creativos</Text>
       <Text style={styles.subtitle}>Ya sabes cómo funciona la IA por dentro. Ahora la usas para crear: historias, personajes, canciones, juegos, mundos enteros.</Text>
-      <View style={styles.card}><Text style={styles.cardTitle}>🎯 Qué vas a aprender</Text><Text style={styles.cardText}>Cómo los adjetivos y el tono cambian todo · Técnica del "y de repente" · Personajes con 3 palabras · Sprint de 3 prompts creativos</Text></View>
-      <View style={styles.card}><Text style={styles.cardTitle}>💡 La idea central</Text><Text style={styles.cardText}>La IA es un co-autor. Tú pones la visión y la dirección — ella construye. El prompt creativo es el guión del director.</Text></View>
+      <View style={[styles.card, { backgroundColor: '#faf5ff', borderColor: '#e9d5ff' }]}><Text style={styles.cardTitle}>🎯 Qué vas a aprender</Text><Text style={styles.cardText}>Cómo los adjetivos y el tono cambian todo · Técnica del "y de repente" · Personajes con 3 palabras · Comparar estilos narrativos · Sprint de 3 prompts creativos</Text></View>
+      <View style={[styles.card, { backgroundColor: '#f0f9ff', borderColor: '#bae6fd' }]}><Text style={styles.cardTitle}>💡 La idea central</Text><Text style={styles.cardText}>La IA es un co-autor. Tú pones la visión y la dirección — ella construye. <Bold>El prompt creativo es el guión del director.</Bold></Text></View>
+      <Hl variant="purple"><Bold>Un prompt bien escrito no describe lo que quieres.</Bold> Crea las condiciones para que la IA lo descubra contigo.</Hl>
     </View>
   );
 
@@ -518,10 +537,21 @@ export default function World2Level3() {
     const ok = w1.trim().length >= 2 && w2.trim().length >= 2 && w3.trim().length >= 2;
     return (
       <View>
-        <View style={[styles.tag, { backgroundColor: '#eef2ff' }]}><Text style={[styles.tagText, { color: '#4338ca' }]}>Nivel 9 · 18 módulos</Text></View>
-        <View style={[styles.tag, { backgroundColor: '#d1fae5' }]}><Text style={[styles.tagText, { color: '#065f46' }]}>📖 Módulo 1 · Builder</Text></View>
+        <View style={[styles.tag, { backgroundColor: '#faf5ff' }]}><Text style={[styles.tagText, { color: '#7e22ce' }]}>📖 Módulo 1 · Builder</Text></View>
         <Text style={styles.title}>El prompt de 3 palabras</Text>
-        <Text style={styles.subtitle}>3 palabras → prompt narrativo completo → historia.</Text>
+        <Text style={styles.subtitle}>3 palabras → prompt narrativo completo → historia. Así de poderoso es el contexto.</Text>
+        <View style={styles.compareWrap}>
+          <View style={[styles.comparePanel, { backgroundColor: '#fff7ed', borderColor: '#fed7aa' }]}>
+            <Text style={[styles.compareLabel, { color: '#c2410c' }]}>Solo 3 palabras</Text>
+            <Text style={styles.compareMono}>robot · lluvia · espejo</Text>
+          </View>
+          <View style={[styles.comparePanel, { backgroundColor: '#f0fdf4', borderColor: '#bbf7d0' }]}>
+            <Text style={[styles.compareLabel, { color: '#065f46' }]}>Prompt expandido</Text>
+            <Text style={styles.compareResp}>Escribe el primer párrafo de una historia donde un robot descubre su propio reflejo bajo la lluvia por primera vez. Tono: contemplativo. Máximo 80 palabras.</Text>
+          </View>
+        </View>
+        <Hl variant="purple"><Bold>El truco:</Bold> Toma tus 3 palabras → añade Quién + Qué descubre/hace + Tono + Extensión. En 30 segundos tienes un prompt narrativo completo.</Hl>
+        <Text style={[styles.builderLabel, { color: '#7e22ce' }]}>Elige tus 3 palabras</Text>
         <TextInput style={styles.input} placeholder="Palabra 1 (personaje o lugar)" value={w1} onChangeText={(v) => { setW1(v); if (!wordsBuilt && w2.trim().length >= 2 && w3.trim().length >= 2 && v.trim().length >= 2 && !wordsBuilt) { addXP(5); setWordsBuilt(true); } }} />
         <TextInput style={styles.input} placeholder="Palabra 2 (objeto o elemento)" value={w2} onChangeText={(v) => { setW2(v); if (!wordsBuilt && w1.trim().length >= 2 && w3.trim().length >= 2 && v.trim().length >= 2 && !wordsBuilt) { addXP(5); setWordsBuilt(true); } }} />
         <TextInput style={styles.input} placeholder="Palabra 3 (emoción o acción)" value={w3} onChangeText={(v) => { setW3(v); if (!wordsBuilt && w1.trim().length >= 2 && w2.trim().length >= 2 && v.trim().length >= 2 && !wordsBuilt) { addXP(5); setWordsBuilt(true); } }} />
@@ -553,18 +583,30 @@ export default function World2Level3() {
               <Text style={{ fontSize: 12, color: '#334155' }}>{genreItem.genres[k]}</Text>
             </View>
             <View style={{ flexDirection: 'row', gap: 4, flexWrap: 'wrap', width: 110 }}>
-              {genreOpts.map((opt) => (
-                <TouchableOpacity
-                  key={opt}
-                  style={[styles.genreOpt, genreAnswers[i] === opt && { backgroundColor: '#ede9fe', borderColor: '#7c3aed' }]}
-                  onPress={() => selectGenre(i, opt)}
-                >
-                  <Text style={{ fontSize: 10, fontWeight: '600', color: genreAnswers[i] === opt ? '#5b21b6' : '#64748b' }}>{opt}</Text>
-                </TouchableOpacity>
-              ))}
+              {genreOpts.map((opt) => {
+                const sel = genreAnswers[i] === opt;
+                const okColor = genreChecked && opt === k;
+                const badColor = genreChecked && sel && opt !== k;
+                return (
+                  <TouchableOpacity
+                    key={opt}
+                    style={[styles.genreOpt, sel && !genreChecked && { backgroundColor: '#ede9fe', borderColor: '#7c3aed' }, okColor && { backgroundColor: '#dcfce7', borderColor: '#10b981' }, badColor && { backgroundColor: '#fff1f2', borderColor: '#ef4444' }]}
+                    onPress={() => selectGenre(i, opt)}
+                    disabled={genreChecked}
+                  >
+                    <Text style={{ fontSize: 10, fontWeight: '600', color: okColor ? '#166534' : badColor ? '#991b1b' : sel ? '#5b21b6' : '#64748b' }}>{opt}</Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </View>
         ))}
+        {genreChecked && (
+          <FeedbackBar ok={genreScore >= 3}>
+            {(genreScore >= 3 ? '✅ ' : '⚠️ ') + `${genreScore}/${shuffledGenres.length} correctas. +${genreScore * 8} XP.\n`}
+            Cada género transforma el mismo tema en una historia completamente diferente — ese es el poder del prompting creativo.
+          </FeedbackBar>
+        )}
       </View>
     );
   };
@@ -577,16 +619,21 @@ export default function World2Level3() {
       <View style={[styles.card, { backgroundColor: '#faf5ff' }]}>
         <Text style={{ fontSize: 13, fontStyle: 'italic', color: '#334155' }}>{fillItem.prompt}</Text>
       </View>
-      {fillItem.options.map((opt, i) => (
-        <TouchableOpacity
-          key={i}
-          style={[styles.optionBtn, fillSel === i && { borderColor: fillItem.correct === i ? '#10b981' : '#ef4444', backgroundColor: fillItem.correct === i ? '#dcfce7' : '#fff1f2' }]}
-          onPress={() => answerFill(i)}
-          disabled={fillAnswered}
-        >
-          <Text style={{ fontSize: 12, fontWeight: '600', color: '#334155' }}>{opt}</Text>
-        </TouchableOpacity>
-      ))}
+      {fillItem.options.map((opt, i) => {
+        const okColor = fillAnswered && i === fillItem.correct;
+        const badColor = fillAnswered && fillSel === i && i !== fillItem.correct;
+        return (
+          <TouchableOpacity
+            key={i}
+            style={[styles.optionBtn, okColor && styles.optOk, badColor && styles.optBad]}
+            onPress={() => answerFill(i)}
+            disabled={fillAnswered}
+          >
+            <Text style={{ fontSize: 12, fontWeight: '600', color: okColor ? '#166534' : badColor ? '#991b1b' : '#334155' }}>{opt}</Text>
+          </TouchableOpacity>
+        );
+      })}
+      {fillAnswered && <FeedbackBar ok={fillSel === fillItem.correct}>{(fillSel === fillItem.correct ? '✅ ' : '❌ ') + fillItem.explain}</FeedbackBar>}
     </View>
   );
 
@@ -604,6 +651,7 @@ export default function World2Level3() {
         <View style={[styles.card, { backgroundColor: '#faf5ff' }]}><Text style={styles.cardTitle}>🌀 Más raro</Text><Text style={{ fontStyle: 'italic', fontSize: 12 }}>{t.versiones.raro}</Text></View>
         <View style={[styles.card, { backgroundColor: '#f0fdf4' }]}><Text style={styles.cardTitle}>😄 Más divertido</Text><Text style={{ fontStyle: 'italic', fontSize: 12 }}>{t.versiones.divertido}</Text></View>
         <View style={[styles.card, { backgroundColor: '#eff6ff' }]}><Text style={styles.cardTitle}>🎯 Más serio</Text><Text style={{ fontStyle: 'italic', fontSize: 12 }}>{t.versiones.serio}</Text></View>
+        <Hl variant="purple"><Bold>Cómo pedirle el tono a la IA:</Bold>{'\n'}Añade al final del prompt: "Tono: absurdo y surrealista" / "Tono: cómico exagerado" / "Tono: contemplativo y serio"</Hl>
       </View>
     );
   };
@@ -625,11 +673,12 @@ export default function World2Level3() {
         <TextInput style={styles.input} placeholder="Frase icónica" value={charFrase} onChangeText={setCharFrase} />
         {ok && (
           <View style={[styles.card, { backgroundColor: '#f0fdf4', marginTop: 10 }]}>
-            <Text style={{ fontSize: 12, color: '#065f46' }}>
-              Nombre: {charW1} {charW2} {charW3}{'\n'}
-              Poder: {charPoder}{'\n'}
-              Debilidad: {charDebilidad}{'\n'}
-              Frase: "{charFrase}"
+            <Text style={{ fontSize: 12, color: '#065f46', lineHeight: 19 }}>
+              <Bold>Nombre:</Bold> {charW1}{'\n'}
+              <Bold>Tipo:</Bold> {charW2} {charW3}{'\n'}
+              <Bold>Poder:</Bold> {charPoder}{'\n'}
+              <Bold>Debilidad:</Bold> {charDebilidad}{'\n'}
+              <Bold>Frase icónica:</Bold> "{charFrase}"
             </Text>
           </View>
         )}
@@ -652,7 +701,7 @@ export default function World2Level3() {
         {ok && (
           <View style={[styles.card, { backgroundColor: '#f0fdf4', marginTop: 10 }]}>
             <Text style={{ fontSize: 12, color: '#065f46' }}>
-              Actúa como compositor de {sgGenre}. Escribe la letra de una canción sobre {sgTema}. Mood: {sgMood}. Incluye: intro, dos estrofas y un coro pegajoso.
+              Actúa como compositor de {sgGenre}. Escribe la letra de una canción sobre {sgTema}. Mood: {sgMood}. Incluye: intro, dos estrofas y un coro pegajoso. El lenguaje debe sentirse auténtico para alguien de 15 años.
             </Text>
           </View>
         )}
@@ -662,8 +711,9 @@ export default function World2Level3() {
 
   const renderCompare = () => (
     <View>
-      <View style={[styles.tag, { backgroundColor: '#fff1f2' }]}><Text style={[styles.tagText, { color: '#e11d48' }]}>✍️ Módulo 7 · Prompt-compare</Text></View>
+      <View style={[styles.tag, { backgroundColor: '#faf5ff' }]}><Text style={[styles.tagText, { color: '#7e22ce' }]}>✍️ Módulo 7 · Prompt-compare</Text></View>
       <Text style={styles.title}>Con vs. sin adjetivos</Text>
+      <Text style={styles.subtitle}>Los adjetivos emocionales no son decoración — son instrucciones de atmósfera.</Text>
       <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
         <View style={{ flex: 1, backgroundColor: '#fff1f2', borderRadius: 10, padding: 10 }}>
           <Text style={{ fontWeight: 'bold', color: '#991b1b', marginBottom: 4 }}>❌ Sin adjetivos</Text>
@@ -675,30 +725,41 @@ export default function World2Level3() {
         </View>
       </View>
       <Text style={{ fontWeight: 'bold', fontSize: 13, marginBottom: 8 }}>{COMPARE_PAIR.question}</Text>
-      {COMPARE_PAIR.opts.map((opt, i) => (
-        <TouchableOpacity
-          key={i}
-          style={[styles.optionBtn, compareSel === i && { borderColor: COMPARE_PAIR.correct === i ? '#10b981' : '#ef4444', backgroundColor: COMPARE_PAIR.correct === i ? '#dcfce7' : '#fff1f2' }]}
-          onPress={() => answerCompare(i)}
-          disabled={compareAnswered}
-        >
-          <Text style={{ fontSize: 12 }}>{opt}</Text>
-        </TouchableOpacity>
-      ))}
+      {COMPARE_PAIR.opts.map((opt, i) => {
+        const okColor = compareAnswered && i === COMPARE_PAIR.correct;
+        const badColor = compareAnswered && compareSel === i && i !== COMPARE_PAIR.correct;
+        return (
+          <TouchableOpacity
+            key={i}
+            style={[styles.optionBtn, okColor && styles.optOk, badColor && styles.optBad]}
+            onPress={() => answerCompare(i)}
+            disabled={compareAnswered}
+          >
+            <Text style={{ fontSize: 12, fontWeight: '600', color: okColor ? '#166534' : badColor ? '#991b1b' : '#334155' }}>{opt}</Text>
+          </TouchableOpacity>
+        );
+      })}
+      {compareAnswered && <FeedbackBar ok={compareSel === COMPARE_PAIR.correct}>{(compareSel === COMPARE_PAIR.correct ? '✅ ' : '❌ ') + COMPARE_PAIR.explain}</FeedbackBar>}
     </View>
   );
 
   const renderDirector = () => (
     <View>
-      <View style={[styles.tag, { backgroundColor: '#dcfce7' }]}><Text style={[styles.tagText, { color: '#166534' }]}>🎬 Módulo 8 · Casos reales</Text></View>
+      <View style={[styles.tag, { backgroundColor: '#fdf4ff' }]}><Text style={[styles.tagText, { color: '#7e22ce' }]}>🎬 Módulo 8 · Casos reales</Text></View>
       <Text style={styles.title}>La IA como director de cine</Text>
+      <Text style={styles.subtitle}>Un director no dice "haz algo bonito" — da instrucciones técnicas de atmósfera. Tú haces lo mismo con la IA.</Text>
       <View style={[styles.card, { backgroundColor: '#f8fafc' }]}>
         <Text style={styles.cardTitle}>🎥 Prompt de escena básico</Text>
-        <Text style={{ fontStyle: 'italic', fontSize: 12 }}>"Describe una escena de persecución."</Text>
+        <Text style={{ fontStyle: 'italic', fontSize: 12, color: '#334155' }}>"Describe una escena de persecución."</Text>
       </View>
-      <View style={[styles.card, { backgroundColor: '#faf5ff' }]}>
+      <View style={[styles.card, { backgroundColor: '#faf5ff', borderColor: '#e9d5ff' }]}>
         <Text style={styles.cardTitle}>🎬 Prompt de director</Text>
-        <Text style={{ fontStyle: 'italic', fontSize: 12 }}>"Describe una persecución nocturna en una ciudad lluviosa. Ángulo: cámara baja. Luz: faroles amarillos. Emoción: desesperación. Sin música — solo zapatos y lluvia."</Text>
+        <Text style={{ fontStyle: 'italic', fontSize: 12, color: '#334155', lineHeight: 19 }}>"Describe una persecución nocturna en una ciudad lluviosa. Ángulo: cámara baja, casi al suelo. Luz: solo faroles amarillos que parpadean. Emoción dominante: desesperación a punto de convertirse en rabia. Sin música — solo el sonido de zapatos y lluvia."</Text>
+      </View>
+      <Hl variant="purple"><Bold>Los 4 ingredientes de una escena visual:</Bold>{'\n'}📍 Ángulo de cámara · 💡 Luz / paleta · 😤 Emoción dominante · 🔊 Sonido / silencio</Hl>
+      <View style={[styles.card, { backgroundColor: '#f0f9ff', borderColor: '#bae6fd' }]}>
+        <Text style={styles.cardTitle}>🌍 Caso real</Text>
+        <Text style={styles.cardText}>Escritores de guiones en Hollywood ya usan IA para generar descripciones de escenas con este nivel de detalle. No reemplaza al escritor — acelera el borrador para que el creador se enfoque en la revisión.</Text>
       </View>
     </View>
   );
@@ -719,7 +780,7 @@ export default function World2Level3() {
         {ok && (
           <View style={[styles.card, { backgroundColor: '#f0fdf4', marginTop: 10 }]}>
             <Text style={{ fontSize: 12, color: '#065f46' }}>
-              Diseña las reglas de un {gmTipo}. Personajes: {gmPers}. Objetivo: {gmObj}. Mecánica especial: {gmMec}.
+              Diseña las reglas de un {gmTipo}. Los personajes son: {gmPers}. El objetivo es: {gmObj}. La mecánica especial que lo hace único: {gmMec}. Entrega: nombre del juego, reglas en 5 pasos, y cómo se gana.
             </Text>
           </View>
         )}
@@ -752,8 +813,9 @@ export default function World2Level3() {
     const s = STYLE_COMPARE;
     return (
       <View>
-        <View style={[styles.tag, { backgroundColor: '#fff1f2' }]}><Text style={[styles.tagText, { color: '#e11d48' }]}>🎨 Módulo 11 · Prompt-compare</Text></View>
+        <View style={[styles.tag, { backgroundColor: '#faf5ff' }]}><Text style={[styles.tagText, { color: '#7e22ce' }]}>🎨 Módulo 11 · Prompt-compare</Text></View>
         <Text style={styles.title}>El mismo prompt en 3 estilos</Text>
+        <Text style={styles.subtitle}>Mismo tema, misma escena — tres registros narrativos distintos.</Text>
         <View style={[styles.card, { backgroundColor: '#f8fafc' }]}>
           <Text style={{ fontWeight: 'bold', fontSize: 12 }}>📌 Tema</Text>
           <Text style={{ fontStyle: 'italic', fontSize: 12 }}>{s.tema}</Text>
@@ -762,16 +824,21 @@ export default function World2Level3() {
         <View style={[styles.card, { backgroundColor: '#faf5ff' }]}><Text style={styles.cardTitle}>🌀 Surrealista</Text><Text style={{ fontStyle: 'italic', fontSize: 12 }}>{s.surrealista}</Text></View>
         <View style={[styles.card, { backgroundColor: '#fffbeb' }]}><Text style={styles.cardTitle}>✨ Poético</Text><Text style={{ fontStyle: 'italic', fontSize: 12 }}>{s.poetico}</Text></View>
         <Text style={{ fontWeight: 'bold', fontSize: 13, marginBottom: 8 }}>{s.question}</Text>
-        {s.opts.map((opt, i) => (
-          <TouchableOpacity
-            key={i}
-            style={[styles.optionBtn, styleSel === i && { borderColor: s.correct === i ? '#10b981' : '#ef4444', backgroundColor: s.correct === i ? '#dcfce7' : '#fff1f2' }]}
-            onPress={() => answerStyle(i)}
-            disabled={styleAnswered}
-          >
-            <Text style={{ fontSize: 12 }}>{opt}</Text>
-          </TouchableOpacity>
-        ))}
+        {s.opts.map((opt, i) => {
+          const okColor = styleAnswered && i === s.correct;
+          const badColor = styleAnswered && styleSel === i && i !== s.correct;
+          return (
+            <TouchableOpacity
+              key={i}
+              style={[styles.optionBtn, okColor && styles.optOk, badColor && styles.optBad]}
+              onPress={() => answerStyle(i)}
+              disabled={styleAnswered}
+            >
+              <Text style={{ fontSize: 12, fontWeight: '600', color: okColor ? '#166534' : badColor ? '#991b1b' : '#334155' }}>{opt}</Text>
+            </TouchableOpacity>
+          );
+        })}
+        {styleAnswered && <FeedbackBar ok={styleSel === s.correct}>{(styleSel === s.correct ? '✅ ' : '❌ ') + s.explain}</FeedbackBar>}
       </View>
     );
   };
@@ -804,10 +871,13 @@ export default function World2Level3() {
 
   const renderMemes = () => (
     <View>
-      <View style={[styles.tag, { backgroundColor: '#dcfce7' }]}><Text style={[styles.tagText, { color: '#166534' }]}>😂 Módulo 13 · Casos reales</Text></View>
+      <View style={[styles.tag, { backgroundColor: '#fdf4ff' }]}><Text style={[styles.tagText, { color: '#7e22ce' }]}>😂 Módulo 13 · Casos reales</Text></View>
       <Text style={styles.title}>Crea un meme con palabras</Text>
-      <View style={styles.card}><Text style={styles.cardTitle}>💡 Fórmula del prompt-meme</Text><Text style={styles.cardText}>Genera un meme sobre [tema]. Imagen: [describe]. Texto superior: [frase 1]. Texto inferior: [frase 2]. Tono: [irónico / absurdo / motivacional]</Text></View>
-      <View style={[styles.card, { backgroundColor: '#faf5ff' }]}><Text style={styles.cardTitle}>Ejemplo — Meme escolar</Text><Text style={{ fontSize: 11, fontStyle: 'italic' }}>Imagen: perro rodeado de llamas. Texto superior: "Yo cuando tengo 3 parciales mañana". Texto inferior: "Pero primero termino este video".</Text></View>
+      <Text style={styles.subtitle}>Los memes también son prompts. Texto + imagen descrita + tono = instrucción completa.</Text>
+      <View style={[styles.card, { backgroundColor: '#f8fafc' }]}><Text style={styles.cardTitle}>💡 Fórmula del prompt-meme</Text><Text style={styles.cardText}>Genera un meme sobre [tema]. Imagen: [describe la imagen]. Texto superior: [frase 1]. Texto inferior: [frase 2]. Tono: [irónico / absurdo / motivacional]</Text></View>
+      <View style={[styles.card, { backgroundColor: '#faf5ff', borderColor: '#e9d5ff' }]}><Text style={styles.cardTitle}>Ejemplo 1 — Meme escolar</Text><Text style={{ fontSize: 11, fontStyle: 'italic', color: '#334155', lineHeight: 17 }}>Imagen: un perro sentado tranquilamente rodeado de llamas.{'\n'}Texto superior: "Yo cuando tengo 3 parciales mañana"{'\n'}Texto inferior: "Pero primero termino este video"{'\n'}Tono: absurdo y reconocible.</Text></View>
+      <View style={[styles.card, { backgroundColor: '#fffbeb', borderColor: '#fde68a' }]}><Text style={styles.cardTitle}>Ejemplo 2 — Meme de IA</Text><Text style={{ fontSize: 11, fontStyle: 'italic', color: '#334155', lineHeight: 17 }}>Imagen: un botón rojo gigante con la etiqueta "Prompt genérico".{'\n'}Texto superior: "Saber que hay una forma mejor"{'\n'}Texto inferior: "Pero escribir igual que siempre"{'\n'}Tono: autocrítico y divertido.</Text></View>
+      <Hl variant="amber"><Bold>Por qué esto es prompting:</Bold> Describes una imagen que no existe, defines qué debe decir y con qué tono. Le estás dando a la IA las instrucciones exactas de un director creativo.</Hl>
     </View>
   );
 
@@ -847,41 +917,59 @@ export default function World2Level3() {
     <View>
       <View style={[styles.tag, { backgroundColor: '#fdf4ff' }]}><Text style={[styles.tagText, { color: '#7e22ce' }]}>⚖️ Módulo 15 · Reflexión ética</Text></View>
       <Text style={styles.title}>¿Cuándo NO usar IA para crear?</Text>
-      <View style={[styles.card, { backgroundColor: '#fff1f2' }]}>
+      <Text style={styles.subtitle}>La IA es un co-autor poderoso. Pero hay momentos donde usarla resta, no suma.</Text>
+      <View style={[styles.card, { backgroundColor: '#fff1f2', borderColor: '#fecdd3' }]}>
         <Text style={styles.cardTitle}>🚫 El límite entre apoyarse y reemplazarse</Text>
-        <Text style={styles.cardText}>❌ Trampa académica: entregar trabajo de IA como tuyo.{'\n'}❌ Perder tu voz: si todo lo que "creas" viene de la IA.{'\n'}✅ La regla: usa la IA para amplificar tu visión, no para reemplazarla.</Text>
+        <Text style={[styles.cardText, { lineHeight: 20 }]}>
+          ❌ <Bold>Trampa académica:</Bold> Entregar trabajo de la IA como tuyo sin contribución real.{'\n\n'}
+          ❌ <Bold>Perder tu voz:</Bold> Si todo lo que "creas" viene de la IA, ¿qué queda de ti como creador?{'\n\n'}
+          ❌ <Bold>Saltarse el aprendizaje:</Bold> Escribir mal y mejorar es parte del proceso. La IA no puede sentir eso por ti.{'\n\n'}
+          ✅ <Bold>La regla:</Bold> Usa la IA para amplificar tu visión, no para reemplazarla.
+        </Text>
       </View>
+      <Hl variant="purple"><Bold>La pregunta clave:</Bold> ¿Este prompt está llevando mi idea más lejos — o está creando en mi lugar?</Hl>
     </View>
   );
 
   const renderQuizInv = () => (
     <View>
-      <View style={[styles.tag, { backgroundColor: '#eef2ff' }]}><Text style={[styles.tagText, { color: '#3730a3' }]}>🔍 Módulo 16 · Quiz inverso ({quizInvIdx + 1}/{QUIZ_INVERSO.length})</Text></View>
+      <View style={[styles.tag, { backgroundColor: '#faf5ff' }]}><Text style={[styles.tagText, { color: '#7e22ce' }]}>🔍 Módulo 16 · Quiz inverso ({quizInvIdx + 1}/{QUIZ_INVERSO.length})</Text></View>
       <Text style={styles.title}>¿Cuál prompt generó este resultado?</Text>
-      <View style={[styles.card, { backgroundColor: '#f0fdf4', marginBottom: 10 }]}>
-        <Text style={{ fontStyle: 'italic', fontSize: 13, lineHeight: 20 }}>{QUIZ_INVERSO[quizInvIdx].resultado}</Text>
+      <Text style={styles.subtitle}>Lee el resultado. ¿Cuál prompt lo generó?</Text>
+      <View style={[styles.card, { backgroundColor: '#f0fdf4', borderColor: '#bbf7d0', marginBottom: 10 }]}>
+        <Text style={{ fontStyle: 'italic', fontSize: 13, lineHeight: 20, color: '#334155' }}>{QUIZ_INVERSO[quizInvIdx].resultado}</Text>
       </View>
-      {QUIZ_INVERSO[quizInvIdx].opts.map((opt, i) => (
-        <TouchableOpacity
-          key={i}
-          style={[styles.optionBtn, quizInvRevealed && i === QUIZ_INVERSO[quizInvIdx].correct && { borderColor: '#10b981', backgroundColor: '#dcfce7' }, quizInvSel === i && !quizInvRevealed && { borderColor: '#7c3aed' }]}
-          onPress={() => answerQI(i)}
-          disabled={quizInvRevealed}
-        >
-          <Text style={{ fontSize: 12, fontWeight: '600' }}>{opt}</Text>
-        </TouchableOpacity>
-      ))}
+      {QUIZ_INVERSO[quizInvIdx].opts.map((opt, i) => {
+        const okColor = quizInvRevealed && i === QUIZ_INVERSO[quizInvIdx].correct;
+        const badColor = quizInvRevealed && quizInvSel === i && i !== QUIZ_INVERSO[quizInvIdx].correct;
+        return (
+          <TouchableOpacity
+            key={i}
+            style={[styles.optionBtn, okColor && styles.optOk, badColor && styles.optBad]}
+            onPress={() => answerQI(i)}
+            disabled={quizInvRevealed}
+          >
+            <Text style={{ fontSize: 12, fontWeight: '600', color: okColor ? '#166534' : badColor ? '#991b1b' : '#334155' }}>{opt}</Text>
+          </TouchableOpacity>
+        );
+      })}
+      {quizInvRevealed && <FeedbackBar ok={quizInvSel === QUIZ_INVERSO[quizInvIdx].correct}>{(quizInvSel === QUIZ_INVERSO[quizInvIdx].correct ? '✅ ' : '❌ ') + QUIZ_INVERSO[quizInvIdx].explain}</FeedbackBar>}
     </View>
   );
 
   const renderWild = () => (
     <View>
-      <View style={[styles.tag, { backgroundColor: '#eff6ff' }]}><Text style={[styles.tagText, { color: '#1e40af' }]}>🚀 Módulo 17 · Builder libre</Text></View>
+      <View style={[styles.tag, { backgroundColor: '#faf5ff' }]}><Text style={[styles.tagText, { color: '#7e22ce' }]}>🚀 Módulo 17 · Builder libre</Text></View>
       <Text style={styles.title}>Lo que nunca habrías escrito solo</Text>
+      <Text style={styles.subtitle}>El prompt más arriesgado y creativo que puedas imaginar. Sin filtro. Sin miedo.</Text>
+      <Hl variant="purple"><Bold>Desafío:</Bold> Escribe un prompt para crear algo que te parece imposible, ridículo, demasiado raro — o simplemente algo que nunca habrías pensado hacer sin la IA.</Hl>
+      <Text style={[styles.builderLabel, { color: '#7e22ce' }]}>Tu prompt más arriesgado (mínimo 30 caracteres)</Text>
       <TextInput
         style={styles.textArea}
         multiline
-        placeholder="Escribe tu prompt más arriesgado (mín. 30 caracteres)..."
+        textAlignVertical="top"
+        placeholder="Ej: Actúa como un narrador de documentales de naturaleza de los años 80. Narra mi lunes como si fuera la migración épica de los ñus por el Serengeti..."
+        placeholderTextColor="#b8bcc0"
         value={wildText}
         onChangeText={(v) => {
           setWildText(v);
@@ -889,6 +977,7 @@ export default function World2Level3() {
         }}
       />
       <Text style={{ fontSize: 11, color: '#94a3b8', textAlign: 'right' }}>{wildText.length} / mínimo 30 caracteres</Text>
+      <TipBox>✅ <Bold>Esta idea queda en tu portafolio IA Explorer.</Bold>{'\n'}Los mejores prompts creativos suelen ser los que primero parecen absurdos.</TipBox>
     </View>
   );
 
@@ -896,10 +985,13 @@ export default function World2Level3() {
     <View>
       <View style={[styles.tag, { backgroundColor: '#f1f5f9' }]}><Text style={[styles.tagText, { color: '#475569' }]}>✨ Módulo 18 · Reflexión</Text></View>
       <Text style={styles.title}>¿La creación es tuya o de la IA?</Text>
+      <Text style={styles.subtitle}>Piensa en todo lo que construiste hoy.</Text>
       <TextInput
         style={styles.textArea}
         multiline
-        placeholder="Escribe tu reflexión (mín. 50 caracteres)..."
+        textAlignVertical="top"
+        placeholder="Ej: Creo que la creación sigue siendo mía porque yo puse la visión, el tono y la dirección. La IA construyó con mis instrucciones — como un músico que toca la canción que yo compuse..."
+        placeholderTextColor="#b8bcc0"
         value={reflectText}
         onChangeText={(v) => {
           setReflectText(v);
@@ -907,6 +999,7 @@ export default function World2Level3() {
         }}
       />
       <Text style={{ fontSize: 11, color: '#94a3b8', textAlign: 'right' }}>{reflectText.length} / mínimo 50 caracteres</Text>
+      <TipBox>✅ <Bold>Esta reflexión queda en tu portafolio IA Explorer.</Bold>{'\n'}No hay respuesta correcta. Lo que importa es que la pregunta ya no te parezca obvia.</TipBox>
     </View>
   );
 
@@ -992,8 +1085,7 @@ export default function World2Level3() {
       16: () => {
         if (quizInvDone) return true;
         if (quizInvRevealed) { nextQI(); return false; }
-        Alert.alert('Elige una opción', 'Selecciona cuál prompt generó este resultado.');
-        return false;
+        return false; // aún sin responder: el botón no avanza
       },
      17: () => wildText.trim().length >= 30,
      18: () => reflectText.trim().length >= 50,
@@ -1012,7 +1104,7 @@ export default function World2Level3() {
   const getBtnLabel = () => {
     switch (step) {
       case 1: return 'Continuar →';
-      case 2: return 'Verificar →';
+      case 2: return genreChecked ? 'Continuar →' : 'Verificar →';
       case 3: return 'Continuar →';
       case 5: return 'Continuar →';
       case 6: return 'Continuar →';
@@ -1086,6 +1178,26 @@ const styles = StyleSheet.create({
   input: { borderWidth: 1.5, borderColor: '#a7f3d0', borderRadius: 10, padding: 10, fontSize: 13, backgroundColor: '#f0fdf4', color: '#334155', marginBottom: 8 },
   textArea: { borderWidth: 1.5, borderColor: '#e2e8f0', borderRadius: 10, padding: 12, fontSize: 13, color: '#334155', textAlignVertical: 'top', minHeight: 80, backgroundColor: '#fafafa', marginBottom: 8 },
   optionBtn: { width: '100%', padding: 11, borderRadius: 11, borderWidth: 2, borderColor: '#e2e8f0', backgroundColor: '#f8fafc', marginBottom: 7 },
+  optOk: { borderColor: '#10b981', backgroundColor: '#dcfce7' },
+  optBad: { borderColor: '#ef4444', backgroundColor: '#fff1f2' },
+  builderLabel: { fontSize: 11, fontWeight: '700', marginBottom: 4, marginTop: 6 },
+  // Highlight boxes
+  hlBox: { paddingHorizontal: 14, paddingVertical: 12, borderTopRightRadius: 12, borderBottomRightRadius: 12, borderLeftWidth: 3, marginVertical: 9 },
+  hlText: { fontSize: 12, lineHeight: 20, fontWeight: '500' },
+  // Tip box
+  tipBox: { marginTop: 10, backgroundColor: '#f5f3ff', borderWidth: 1, borderColor: '#c4b5fd', borderRadius: 10, paddingHorizontal: 13, paddingVertical: 11 },
+  tipText: { fontSize: 12, color: '#5b21b6', lineHeight: 18 },
+  // Feedback bar
+  fbBar: { borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, marginTop: 7 },
+  fbOk: { backgroundColor: '#dcfce7' },
+  fbWrong: { backgroundColor: '#fff1f2' },
+  fbText: { fontSize: 12, fontWeight: '500', lineHeight: 18 },
+  // Compare panels
+  compareWrap: { flexDirection: 'row', gap: 8, marginBottom: 11 },
+  comparePanel: { flex: 1, borderRadius: 12, padding: 11, borderWidth: 1 },
+  compareLabel: { fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 7 },
+  compareMono: { fontSize: 11, color: '#334155', lineHeight: 17, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+  compareResp: { fontSize: 11, color: '#334155', lineHeight: 17 },
   genreOpt: { padding: 6, paddingHorizontal: 10, borderRadius: 8, borderWidth: 1.5, borderColor: '#e2e8f0', backgroundColor: '#fff', marginBottom: 4 },
   emoTag: { padding: 8, paddingHorizontal: 13, borderRadius: 20, borderWidth: 2, borderColor: '#c4b5fd', backgroundColor: '#f5f3ff' },
   actionBtn: { flex: 1, padding: 11, borderRadius: 11, alignItems: 'center' },
