@@ -11,7 +11,7 @@ import XPToast from '../components/XPToast';
 
 // ---------- Tipos ----------
 type TFItem = { stmt: string; correct: boolean; explain: string };
-type DragItem = { text: string; cat: string };
+type DragItem = { text: string; cat: string; why: string };
 type FillPrompt = { roto: string; campos: string[]; correcto: string };
 type MatchPair = { largo: string; corto: string; problemaLargo: string; correcto: string };
 type MCQ = { q?: string; opts: string[]; correct: number; explain: string };
@@ -24,14 +24,14 @@ type CardVariant = 'sky' | 'green' | 'amber' | 'purple' | 'red' | 'slate';
 
 // ---------- Pools ----------
 const DD_ERRORES: DragItem[] = [
-  { text: 'Escribe sobre el futuro', cat: 'rol' },
-  { text: 'Dame info sobre Colombia', cat: 'ctx' },
-  { text: 'Explícame cómo funciona', cat: 'ctx' },
-  { text: 'Responde como si fueras algo malo', cat: 'rol' },
-  { text: 'Haz una presentación de 10 slides con todo', cat: 'fmt' },
-  { text: 'Tradúcelo bien y bonito', cat: 'inst' },
-  { text: 'Dame más información sobre eso', cat: 'ctx' },
-  { text: 'Escríbeme algo creativo y largo', cat: 'fmt' },
+  { text: 'Escribe sobre el futuro', cat: 'rol', why: 'Falta el papel: ¿la IA escribe como científica, como poeta...? Sin un rol no sabe con qué voz responder.' },
+  { text: 'Dame info sobre Colombia', cat: 'ctx', why: 'Le falta contexto: ¿qué de Colombia? ¿su historia, su comida, su geografía? Es demasiado abierto.' },
+  { text: 'Explícame cómo funciona', cat: 'ctx', why: '¿Cómo funciona QUÉ? Falta el contexto de qué cosa quieres entender.' },
+  { text: 'Responde como si fueras algo malo', cat: 'rol', why: 'Es un rol mal definido: "algo malo" no es un papel claro que la IA pueda tomar.' },
+  { text: 'Haz una presentación de 10 slides con todo', cat: 'fmt', why: 'El formato es imposible: "10 slides con todo" no dice qué contenido va en cada una.' },
+  { text: 'Tradúcelo bien y bonito', cat: 'inst', why: 'La instrucción es vaga: "bien y bonito" no dice qué hacer exactamente.' },
+  { text: 'Dame más información sobre eso', cat: 'ctx', why: 'Falta contexto: "¿eso?" — la IA no sabe a qué te refieres.' },
+  { text: 'Escríbeme algo creativo y largo', cat: 'fmt', why: 'Falta el formato real: ¿un cuento? ¿un poema? ¿cuántas palabras?' },
 ];
 
 const VF_POOL: TFItem[] = [
@@ -111,15 +111,28 @@ const PROMPTS_ROTOS: FixItem[] = [
 ];
 
 const LIMITES_ITEMS: DragItem[] = [
-  { text: 'Resumir un documento de 20 páginas', cat: 'puede' },
-  { text: 'Saber qué pasó en las noticias de hoy', cat: 'nopuede' },
-  { text: 'Traducir un texto con jerga local colombiana', cat: 'depende' },
-  { text: 'Recordar lo que le dijiste hace 3 semanas', cat: 'nopuede' },
-  { text: 'Escribir código funcional en Python', cat: 'puede' },
-  { text: 'Darte el precio actual del dólar', cat: 'nopuede' },
-  { text: 'Analizar una imagen que le adjuntas', cat: 'depende' },
-  { text: 'Generar ideas creativas sin límite', cat: 'puede' },
+  { text: 'Resumir un documento de 20 páginas', cat: 'puede', why: 'Sí puede: resumir texto es justo lo que mejor hace.' },
+  { text: 'Saber qué pasó en las noticias de hoy', cat: 'nopuede', why: 'No puede: no tiene internet en vivo; su conocimiento llega hasta su fecha de corte.' },
+  { text: 'Traducir un texto con jerga local colombiana', cat: 'depende', why: 'Depende: entiende mucho español, pero la jerga muy local a veces se le escapa.' },
+  { text: 'Recordar lo que le dijiste hace 3 semanas', cat: 'nopuede', why: 'No puede: no guarda memoria de charlas pasadas (salvo que la app se lo permita).' },
+  { text: 'Escribir código funcional en Python', cat: 'puede', why: 'Sí puede: generar código es una de sus fortalezas.' },
+  { text: 'Darte el precio actual del dólar', cat: 'nopuede', why: 'No puede: es un dato en tiempo real y no lo tiene.' },
+  { text: 'Analizar una imagen que le adjuntas', cat: 'depende', why: 'Depende: solo si el modelo tiene "visión" activada.' },
+  { text: 'Generar ideas creativas sin límite', cat: 'puede', why: 'Sí puede: crear ideas nuevas se le da muy bien.' },
 ];
+
+// Encabezados y etiquetas de las columnas de drag-drop (con "por qué" para el feedback)
+const DD_HEADER: Record<string, { bg: string; fg: string; label: string }> = {
+  rol: { bg: '#ede9fe', fg: '#5b21b6', label: '🎭 Rol' },
+  ctx: { bg: '#dbeafe', fg: '#1e40af', label: '📋 Contexto' },
+  inst: { bg: '#fff7ed', fg: '#c2410c', label: '🎯 Instrucción' },
+  fmt: { bg: '#dcfce7', fg: '#166534', label: '📐 Formato' },
+};
+const LIMIT_HEADER: Record<string, { bg: string; fg: string; label: string }> = {
+  puede: { bg: '#dcfce7', fg: '#166534', label: '✅ Puede' },
+  nopuede: { bg: '#fee2e2', fg: '#991b1b', label: '🚫 No puede' },
+  depende: { bg: '#fef3c7', fg: '#92400e', label: '⚡ Depende' },
+};
 
 const ETICA_ITEMS: EticaItem[] = [
   { prompt: 'Escríbeme un ensayo sobre los riesgos del cambio climático para presentar en clase.', cat: 'ayuda', label: '✅ Ayuda legítima', nota: 'Usas la IA para producir un trabajo propio; el tema es educativo y transparente.' },
@@ -257,12 +270,15 @@ export default function World2Level4() {
   const compareMCQ = useRef(shuffleMCQ(COMPARE_REPITE.mcq)).current;
   const checklistItems = useRef(CHECKLIST_QUIZ.map(shuffleMCQ)).current;
 
-  // Drag errores
-  const [ddPool, setDdPool] = useState<DragItem[]>([]);
-  const [ddCols, setDdCols] = useState<{ [key: string]: DragItem[] }>({ rol: [], ctx: [], inst: [], fmt: [] });
+  // Drag errores (patrón robusto: array fijo + mapa placed {idx: columna})
+  const [ddPlaced, setDdPlaced] = useState<{ [idx: number]: string }>({});
   const [ddSel, setDdSel] = useState<number | null>(null);
   const [ddVerified, setDdVerified] = useState(false);
   const [ddCorrect, setDdCorrect] = useState(0);
+  const [ddOverCol, setDdOverCol] = useState<string | null>(null);
+  const ddPlacedRef = useRef(ddPlaced);
+  useEffect(() => { ddPlacedRef.current = ddPlaced; }, [ddPlaced]);
+  const ddIdxRef = useRef<number | null>(null);
 
   // Matching largo/corto
   const [matchAnswered, setMatchAnswered] = useState(false);
@@ -295,11 +311,14 @@ export default function World2Level4() {
   const [builderDone, setBuilderDone] = useState(false);
 
   // Límites drag
-  const [limitPool, setLimitPool] = useState<DragItem[]>([]);
-  const [limitCols, setLimitCols] = useState<{ [key: string]: DragItem[] }>({ puede: [], nopuede: [], depende: [] });
+  const [limitPlaced, setLimitPlaced] = useState<{ [idx: number]: string }>({});
   const [limitSel, setLimitSel] = useState<number | null>(null);
   const [limitVerified, setLimitVerified] = useState(false);
   const [limitCorrect, setLimitCorrect] = useState(0);
+  const [limitOverCol, setLimitOverCol] = useState<string | null>(null);
+  const limitPlacedRef = useRef(limitPlaced);
+  useEffect(() => { limitPlacedRef.current = limitPlaced; }, [limitPlaced]);
+  const limitIdxRef = useRef<number | null>(null);
 
   // Ética
   const [eticaIdx, setEticaIdx] = useState(0);
@@ -346,9 +365,74 @@ export default function World2Level4() {
     return () => h.remove();
   }, [isActivity]);
 
-  // Inicializar drags
-  useEffect(() => { if (step === 2) { setDdPool([...DD_ERRORES]); setDdCols({ rol: [], ctx: [], inst: [], fmt: [] }); setDdSel(null); setDdVerified(false); } }, [step]);
-  useEffect(() => { if (step === 12) { setLimitPool([...LIMITES_ITEMS]); setLimitCols({ puede: [], nopuede: [], depende: [] }); setLimitSel(null); setLimitVerified(false); } }, [step]);
+  // Drag & drop web — Módulo 2 (tipos de error). Se puede colocar en CUALQUIER columna;
+  // la validación ocurre solo al pulsar Verificar (regla de auditoría, no validar en el drop).
+  useEffect(() => {
+    if (Platform.OS !== 'web' || step !== 2 || ddVerified) return;
+    const cleanups: (() => void)[] = [];
+    const setup = () => {
+      DD_ERRORES.forEach((_, idx) => {
+        if (ddPlacedRef.current[idx] !== undefined) return;
+        const el = document.getElementById(`dd-chip-${idx}`);
+        if (!el) return;
+        el.setAttribute('draggable', 'true');
+        (el as HTMLElement).style.cursor = 'grab';
+        const onDragStart = (e: DragEvent) => { ddIdxRef.current = idx; setDdSel(null); if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move'; };
+        const onDragEnd = () => { ddIdxRef.current = null; setDdOverCol(null); };
+        el.addEventListener('dragstart', onDragStart);
+        el.addEventListener('dragend', onDragEnd);
+        cleanups.push(() => { el.removeEventListener('dragstart', onDragStart); el.removeEventListener('dragend', onDragEnd); });
+      });
+      (['rol', 'ctx', 'inst', 'fmt'] as const).forEach(col => {
+        const el = document.getElementById(`dd-zone-${col}`);
+        if (!el) return;
+        const onOver = (e: Event) => { e.preventDefault(); setDdOverCol(col); };
+        const onLeave = (e: DragEvent) => { if (!el.contains(e.relatedTarget as Node)) setDdOverCol(null); };
+        const onDrop = (e: Event) => { e.preventDefault(); setDdOverCol(null); const idx = ddIdxRef.current; if (idx === null || ddPlacedRef.current[idx] !== undefined) return; setDdPlaced(p => ({ ...p, [idx]: col })); ddIdxRef.current = null; };
+        el.addEventListener('dragover', onOver);
+        el.addEventListener('dragleave', onLeave);
+        el.addEventListener('drop', onDrop);
+        cleanups.push(() => { el.removeEventListener('dragover', onOver); el.removeEventListener('dragleave', onLeave); el.removeEventListener('drop', onDrop); });
+      });
+    };
+    const t = setTimeout(setup, 50);
+    return () => { clearTimeout(t); cleanups.forEach(fn => fn()); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, ddPlaced, ddVerified]);
+
+  // Drag & drop web — Módulo 12 (límites del modelo)
+  useEffect(() => {
+    if (Platform.OS !== 'web' || step !== 12 || limitVerified) return;
+    const cleanups: (() => void)[] = [];
+    const setup = () => {
+      LIMITES_ITEMS.forEach((_, idx) => {
+        if (limitPlacedRef.current[idx] !== undefined) return;
+        const el = document.getElementById(`lim-chip-${idx}`);
+        if (!el) return;
+        el.setAttribute('draggable', 'true');
+        (el as HTMLElement).style.cursor = 'grab';
+        const onDragStart = (e: DragEvent) => { limitIdxRef.current = idx; setLimitSel(null); if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move'; };
+        const onDragEnd = () => { limitIdxRef.current = null; setLimitOverCol(null); };
+        el.addEventListener('dragstart', onDragStart);
+        el.addEventListener('dragend', onDragEnd);
+        cleanups.push(() => { el.removeEventListener('dragstart', onDragStart); el.removeEventListener('dragend', onDragEnd); });
+      });
+      (['puede', 'nopuede', 'depende'] as const).forEach(col => {
+        const el = document.getElementById(`lim-zone-${col}`);
+        if (!el) return;
+        const onOver = (e: Event) => { e.preventDefault(); setLimitOverCol(col); };
+        const onLeave = (e: DragEvent) => { if (!el.contains(e.relatedTarget as Node)) setLimitOverCol(null); };
+        const onDrop = (e: Event) => { e.preventDefault(); setLimitOverCol(null); const idx = limitIdxRef.current; if (idx === null || limitPlacedRef.current[idx] !== undefined) return; setLimitPlaced(p => ({ ...p, [idx]: col })); limitIdxRef.current = null; };
+        el.addEventListener('dragover', onOver);
+        el.addEventListener('dragleave', onLeave);
+        el.addEventListener('drop', onDrop);
+        cleanups.push(() => { el.removeEventListener('dragover', onOver); el.removeEventListener('dragleave', onLeave); el.removeEventListener('drop', onDrop); });
+      });
+    };
+    const t = setTimeout(setup, 50);
+    return () => { clearTimeout(t); cleanups.forEach(fn => fn()); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, limitPlaced, limitVerified]);
 
   // Sprint 1 timer
   useEffect(() => {
@@ -381,25 +465,24 @@ export default function World2Level4() {
   };
 
   // ----- Drag errores -----
-  const placeDdChip = (item: DragItem, col: string) => {
-    setDdPool(p => p.filter(it => it.text !== item.text));
-    setDdCols(c => {
-      const next = { ...c };
-      Object.keys(next).forEach(k => { next[k] = next[k].filter(it => it.text !== item.text); });
-      next[col] = [...next[col], item];
-      return next;
-    });
+  const ddAllPlaced = Object.keys(ddPlaced).length === DD_ERRORES.length;
+  const pressDdChip = (idx: number) => {
+    if (ddVerified || ddPlaced[idx] !== undefined) return;
+    setDdSel(ddSel === idx ? null : idx);
+  };
+  const dropDd = (col: string) => {
+    if (ddVerified || ddSel === null || ddPlaced[ddSel] !== undefined) return;
+    setDdPlaced(p => ({ ...p, [ddSel]: col }));
     setDdSel(null);
   };
-  const returnDdChip = (item: DragItem, col: string) => {
+  const removeDd = (idx: number) => {
     if (ddVerified) return;
-    setDdCols(c => ({ ...c, [col]: c[col].filter(it => it.text !== item.text) }));
-    setDdPool(p => [...p, item]);
+    setDdPlaced(p => { const n = { ...p }; delete n[idx]; return n; });
   };
   const verifyDD = () => {
     if (ddVerified) return;
     let correct = 0;
-    DD_ERRORES.forEach(item => { if (ddCols[item.cat]?.some(it => it.text === item.text)) correct++; });
+    DD_ERRORES.forEach((item, i) => { if (ddPlaced[i] === item.cat) correct++; });
     setDdCorrect(correct);
     setDdVerified(true);
     if (correct > 0) addXP(correct * 6);
@@ -458,20 +541,24 @@ export default function World2Level4() {
   };
 
   // ----- Límites drag -----
-  const placeLimitChip = (item: DragItem, col: string) => {
-    setLimitPool(p => p.filter(it => it.text !== item.text));
-    setLimitCols(c => { const n = { ...c }; Object.keys(n).forEach(k => n[k] = n[k].filter(it => it.text !== item.text)); n[col] = [...n[col], item]; return n; });
+  const limitAllPlaced = Object.keys(limitPlaced).length === LIMITES_ITEMS.length;
+  const pressLimitChip = (idx: number) => {
+    if (limitVerified || limitPlaced[idx] !== undefined) return;
+    setLimitSel(limitSel === idx ? null : idx);
+  };
+  const dropLimit = (col: string) => {
+    if (limitVerified || limitSel === null || limitPlaced[limitSel] !== undefined) return;
+    setLimitPlaced(p => ({ ...p, [limitSel]: col }));
     setLimitSel(null);
   };
-  const returnLimitChip = (item: DragItem, col: string) => {
+  const removeLimit = (idx: number) => {
     if (limitVerified) return;
-    setLimitCols(c => ({ ...c, [col]: c[col].filter(it => it.text !== item.text) }));
-    setLimitPool(p => [...p, item]);
+    setLimitPlaced(p => { const n = { ...p }; delete n[idx]; return n; });
   };
   const verifyLimites = () => {
     if (limitVerified) return;
     let correct = 0;
-    LIMITES_ITEMS.forEach(item => { if (limitCols[item.cat]?.some(it => it.text === item.text)) correct++; });
+    LIMITES_ITEMS.forEach((item, i) => { if (limitPlaced[i] === item.cat) correct++; });
     setLimitCorrect(correct);
     setLimitVerified(true);
     if (correct > 0) addXP(correct * 7);
@@ -584,38 +671,44 @@ export default function World2Level4() {
         <View style={styles.stepContainer}>
           <Tag variant="blue" label="🎯 Módulo 2 · Drag-drop" />
           {titleSm('Tipos de error en prompts')}
-          {sub('Toca un chip y luego la columna donde va. Los 4 tipos: 🎭 Rol · 📋 Contexto · 🎯 Instrucción · 📐 Formato.')}
+          {sub('Arrastra cada prompt roto a su tipo de error (o tócalo y luego toca la columna). Puedes colocarlos donde creas; verificas al final.')}
           {!ddVerified && (
             <View style={styles.chipWrap}>
-              {ddPool.map((item, i) => (
-                <TouchableOpacity key={i} style={[styles.chip, ddSel === i && styles.chipOn]} onPress={() => setDdSel(ddSel === i ? null : i)}>
+              {DD_ERRORES.map((item, idx) => ddPlaced[idx] !== undefined ? null : (
+                <TouchableOpacity key={idx} id={`dd-chip-${idx}`} style={[styles.chip, ddSel === idx && styles.chipOn]} onPress={() => pressDdChip(idx)}>
                   <Text style={styles.chipText}>{item.text}</Text>
                 </TouchableOpacity>
               ))}
-              {ddPool.length === 0 && <Text style={styles.chipHint}>Todos ubicados. Pulsa Verificar.</Text>}
+              {ddAllPlaced && <Text style={styles.chipHint}>Todos ubicados. Pulsa Verificar.</Text>}
             </View>
           )}
           <View style={styles.dropGrid2}>
             {(['rol', 'ctx', 'inst', 'fmt'] as const).map(col => (
-              <TouchableOpacity key={col} style={styles.dropZone} activeOpacity={0.9} onPress={() => { if (!ddVerified && ddSel !== null) placeDdChip(DD_ERRORES[ddSel], col); }}>
-                <Text style={styles.dropHeader}>{col === 'rol' ? '🎭 ROL' : col === 'ctx' ? '📋 CONTEXTO' : col === 'inst' ? '🎯 INSTRUCCIÓN' : '📐 FORMATO'}</Text>
-                {ddCols[col].map((item, i) => {
-                  const isRight = item.cat === col;
-                  return (
-                    <TouchableOpacity key={i} onPress={() => returnDdChip(item, col)} disabled={ddVerified}>
-                      <Text style={[styles.dropChipText, ddVerified && (isRight ? styles.dropChipOk : styles.dropChipBad)]}>{item.text}{ddVerified ? (isRight ? ' ✓' : ' ✕') : ' ✕'}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </TouchableOpacity>
+              <View key={col} style={styles.dropColWrap}>
+                <View style={[styles.dropHeaderBox, { backgroundColor: DD_HEADER[col].bg }]}><Text style={[styles.dropHeaderText, { color: DD_HEADER[col].fg }]}>{DD_HEADER[col].label}</Text></View>
+                <TouchableOpacity id={`dd-zone-${col}`} activeOpacity={0.9} style={[styles.dropCol, ddOverCol === col && styles.dropColOver]} onPress={() => dropDd(col)}>
+                  {Object.keys(ddPlaced).map(k => {
+                    const idx = Number(k);
+                    if (ddPlaced[idx] !== col) return null;
+                    const item = DD_ERRORES[idx];
+                    const isRight = item.cat === col;
+                    return (
+                      <TouchableOpacity key={k} onPress={() => removeDd(idx)} disabled={ddVerified}>
+                        <Text style={[styles.dropChip, ddVerified && (isRight ? styles.dropChipOk : styles.dropChipBad)]}>{item.text}{ddVerified ? (isRight ? ' ✓' : ' ✕') : ' ✕'}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </TouchableOpacity>
+              </View>
             ))}
           </View>
           {ddVerified && (
-            <View style={[styles.fbBox, ddCorrect >= 6 ? styles.fbBoxOk : styles.fbBoxBad]}>
-              <Text style={[styles.fbBoxText, ddCorrect >= 6 ? styles.fbOkText : styles.fbBadText]}>
-                {ddCorrect >= 6 ? '✅ ' : '⚠️ '}{ddCorrect}/{DD_ERRORES.length} correctas. +{ddCorrect * 6} XP.{'\n'}
-                Rol = quién es la IA · Contexto = información de fondo · Instrucción = qué hacer · Formato = cómo entregar.
-              </Text>
+            <View style={[styles.fbBox, ddCorrect >= 6 ? styles.fbBoxOk : styles.fbBoxAmber]}>
+              <Text style={[styles.fbBoxText, ddCorrect >= 6 ? styles.fbOkText : styles.fbAmberText]}>{ddCorrect >= 6 ? '✅ ' : '💡 '}{ddCorrect}/{DD_ERRORES.length} correctas · +{ddCorrect * 6} XP</Text>
+              {DD_ERRORES.map((item, idx) => ddPlaced[idx] !== item.cat ? (
+                <Text key={idx} style={styles.fbLine}>• "{item.text}" en realidad es {DD_HEADER[item.cat].label}: {item.why}</Text>
+              ) : null)}
+              <Text style={styles.fbRecap}>Recuerda: 🎭 Rol = quién es la IA · 📋 Contexto = información de fondo · 🎯 Instrucción = qué hacer · 📐 Formato = cómo entregarlo.</Text>
             </View>
           )}
         </View>
@@ -868,35 +961,41 @@ export default function World2Level4() {
           {sub('Clasifica cada tarea según lo que el modelo puede o no puede hacer.')}
           {!limitVerified && (
             <View style={styles.chipWrap}>
-              {limitPool.map((item, i) => (
-                <TouchableOpacity key={i} style={[styles.chip, limitSel === i && styles.chipOn]} onPress={() => setLimitSel(limitSel === i ? null : i)}>
+              {LIMITES_ITEMS.map((item, idx) => limitPlaced[idx] !== undefined ? null : (
+                <TouchableOpacity key={idx} id={`lim-chip-${idx}`} style={[styles.chip, limitSel === idx && styles.chipOn]} onPress={() => pressLimitChip(idx)}>
                   <Text style={styles.chipText}>{item.text}</Text>
                 </TouchableOpacity>
               ))}
-              {limitPool.length === 0 && <Text style={styles.chipHint}>Todos ubicados. Pulsa Verificar.</Text>}
+              {limitAllPlaced && <Text style={styles.chipHint}>Todos ubicados. Pulsa Verificar.</Text>}
             </View>
           )}
           <View style={styles.dropGrid3}>
             {(['puede', 'nopuede', 'depende'] as const).map(col => (
-              <TouchableOpacity key={col} style={styles.dropZone} activeOpacity={0.9} onPress={() => { if (!limitVerified && limitSel !== null) placeLimitChip(LIMITES_ITEMS[limitSel], col); }}>
-                <Text style={styles.dropHeader}>{col === 'puede' ? '✅ Puede' : col === 'nopuede' ? '🚫 No puede' : '⚡ Depende'}</Text>
-                {limitCols[col].map((item, i) => {
-                  const isRight = item.cat === col;
-                  return (
-                    <TouchableOpacity key={i} onPress={() => returnLimitChip(item, col)} disabled={limitVerified}>
-                      <Text style={[styles.dropChipText, limitVerified && (isRight ? styles.dropChipOk : styles.dropChipBad)]}>{item.text}{limitVerified ? (isRight ? ' ✓' : ' ✕') : ' ✕'}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </TouchableOpacity>
+              <View key={col} style={styles.dropColWrap3}>
+                <View style={[styles.dropHeaderBox, { backgroundColor: LIMIT_HEADER[col].bg }]}><Text style={[styles.dropHeaderText, { color: LIMIT_HEADER[col].fg }]}>{LIMIT_HEADER[col].label}</Text></View>
+                <TouchableOpacity id={`lim-zone-${col}`} activeOpacity={0.9} style={[styles.dropCol, limitOverCol === col && styles.dropColOver]} onPress={() => dropLimit(col)}>
+                  {Object.keys(limitPlaced).map(k => {
+                    const idx = Number(k);
+                    if (limitPlaced[idx] !== col) return null;
+                    const item = LIMITES_ITEMS[idx];
+                    const isRight = item.cat === col;
+                    return (
+                      <TouchableOpacity key={k} onPress={() => removeLimit(idx)} disabled={limitVerified}>
+                        <Text style={[styles.dropChip, limitVerified && (isRight ? styles.dropChipOk : styles.dropChipBad)]}>{item.text}{limitVerified ? (isRight ? ' ✓' : ' ✕') : ' ✕'}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </TouchableOpacity>
+              </View>
             ))}
           </View>
           {limitVerified && (
-            <View style={[styles.fbBox, limitCorrect >= 6 ? styles.fbBoxOk : styles.fbBoxBad]}>
-              <Text style={[styles.fbBoxText, limitCorrect >= 6 ? styles.fbOkText : styles.fbBadText]}>
-                {limitCorrect >= 6 ? '✅ ' : '⚠️ '}{limitCorrect}/{LIMITES_ITEMS.length} correctas. +{limitCorrect * 7} XP.{'\n'}
-                "Depende" = lo hace si tiene la herramienta correcta (visión, acceso a web, etc.).
-              </Text>
+            <View style={[styles.fbBox, limitCorrect >= 6 ? styles.fbBoxOk : styles.fbBoxAmber]}>
+              <Text style={[styles.fbBoxText, limitCorrect >= 6 ? styles.fbOkText : styles.fbAmberText]}>{limitCorrect >= 6 ? '✅ ' : '💡 '}{limitCorrect}/{LIMITES_ITEMS.length} correctas · +{limitCorrect * 7} XP</Text>
+              {LIMITES_ITEMS.map((item, idx) => limitPlaced[idx] !== item.cat ? (
+                <Text key={idx} style={styles.fbLine}>• "{item.text}" va en {LIMIT_HEADER[item.cat].label}: {item.why}</Text>
+              ) : null)}
+              <Text style={styles.fbRecap}>Recuerda: "⚡ Depende" = lo hace solo si tiene la herramienta correcta (visión, acceso a la web, etc.).</Text>
             </View>
           )}
         </View>
@@ -1100,14 +1199,14 @@ export default function World2Level4() {
   // ========== HABILITACIÓN Y ETIQUETA DEL BOTÓN ==========
   const canProceed = (() => {
     switch (step) {
-      case 2: return ddVerified || ddPool.length === 0;
+      case 2: return ddVerified || ddAllPlaced;
       case 3: return matchAnswered;
       case 4: return vfDone || vfAns !== null;
       case 5: return fillRevealed || fillComplete;
       case 7: return crAnswered;
       case 9: return s1Done;
       case 10: return builderDone || fixText.trim().length >= 20;
-      case 12: return limitVerified || limitPool.length === 0;
+      case 12: return limitVerified || limitAllPlaced;
       case 13: return eticaDone || eticaAns !== null;
       case 15: return checkDone || checkAns !== null;
       case 16: return rulesDone || rulesComplete;
@@ -1227,11 +1326,15 @@ const styles = StyleSheet.create({
   chipOn: { borderColor: '#10b981', backgroundColor: '#d1fae5' },
   chipText: { fontSize: 11, color: '#334155' },
   chipHint: { fontSize: 11, color: '#94a3b8', fontStyle: 'italic', padding: 4 },
-  dropGrid2: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 },
+  dropGrid2: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
   dropGrid3: { flexDirection: 'row', gap: 6, marginBottom: 12 },
-  dropZone: { flex: 1, minWidth: '45%', borderWidth: 2, borderColor: '#cbd5e1', borderStyle: 'dashed', borderRadius: 10, padding: 8, minHeight: 80, backgroundColor: '#fafafa' },
-  dropHeader: { fontSize: 10, fontWeight: '700', textAlign: 'center', marginBottom: 6, textTransform: 'uppercase', color: '#475569' },
-  dropChipText: { fontSize: 10, padding: 4, marginBottom: 3, backgroundColor: '#e2e8f0', borderRadius: 6, color: '#334155' },
+  dropColWrap: { flex: 1, minWidth: '45%' },
+  dropColWrap3: { flex: 1, minWidth: '30%' },
+  dropHeaderBox: { borderTopLeftRadius: 10, borderTopRightRadius: 10, paddingVertical: 5, paddingHorizontal: 4, alignItems: 'center' },
+  dropHeaderText: { fontSize: 10, fontWeight: '700', textTransform: 'uppercase', textAlign: 'center' },
+  dropCol: { borderWidth: 2, borderColor: '#cbd5e1', borderStyle: 'dashed', borderBottomLeftRadius: 10, borderBottomRightRadius: 10, padding: 7, minHeight: 72, backgroundColor: '#fafafa' },
+  dropColOver: { borderColor: '#10b981', backgroundColor: '#ecfdf5' },
+  dropChip: { fontSize: 10, paddingVertical: 4, paddingHorizontal: 6, marginBottom: 3, backgroundColor: '#e2e8f0', borderRadius: 6, color: '#334155', overflow: 'hidden' },
   dropChipOk: { backgroundColor: '#dcfce7', color: '#166534' },
   dropChipBad: { backgroundColor: '#fee2e2', color: '#991b1b' },
   // Quiz
@@ -1261,6 +1364,8 @@ const styles = StyleSheet.create({
   fbAmberText: { color: '#92400e' },
   resultBig: { fontSize: 15, fontWeight: '800', color: '#0f172a', textAlign: 'center', marginBottom: 6 },
   tipText: { fontSize: 12, color: '#065f46', backgroundColor: '#ecfdf5', borderRadius: 10, padding: 11, marginTop: 6, lineHeight: 17, borderWidth: 1, borderColor: '#a7f3d0' },
+  fbLine: { fontSize: 11, color: '#334155', lineHeight: 16, marginTop: 5 },
+  fbRecap: { fontSize: 11, color: '#475569', lineHeight: 16, marginTop: 8, fontStyle: 'italic' },
   // Inputs / builder
   input: { borderWidth: 1.5, borderColor: '#cbd5e1', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 12, backgroundColor: '#f8fafc', marginBottom: 8, color: colors.textPrimary },
   textArea: { borderWidth: 1.5, borderColor: '#cbd5e1', borderRadius: 10, padding: 12, minHeight: 90, fontSize: 12, backgroundColor: '#f8fafc', marginBottom: 4, color: colors.textPrimary, textAlignVertical: 'top' },
