@@ -1,3 +1,4 @@
+import { exitLevel } from '../../utils/exitLevel';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -171,7 +172,7 @@ export default function World3Level7() {
     const pct = Math.round((totalCorrect / total) * 100);
     let stars = pct >= 85 ? 3 : pct >= 70 ? 2 : 1;
     completeLevel(39, stars, xp);
-    router.back();
+    exitLevel({ confirm: false });
   };
 
   const goToNextPart = () => {
@@ -354,7 +355,7 @@ export default function World3Level7() {
   return (
     <View style={styles.screen}>
       <View style={styles.bar}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => exitLevel({ confirm: false })}>
           <MaterialIcons name="close" size={24} color={colors.textSecondary} />
         </TouchableOpacity>
         <View style={styles.track}><View style={[styles.fill, { width: `${(currentPart/5)*100}%` }]} /></View>

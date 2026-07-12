@@ -1,3 +1,4 @@
+import { exitLevel } from '../utils/exitLevel';
 // src/levels/World4/Level2.tsx
 import { router } from 'expo-router';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
@@ -776,7 +777,7 @@ export default function World4Level2() {
   const finishLevel = () => {
     const stars = xp >= 160 ? 3 : xp >= 120 ? 2 : 1;
     completeLevel(20, stars, xp);
-    router.back();
+    exitLevel({ confirm: false });
   };
 
   const current = steps[step];

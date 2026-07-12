@@ -1,3 +1,4 @@
+import { exitLevel } from '../utils/exitLevel';
 import { useState, useEffect, useRef } from 'react';
 import {
   View,
@@ -245,7 +246,7 @@ export default function World2Level5() {
       if (isExamMode) {
         Alert.alert('Módulo en curso', 'No puedes regresar durante esta actividad.', [
           { text: 'Cancelar', style: 'cancel' },
-          { text: 'Salir', style: 'destructive', onPress: () => navigation.goBack() },
+          { text: 'Salir', style: 'destructive', onPress: () => exitLevel({ confirm: false }) },
         ]);
         return true;
       }
@@ -277,7 +278,7 @@ export default function World2Level5() {
   const handleClose = () => {
     Alert.alert('Salir', '¿Seguro que quieres salir?', [
       { text: 'Cancelar', style: 'cancel' },
-      { text: 'Salir', onPress: () => navigation.goBack() },
+      { text: 'Salir', onPress: () => exitLevel({ confirm: false }) },
     ]);
   };
 
@@ -287,7 +288,7 @@ export default function World2Level5() {
     else if (xp >= 120) stars = 2;
     else if (xp >= 60) stars = 1;
     completeLevel(11, stars, xp);
-    navigation.goBack();
+    exitLevel({ confirm: false });
   };
 
   // ============ MECÁNICAS ============
@@ -938,7 +939,7 @@ export default function World2Level5() {
   return (
     <View style={styles.screen}>
       <View style={styles.progressBar}>
-        <TouchableOpacity onPress={handleClose} style={styles.closeBtn}><MaterialIcons name="close" size={24} color={colors.textSecondary} /></TouchableOpacity>
+        <TouchableOpacity onPress={() => exitLevel()} style={styles.closeBtn}><MaterialIcons name="close" size={24} color={colors.textSecondary} /></TouchableOpacity>
         <View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${progressPercent}%` }]} /></View>
         <Text style={styles.xpText}>{xp} XP</Text>
       </View>

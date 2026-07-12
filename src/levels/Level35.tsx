@@ -1,3 +1,4 @@
+import { exitLevel } from '../utils/exitLevel';
 import { router } from 'expo-router';
 import { useState, useEffect, useRef } from 'react';
 import {
@@ -144,7 +145,7 @@ export default function World6Level5() {
     let stars = 0;
     if (xp >= 180) stars = 3; else if (xp >= 120) stars = 2; else if (xp >= 60) stars = 1;
     completeLevel(35, stars, xp);
-    router.back();
+    exitLevel({ confirm: false });
   };
 
   // Quiz genérico
@@ -448,7 +449,7 @@ export default function World6Level5() {
   return (
     <View style={styles.screen}>
       <View style={styles.progressBar}>
-        <TouchableOpacity onPress={() => router.back()}><MaterialIcons name="close" size={24} color={colors.textSecondary} /></TouchableOpacity>
+        <TouchableOpacity onPress={() => exitLevel({ confirm: false })}><MaterialIcons name="close" size={24} color={colors.textSecondary} /></TouchableOpacity>
         <View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${progress}%` }]} /></View>
         <Text style={styles.xpText}>{xp} XP</Text>
       </View>

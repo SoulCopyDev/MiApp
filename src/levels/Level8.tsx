@@ -1,3 +1,4 @@
+import { exitLevel } from '../utils/exitLevel';
 import { router } from 'expo-router';
 import { useState, useEffect, useRef } from 'react';
 import {
@@ -389,14 +390,14 @@ export default function World2Level2() {
 
   const handleClose = () => {
     const msg = isExamMode ? 'Estás en una actividad. Si sales perderás el progreso. ¿Seguro?' : '¿Seguro que quieres salir?';
-    if (Platform.OS === 'web') { if (window.confirm(msg)) router.back(); return; }
-    Alert.alert('Salir', msg, [{ text: 'Cancelar', style: 'cancel' }, { text: 'Salir', style: 'destructive', onPress: () => router.back() }]);
+    if (Platform.OS === 'web') { if (window.confirm(msg)) exitLevel({ confirm: false }); return; }
+    Alert.alert('Salir', msg, [{ text: 'Cancelar', style: 'cancel' }, { text: 'Salir', style: 'destructive', onPress: () => exitLevel({ confirm: false }) }]);
   };
 
   const finishLevel = () => {
     const stars = xp >= 180 ? 3 : xp >= 120 ? 2 : xp >= 50 ? 1 : 0;
     completeLevel(8, stars, xp);
-    router.back();
+    exitLevel({ confirm: false });
   };
 
   // ----- M6 drag temp -----

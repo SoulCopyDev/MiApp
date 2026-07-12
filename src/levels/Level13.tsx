@@ -1,3 +1,4 @@
+import { exitLevel } from '../utils/exitLevel';
 // src/levels/World3/Level1.tsx
 import { router } from 'expo-router';
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -447,7 +448,7 @@ export default function World3Level1() {
     if (xp >= 200) stars = 3;
     else if (xp >= 150) stars = 2;
     completeLevel(13, stars, xp);
-    router.back();
+    exitLevel({ confirm: false });
   };
 
   // ── RENDERIZADORES POR TIPO ──────────────────────────────

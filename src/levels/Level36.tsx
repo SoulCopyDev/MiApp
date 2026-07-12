@@ -1,3 +1,4 @@
+import { exitLevel } from '../utils/exitLevel';
 import { router } from 'expo-router';
 import { useState, useEffect, useRef } from 'react';
 import {
@@ -199,7 +200,7 @@ export default function World6Level6() {
   const finishLevel = () => {
     let stars = 3; // El último nivel siempre merece 3 estrellas
     completeLevel(36, stars, xp);
-    router.back();
+    exitLevel({ confirm: false });
   };
 
   const resetActivity = () => {
@@ -581,7 +582,7 @@ export default function World6Level6() {
   return (
     <View style={styles.screen}>
       <View style={styles.bar}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => exitLevel({ confirm: false })}>
           <MaterialIcons name="close" size={24} color={colors.textSecondary} />
         </TouchableOpacity>
         <View style={styles.track}><View style={[styles.fill, { width: `${progressPercent}%` }]} /></View>

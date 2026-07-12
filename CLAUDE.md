@@ -98,6 +98,7 @@ MiApp/
     │   └── index.ts         # Re-exporta colors + typography
     └── utils/
         ├── dailyMission.ts  # Generación/detección de misiones diarias (sin dependencia circular)
+        ├── exitLevel.ts     # Salida robusta de niveles: web-safe (window.confirm) + fallback a /map si no hay historial
         ├── rankSystem.ts    # Sistema de rangos por estrellas (8 tiers)
         └── trophies.ts      # Construcción de grupos de trofeos por mundo
 ```
@@ -417,6 +418,7 @@ export const DOWNLOAD_CONFIG = {
 - **Niveles nuevos:** siempre incrementar `version` en `gameStore.ts` para disparar migración.
 - **dailyMission.ts:** no importar nada de `gameStore.ts` (evita dependencia circular — usa tipos estructurales propios).
 - **Fechas de racha:** usar `getLocalDate()` del store (hora local, no UTC).
+- **Salir de un nivel:** usar `exitLevel()` de `src/utils/exitLevel.ts` (nunca `navigation.goBack()` ni `router.back()` directo). En web `Alert.alert` no dispara sus botones y `router.back()` no hace nada sin historial → `exitLevel()` usa `window.confirm` en web y cae a `/map` si no hay pantalla previa. Pasar `{ confirm: false }` al completar el nivel.
 
 ### Sin tests
 

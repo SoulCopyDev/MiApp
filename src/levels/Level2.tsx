@@ -1,3 +1,4 @@
+import { exitLevel } from '../utils/exitLevel';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
@@ -296,7 +297,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
           'No puedes regresar mientras realizas el examen. Si sales, perderás el progreso no guardado.',
           [
             { text: 'Cancelar', style: 'cancel' },
-            { text: 'Salir', style: 'destructive', onPress: () => navigation.goBack() }
+            { text: 'Salir', style: 'destructive', onPress: () => exitLevel({ confirm: false }) }
           ]
         );
         return true;
@@ -438,18 +439,18 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
       const msg = isExamMode
         ? 'Estás en medio del examen. Si sales, perderás el progreso. ¿Seguro?'
         : '¿Seguro que quieres salir del nivel? Perderás el progreso no guardado.';
-      if (window.confirm(msg)) router.back();
+      if (window.confirm(msg)) exitLevel({ confirm: false });
       return;
     }
     if (isExamMode) {
       Alert.alert('Examen en curso', 'Estás en medio del examen. Si sales, perderás todo el progreso de este nivel. ¿Seguro que quieres salir?', [
         { text: 'Cancelar', style: 'cancel' },
-        { text: 'Salir', style: 'destructive', onPress: () => navigation.goBack() },
+        { text: 'Salir', style: 'destructive', onPress: () => exitLevel({ confirm: false }) },
       ]);
     } else {
       Alert.alert('Salir', '¿Seguro que quieres salir del juego? Perderás el progreso no guardado.', [
         { text: 'Cancelar', style: 'cancel' },
-        { text: 'Salir', onPress: () => navigation.goBack() },
+        { text: 'Salir', onPress: () => exitLevel({ confirm: false }) },
       ]);
     }
   };
