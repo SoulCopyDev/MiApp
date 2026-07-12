@@ -338,6 +338,8 @@ export default function World2Level3() {
   const [sprintIdx, setSprintIdx] = useState(0);
   const [sprintSec, setSprintSec] = useState(120);
   const [sprintDone, setSprintDone] = useState(false);
+  const [sprintStarted, setSprintStarted] = useState(false);
+  const [sprintTasksDone, setSprintTasksDone] = useState(0);
   const sprintTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Quiz inverso (módulo 16)
@@ -379,6 +381,8 @@ export default function World2Level3() {
       setSprintIdx(0);
       setSprintSec(120);
       setSprintDone(false);
+      setSprintStarted(false);
+      setSprintTasksDone(0);
       if (sprintTimer.current) clearInterval(sprintTimer.current);
     }
   }, [step]);
@@ -470,14 +474,16 @@ export default function World2Level3() {
   useEffect(() => { sprintIdxRef.current = sprintIdx; }, [sprintIdx]);
   const finishSprint = (tasksDone: number) => {
     if (sprintTimer.current) clearInterval(sprintTimer.current);
-    const earned = Math.min(tasksDone, SPRINT_TASKS.length) * 10;
-    if (earned > 0) addXP(earned);
+    const done = Math.min(tasksDone, SPRINT_TASKS.length);
+    setSprintTasksDone(done);
+    if (done > 0) addXP(done * 10);
     setSprintDone(true);
   };
   const startSprint = () => {
     setSprintIdx(0);
     sprintIdxRef.current = 0;
     setSprintSec(120);
+    setSprintStarted(true);
     setSprintDone(false);
     sprintTimer.current = setInterval(() => {
       setSprintSec((prev) => {
@@ -507,10 +513,7 @@ export default function World2Level3() {
 
   const nextQI = () => {
     if (quizInvIdx + 1 >= QUIZ_INVERSO.length) {
-      const earned = (quizInvScore + (quizInvSel === QUIZ_INVERSO[quizInvIdx].correct ? 0 : 0)) * 15;
-      // Recalculate score properly
-      const finalScore = quizInvScore;
-      const finalEarned = finalScore * 15;
+      const finalEarned = quizInvScore * 15;
       if (finalEarned > 0) addXP(finalEarned);
       setQuizInvDone(true);
     } else {
@@ -552,9 +555,9 @@ export default function World2Level3() {
         </View>
         <Hl variant="purple"><Bold>El truco:</Bold> Toma tus 3 palabras → añade Quién + Qué descubre/hace + Tono + Extensión. En 30 segundos tienes un prompt narrativo completo.</Hl>
         <Text style={[styles.builderLabel, { color: '#7e22ce' }]}>Elige tus 3 palabras</Text>
-        <TextInput style={styles.input} placeholder="Palabra 1 (personaje o lugar)" value={w1} onChangeText={(v) => { setW1(v); if (!wordsBuilt && w2.trim().length >= 2 && w3.trim().length >= 2 && v.trim().length >= 2 && !wordsBuilt) { addXP(5); setWordsBuilt(true); } }} />
-        <TextInput style={styles.input} placeholder="Palabra 2 (objeto o elemento)" value={w2} onChangeText={(v) => { setW2(v); if (!wordsBuilt && w1.trim().length >= 2 && w3.trim().length >= 2 && v.trim().length >= 2 && !wordsBuilt) { addXP(5); setWordsBuilt(true); } }} />
-        <TextInput style={styles.input} placeholder="Palabra 3 (emoción o acción)" value={w3} onChangeText={(v) => { setW3(v); if (!wordsBuilt && w1.trim().length >= 2 && w2.trim().length >= 2 && v.trim().length >= 2 && !wordsBuilt) { addXP(5); setWordsBuilt(true); } }} />
+        <TextInput style={styles.input} placeholder="Palabra 1 (personaje o lugar)" placeholderTextColor="#b8bcc0" value={w1} onChangeText={(v) => { setW1(v); if (!wordsBuilt && w2.trim().length >= 2 && w3.trim().length >= 2 && v.trim().length >= 2 && !wordsBuilt) { addXP(5); setWordsBuilt(true); } }} />
+        <TextInput style={styles.input} placeholder="Palabra 2 (objeto o elemento)" placeholderTextColor="#b8bcc0" value={w2} onChangeText={(v) => { setW2(v); if (!wordsBuilt && w1.trim().length >= 2 && w3.trim().length >= 2 && v.trim().length >= 2 && !wordsBuilt) { addXP(5); setWordsBuilt(true); } }} />
+        <TextInput style={styles.input} placeholder="Palabra 3 (emoción o acción)" placeholderTextColor="#b8bcc0" value={w3} onChangeText={(v) => { setW3(v); if (!wordsBuilt && w1.trim().length >= 2 && w2.trim().length >= 2 && v.trim().length >= 2 && !wordsBuilt) { addXP(5); setWordsBuilt(true); } }} />
         {ok && (
           <View style={[styles.card, { backgroundColor: '#f0fdf4', marginTop: 10 }]}>
             <Text style={{ fontSize: 12, color: '#065f46' }}>
@@ -613,9 +616,9 @@ export default function World2Level3() {
 
   const renderFillBlank = () => (
     <View>
-      <View style={[styles.tag, { backgroundColor: '#fff1f2' }]}><Text style={[styles.tagText, { color: '#9f1239' }]}>🌀 Módulo 3 · Fill-in-blank</Text></View>
+      <View style={[styles.tag, { backgroundColor: '#f5f3ff' }]}><Text style={[styles.tagText, { color: '#5b21b6' }]}>🌀 Módulo 3 · Fill-in-blank</Text></View>
       <Text style={styles.title}>El truco del "y de repente..."</Text>
-      <Text style={styles.subtitle}>Un buen giro narrativo convierte una escena plana en una historia que engancha.</Text>
+      <Text style={styles.subtitle}>Un buen giro narrativo convierte una escena plana en una historia que engancha. Elige el giro correcto.</Text>
       <View style={[styles.card, { backgroundColor: '#faf5ff' }]}>
         <Text style={{ fontSize: 13, fontStyle: 'italic', color: '#334155' }}>{fillItem.prompt}</Text>
       </View>
@@ -662,15 +665,19 @@ export default function World2Level3() {
       <View>
         <View style={[styles.tag, { backgroundColor: '#eff6ff' }]}><Text style={[styles.tagText, { color: '#1e40af' }]}>🦸 Módulo 5 · Word-builder</Text></View>
         <Text style={styles.title}>Inventa un personaje</Text>
-        <Text style={styles.subtitle}>3 palabras para el nombre + poder + debilidad + frase icónica.</Text>
+        <Text style={styles.subtitle}>3 palabras para el nombre + poder + debilidad + frase icónica. Así se construye un personaje para darle a la IA.</Text>
+        <Text style={[styles.builderLabel, { color: '#7e22ce' }]}>Nombre (3 palabras combinadas)</Text>
         <View style={{ flexDirection: 'row', gap: 6 }}>
-          <TextInput style={[styles.input, { flex: 1 }]} placeholder="Adjetivo" value={charW1} onChangeText={setCharW1} />
-          <TextInput style={[styles.input, { flex: 1 }]} placeholder="Animal/objeto" value={charW2} onChangeText={setCharW2} />
-          <TextInput style={[styles.input, { flex: 1 }]} placeholder="Rol" value={charW3} onChangeText={setCharW3} />
+          <TextInput style={[styles.input, { flex: 1 }]} placeholder="Adjetivo" placeholderTextColor="#b8bcc0" value={charW1} onChangeText={setCharW1} />
+          <TextInput style={[styles.input, { flex: 1 }]} placeholder="Animal/objeto" placeholderTextColor="#b8bcc0" value={charW2} onChangeText={setCharW2} />
+          <TextInput style={[styles.input, { flex: 1 }]} placeholder="Rol" placeholderTextColor="#b8bcc0" value={charW3} onChangeText={setCharW3} />
         </View>
-        <TextInput style={styles.input} placeholder="Poder único" value={charPoder} onChangeText={setCharPoder} />
-        <TextInput style={styles.input} placeholder="Debilidad sorprendente" value={charDebilidad} onChangeText={setCharDebilidad} />
-        <TextInput style={styles.input} placeholder="Frase icónica" value={charFrase} onChangeText={setCharFrase} />
+        <Text style={[styles.builderLabel, { color: '#7e22ce' }]}>Poder único</Text>
+        <TextInput style={styles.input} placeholder="Ej: puede leer el pasado tocando objetos" placeholderTextColor="#b8bcc0" value={charPoder} onChangeText={setCharPoder} />
+        <Text style={[styles.builderLabel, { color: '#7e22ce' }]}>Debilidad sorprendente</Text>
+        <TextInput style={styles.input} placeholder="Ej: se paraliza cuando escucha música clásica" placeholderTextColor="#b8bcc0" value={charDebilidad} onChangeText={setCharDebilidad} />
+        <Text style={[styles.builderLabel, { color: '#7e22ce' }]}>Frase icónica</Text>
+        <TextInput style={styles.input} placeholder="Ej: El pasado no miente. La gente sí." placeholderTextColor="#b8bcc0" value={charFrase} onChangeText={setCharFrase} />
         {ok && (
           <View style={[styles.card, { backgroundColor: '#f0fdf4', marginTop: 10 }]}>
             <Text style={{ fontSize: 12, color: '#065f46', lineHeight: 19 }}>
@@ -695,9 +702,13 @@ export default function World2Level3() {
       <View>
         <View style={[styles.tag, { backgroundColor: '#eff6ff' }]}><Text style={[styles.tagText, { color: '#1e40af' }]}>🎵 Módulo 6 · Builder</Text></View>
         <Text style={styles.title}>Prompt para una canción</Text>
-        <TextInput style={styles.input} placeholder="Género musical" value={sgGenre} onChangeText={(v) => { setSgGenre(v); checkSong(); }} />
-        <TextInput style={styles.input} placeholder="Tema de la canción" value={sgTema} onChangeText={(v) => { setSgTema(v); checkSong(); }} />
-        <TextInput style={styles.input} placeholder="Mood / emoción dominante" value={sgMood} onChangeText={(v) => { setSgMood(v); checkSong(); }} />
+        <Text style={styles.subtitle}>Género + tema + mood + estrofa de ejemplo = la IA escribe la canción correcta.</Text>
+        <Text style={[styles.builderLabel, { color: '#7e22ce' }]}>Género musical</Text>
+        <TextInput style={styles.input} placeholder="Ej: balada pop latinoamericana, trap melódico, cumbia electrónica..." placeholderTextColor="#b8bcc0" value={sgGenre} onChangeText={(v) => { setSgGenre(v); checkSong(); }} />
+        <Text style={[styles.builderLabel, { color: '#7e22ce' }]}>Tema de la canción</Text>
+        <TextInput style={styles.input} placeholder="Ej: despedirse de una etapa de vida, el primer trabajo, una amistad que se fue..." placeholderTextColor="#b8bcc0" value={sgTema} onChangeText={(v) => { setSgTema(v); checkSong(); }} />
+        <Text style={[styles.builderLabel, { color: '#7e22ce' }]}>Mood / emoción dominante</Text>
+        <TextInput style={styles.input} placeholder="Ej: melancólico pero esperanzador, rabioso pero liberador..." placeholderTextColor="#b8bcc0" value={sgMood} onChangeText={(v) => { setSgMood(v); checkSong(); }} />
         {ok && (
           <View style={[styles.card, { backgroundColor: '#f0fdf4', marginTop: 10 }]}>
             <Text style={{ fontSize: 12, color: '#065f46' }}>
@@ -715,12 +726,12 @@ export default function World2Level3() {
       <Text style={styles.title}>Con vs. sin adjetivos</Text>
       <Text style={styles.subtitle}>Los adjetivos emocionales no son decoración — son instrucciones de atmósfera.</Text>
       <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
-        <View style={{ flex: 1, backgroundColor: '#fff1f2', borderRadius: 10, padding: 10 }}>
-          <Text style={{ fontWeight: 'bold', color: '#991b1b', marginBottom: 4 }}>❌ Sin adjetivos</Text>
+        <View style={{ flex: 1, backgroundColor: '#fff7ed', borderRadius: 10, padding: 10, borderWidth: 1, borderColor: '#fed7aa' }}>
+          <Text style={{ fontWeight: 'bold', color: '#c2410c', marginBottom: 4 }}>❌ Sin adjetivos</Text>
           <Text style={{ fontFamily: 'monospace', fontSize: 11 }}>{COMPARE_PAIR.sin}</Text>
         </View>
-        <View style={{ flex: 1, backgroundColor: '#f0fdf4', borderRadius: 10, padding: 10 }}>
-          <Text style={{ fontWeight: 'bold', color: '#166534', marginBottom: 4 }}>✅ Con adjetivos</Text>
+        <View style={{ flex: 1, backgroundColor: '#f0fdf4', borderRadius: 10, padding: 10, borderWidth: 1, borderColor: '#bbf7d0' }}>
+          <Text style={{ fontWeight: 'bold', color: '#166534', marginBottom: 4 }}>✅ Con adjetivos emocionales</Text>
           <Text style={{ fontFamily: 'monospace', fontSize: 11 }}>{COMPARE_PAIR.con}</Text>
         </View>
       </View>
@@ -773,10 +784,15 @@ export default function World2Level3() {
       <View>
         <View style={[styles.tag, { backgroundColor: '#eff6ff' }]}><Text style={[styles.tagText, { color: '#1e40af' }]}>🎮 Módulo 9 · Builder</Text></View>
         <Text style={styles.title}>Prompt para inventar un juego</Text>
-        <TextInput style={styles.input} placeholder="Tipo de juego" value={gmTipo} onChangeText={(v) => { setGmTipo(v); checkGame(); }} />
-        <TextInput style={styles.input} placeholder="Personajes o elementos" value={gmPers} onChangeText={(v) => { setGmPers(v); checkGame(); }} />
-        <TextInput style={styles.input} placeholder="Objetivo del juego" value={gmObj} onChangeText={(v) => { setGmObj(v); checkGame(); }} />
-        <TextInput style={styles.input} placeholder="Mecánica especial" value={gmMec} onChangeText={(v) => { setGmMec(v); checkGame(); }} />
+        <Text style={styles.subtitle}>Define las 4 partes del juego y construimos el prompt completo.</Text>
+        <Text style={[styles.builderLabel, { color: '#7e22ce' }]}>Tipo de juego</Text>
+        <TextInput style={styles.input} placeholder="Ej: juego de cartas, videojuego de plataformas, juego de mesa cooperativo..." placeholderTextColor="#b8bcc0" value={gmTipo} onChangeText={(v) => { setGmTipo(v); checkGame(); }} />
+        <Text style={[styles.builderLabel, { color: '#7e22ce' }]}>Personajes o elementos principales</Text>
+        <TextInput style={styles.input} placeholder="Ej: 4 elementos de la naturaleza con personalidades opuestas..." placeholderTextColor="#b8bcc0" value={gmPers} onChangeText={(v) => { setGmPers(v); checkGame(); }} />
+        <Text style={[styles.builderLabel, { color: '#7e22ce' }]}>Objetivo del juego</Text>
+        <TextInput style={styles.input} placeholder="Ej: reconstruir el mundo antes de que el caos lo consuma..." placeholderTextColor="#b8bcc0" value={gmObj} onChangeText={(v) => { setGmObj(v); checkGame(); }} />
+        <Text style={[styles.builderLabel, { color: '#7e22ce' }]}>Mecánica especial</Text>
+        <TextInput style={styles.input} placeholder="Ej: cada jugador tiene habilidades que solo funcionan si cooperan..." placeholderTextColor="#b8bcc0" value={gmMec} onChangeText={(v) => { setGmMec(v); checkGame(); }} />
         {ok && (
           <View style={[styles.card, { backgroundColor: '#f0fdf4', marginTop: 10 }]}>
             <Text style={{ fontSize: 12, color: '#065f46' }}>
@@ -790,15 +806,19 @@ export default function World2Level3() {
 
   const renderCollab = () => (
     <View>
-      <View style={[styles.tag, { backgroundColor: '#fff1f2' }]}><Text style={[styles.tagText, { color: '#9f1239' }]}>📚 Módulo 10 · Colaborativo</Text></View>
+      <View style={[styles.tag, { backgroundColor: '#f0fdfa' }]}><Text style={[styles.tagText, { color: '#0f766e' }]}>📚 Módulo 10 · Colaborativo</Text></View>
       <Text style={styles.title}>Historia colaborativa</Text>
+      <Text style={styles.subtitle}>La IA escribió el inicio. Tú escribes el siguiente fragmento. Así funciona la co-creación.</Text>
       <View style={[styles.card, { backgroundColor: '#faf5ff' }]}>
         <Text style={{ fontStyle: 'italic', fontSize: 13, lineHeight: 20 }}>{collabStory.inicio}</Text>
       </View>
+      <Text style={[styles.builderLabel, { color: '#7e22ce' }]}>Tu continuación (mínimo 30 caracteres)</Text>
       <TextInput
         style={styles.textArea}
         multiline
+        textAlignVertical="top"
         placeholder={collabStory.placeholder}
+        placeholderTextColor="#b8bcc0"
         value={storyCollab}
         onChangeText={(v) => {
           setStoryCollab(v);
@@ -847,7 +867,7 @@ export default function World2Level3() {
     <View>
       <View style={[styles.tag, { backgroundColor: '#fdf2f8' }]}><Text style={[styles.tagText, { color: '#9d174d' }]}>💜 Módulo 12 · Word-builder</Text></View>
       <Text style={styles.title}>Emociones en el prompt</Text>
-      <Text style={styles.subtitle}>Selecciona hasta 3 adjetivos emocionales.</Text>
+      <Text style={styles.subtitle}>Selecciona hasta 3 adjetivos emocionales y construimos un prompt de poesía.</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginBottom: 14 }}>
         {EMO_OPTIONS.map((emo) => (
           <TouchableOpacity
@@ -883,8 +903,9 @@ export default function World2Level3() {
 
   const renderSprint = () => (
     <View>
-      <View style={[styles.tag, { backgroundColor: '#ecfdf5' }]}><Text style={[styles.tagText, { color: '#065f46' }]}>⚡ Módulo 14 · Sprint creativo</Text></View>
+      <View style={[styles.tag, { backgroundColor: '#fef3c7' }]}><Text style={[styles.tagText, { color: '#92400e' }]}>⚡ Módulo 14 · Sprint creativo</Text></View>
       <Text style={styles.title}>Sprint: 3 prompts en 2 minutos</Text>
+      <Text style={styles.subtitle}>Para cada desafío, diseña mentalmente (o escribe) el prompt que le darías a la IA.</Text>
       <Text style={{ fontSize: 28, fontWeight: 'bold', textAlign: 'center', color: '#7c3aed', marginVertical: 8 }}>
         {Math.floor(sprintSec / 60)}:{String(sprintSec % 60).padStart(2, '0')}
       </Text>
@@ -893,18 +914,19 @@ export default function World2Level3() {
       </View>
       {sprintDone ? (
         <View style={{ padding: 14, backgroundColor: '#dcfce7', borderRadius: 10, marginTop: 8 }}>
-          <Text style={{ fontWeight: 'bold', color: '#166534', textAlign: 'center' }}>🏁 3/3 prompts diseñados. +30 XP</Text>
+          <Text style={{ fontWeight: 'bold', color: '#166534', textAlign: 'center' }}>🏁 {sprintTasksDone}/3 prompts diseñados. +{sprintTasksDone * 10} XP</Text>
+          <Text style={{ fontSize: 12, color: '#166534', textAlign: 'center', marginTop: 6, lineHeight: 17 }}>Cada uno de esos prompts sería una instrucción real para una IA. Cuanto más los practicas, más rápido los construyes.</Text>
         </View>
       ) : (
         <View>
           <View style={[styles.card, { backgroundColor: '#f5f3ff', borderColor: '#c4b5fd' }]}>
-            <Text style={{ fontSize: 14, fontWeight: 'bold', textAlign: 'center' }}>{SPRINT_TASKS[sprintIdx]}</Text>
+            <Text style={{ fontSize: 14, fontWeight: 'bold', textAlign: 'center' }}>{sprintStarted ? SPRINT_TASKS[sprintIdx] : 'Toca "Iniciar" para comenzar'}</Text>
           </View>
           <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
-            <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#7c3aed' }]} onPress={startSprint}>
+            <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#7c3aed', opacity: sprintStarted ? 0.4 : 1 }]} onPress={startSprint} disabled={sprintStarted}>
               <Text style={{ color: '#fff', fontWeight: 'bold' }}>▶ Iniciar</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#f5f3ff', borderWidth: 1.5, borderColor: '#c4b5fd' }]} onPress={nextSprintTask}>
+            <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#f5f3ff', borderWidth: 1.5, borderColor: '#c4b5fd', opacity: sprintStarted ? 1 : 0.4 }]} onPress={nextSprintTask} disabled={!sprintStarted}>
               <Text style={{ color: '#5b21b6', fontWeight: 'bold' }}>✓ Hecho →</Text>
             </TouchableOpacity>
           </View>
@@ -931,9 +953,20 @@ export default function World2Level3() {
     </View>
   );
 
-  const renderQuizInv = () => (
+  const renderQuizInv = () => {
+    if (quizInvDone) {
+      const perfect = quizInvScore === QUIZ_INVERSO.length;
+      return (
+        <View>
+          <View style={[styles.tag, { backgroundColor: '#faf5ff' }]}><Text style={[styles.tagText, { color: '#7e22ce' }]}>🏁 Quiz inverso — resultado</Text></View>
+          <Text style={[styles.title, { textAlign: 'center' }]}>{quizInvScore}/{QUIZ_INVERSO.length} correctas 🎯</Text>
+          <Hl variant="green"><Bold>+{quizInvScore * 15} XP.</Bold> {perfect ? '¡Lees prompts como un experto!' : 'Con práctica, identificar el prompt correcto se vuelve instintivo.'}</Hl>
+        </View>
+      );
+    }
+    return (
     <View>
-      <View style={[styles.tag, { backgroundColor: '#faf5ff' }]}><Text style={[styles.tagText, { color: '#7e22ce' }]}>🔍 Módulo 16 · Quiz inverso ({quizInvIdx + 1}/{QUIZ_INVERSO.length})</Text></View>
+      <View style={[styles.tag, { backgroundColor: '#faf5ff' }]}><Text style={[styles.tagText, { color: '#7e22ce' }]}>🔍 Módulo 16 · Quiz inverso · {quizInvIdx + 1}/{QUIZ_INVERSO.length}</Text></View>
       <Text style={styles.title}>¿Cuál prompt generó este resultado?</Text>
       <Text style={styles.subtitle}>Lee el resultado. ¿Cuál prompt lo generó?</Text>
       <View style={[styles.card, { backgroundColor: '#f0fdf4', borderColor: '#bbf7d0', marginBottom: 10 }]}>
@@ -955,7 +988,8 @@ export default function World2Level3() {
       })}
       {quizInvRevealed && <FeedbackBar ok={quizInvSel === QUIZ_INVERSO[quizInvIdx].correct}>{(quizInvSel === QUIZ_INVERSO[quizInvIdx].correct ? '✅ ' : '❌ ') + QUIZ_INVERSO[quizInvIdx].explain}</FeedbackBar>}
     </View>
-  );
+    );
+  };
 
   const renderWild = () => (
     <View>
@@ -1033,7 +1067,12 @@ export default function World2Level3() {
           Ahora que sabes crear, vas a aprender a depurar. Prompts ambiguos, alucinaciones, errores de contexto y cómo corregirlos. El nivel donde te conviertes en detective de la IA.
         </Text>
       </View>
-      <Text style={{ fontSize: 10, color: '#94a3b8', marginBottom: 8 }}>Nivel 9 de 36 completado · Mundo 2 — Domina el Prompting</Text>
+      <View style={{ width: '100%', marginBottom: 8 }}>
+        <Text style={{ fontSize: 10, color: '#94a3b8', marginBottom: 4 }}>Nivel 9 de 36 completado · Mundo 2 — Domina el Prompting</Text>
+        <View style={{ height: 6, backgroundColor: '#e2e8f0', borderRadius: 3, overflow: 'hidden' }}>
+          <View style={{ height: '100%', width: '25%', backgroundColor: '#7c3aed', borderRadius: 3 }} />
+        </View>
+      </View>
       <TouchableOpacity style={styles.finishButton} onPress={handleFinish}>
         <Text style={{ fontWeight: 'bold', color: '#fff' }}>Siguiente nivel →</Text>
       </TouchableOpacity>
@@ -1113,7 +1152,7 @@ export default function World2Level3() {
       case 10: return 'Continuar →';
       case 11: return 'Continuar →';
       case 12: return 'Continuar →';
-      case 14: return sprintDone ? 'Continuar →' : 'Siguiente →';
+      case 14: return 'Continuar →';
       case 16: return quizInvDone ? 'Continuar →' : 'Siguiente →';
       case 17: return 'Continuar →';
       case 18: return 'Completar nivel →';
@@ -1148,7 +1187,7 @@ export default function World2Level3() {
           </TouchableOpacity>
         )}
         {showCheckBtn && (
-          <TouchableOpacity style={[styles.nextButton, showBackButton && styles.nextButtonFlex]} onPress={step === 14 && sprintIdx === 0 && sprintSec === 120 ? startSprint : handleMainBtn}>
+          <TouchableOpacity style={[styles.nextButton, showBackButton && styles.nextButtonFlex]} onPress={handleMainBtn}>
             <Text style={styles.nextButtonText}>{getBtnLabel()}</Text>
           </TouchableOpacity>
         )}
