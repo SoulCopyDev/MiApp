@@ -43,8 +43,11 @@ type QuizInversoItem = {
 
 const TOTAL_STEPS = 20; // 0:intro + 18 módulos + 1:complete
 const CONTENT_STEPS = 18;
-// Solo estos módulos (teoría/lectura) muestran el botón "Volver".
-const THEORY_STEPS = new Set([1, 6, 8, 13, 15]);
+// El botón "Volver" solo aparece en módulos puramente informativos (leer + Continuar,
+// sin input ni ejercicio puntuado). NO en actividades/ejercicios/evaluaciones.
+// (El HTML clasificaba mal: marcaba builders como teoría y omitía el módulo 4.)
+// 4 = Modifica el tono · 8 = IA como director · 13 = Crea un meme · 15 = ¿Cuándo no usar IA?
+const THEORY_STEPS = new Set([4, 8, 13, 15]);
 
 const pickN = <T,>(arr: T[], n: number): T[] => {
   const shuffled = [...arr].sort(() => Math.random() - 0.5);
