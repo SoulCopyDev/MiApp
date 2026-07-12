@@ -11,6 +11,7 @@ Referencia técnica completa del proyecto. Actualizar cuando cambien arquitectur
 | `.claude/workflow.md` | Deploy, ramas, estado de auditoría, onboarding de colaboradores |
 | `.claude/commands/new-level.md` | Generador autónomo de niveles (`/project:new-level ruta/spec.md`) |
 | `.claude/commands/_nivel-template.md` | Template del spec file — copiar y rellenar para crear un nivel |
+| `../Prompt de Auditoría UI v2.txt` (carpeta padre, fuera del repo) | **Al auditar un nivel** (usuario dice "audit/auditoría LevelN") — leerlo SIEMPRE antes de tocar código. Checklist v2 + proceso obligatorio; el HTML prototipo es la fuente de verdad |
 
 > Estos archivos son parte de la documentación viva. Actualizarlos proactivamente igual que este CLAUDE.md.
 

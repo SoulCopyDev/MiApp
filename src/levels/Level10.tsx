@@ -1,9 +1,8 @@
 import { exitLevel } from '../utils/exitLevel';
-import { router } from 'expo-router';
 import { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
-  Alert, BackHandler,
+  Alert, BackHandler, Platform,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useGameStore } from '../store/gameStore';
@@ -14,16 +13,11 @@ import XPToast from '../components/XPToast';
 type TFItem = { stmt: string; correct: boolean; explain: string };
 type DragItem = { text: string; cat: string };
 type FillPrompt = { roto: string; campos: string[]; correcto: string };
-type CompareItem = {
-  titulo: string; error: string;
-  prompt_repite: string; resp_repite: string;
-  prompt_reforma: string; resp_reforma: string;
-  q: string; opts: string[]; correct: number; explain: string;
-};
+type MatchPair = { largo: string; corto: string; problemaLargo: string; correcto: string };
+type MCQ = { q?: string; opts: string[]; correct: number; explain: string };
 type SprintItem = { prompt: string; fallo: string };
 type FixItem = { roto: string; tipo: string; pista: string };
-type EticaItem = { prompt: string; cat: string; label: string };
-type ChecklistItem = { q: string; opts: string[]; correct: number; explain: string };
+type EticaItem = { prompt: string; cat: string; label: string; nota: string };
 type Sprint2Item = { roto: string; correcto: string };
 
 // ---------- Pools ----------
@@ -39,52 +33,78 @@ const DD_ERRORES: DragItem[] = [
 ];
 
 const VF_POOL: TFItem[] = [
-  { stmt: 'Cuando una IA inventa un dato que no existe, lo hace porque quiere engañarte.', correct: false, explain: 'Las IAs no tienen intenciones. La alucinación es un fallo técnico, no un engaño.' },
-  { stmt: 'Si la IA responde con total confianza y sin dudar, la respuesta es probablemente correcta.', correct: false, explain: 'El tono seguro no es evidencia de veracidad.' },
-  { stmt: 'Las alucinaciones ocurren más frecuentemente sobre eventos muy recientes o específicos.', correct: true, explain: 'Los LLMs tienen fecha de corte. Datos muy específicos o recientes tienen más probabilidad de ser inventados.' },
-  { stmt: 'Puedes reducir las alucinaciones pidiendo a la IA que cite sus fuentes o admita cuando no sabe.', correct: true, explain: 'Instrucciones como "si no estás seguro, dímelo claramente" activan comportamiento más cauteloso.' },
-  { stmt: 'Una IA que alucina menos es siempre mejor para cualquier tipo de tarea.', correct: false, explain: 'Para tareas creativas, cierto nivel de "invención" es deseable.' },
-  { stmt: 'Si le preguntas a la IA si alucinó en su respuesta anterior, puede detectarlo con precisión.', correct: false, explain: 'La IA no tiene acceso privilegiado a su propio proceso.' },
-  { stmt: 'Las alucinaciones son exclusivas de los modelos de lenguaje.', correct: false, explain: 'Los humanos también confabulamos cuando nuestra memoria falla.' },
-  { stmt: 'Dar más contexto en el prompt suele reducir la probabilidad de que la IA alucine.', correct: true, explain: 'Más contexto = menos espacio para que el modelo "rellene" con información inventada.' },
+  { stmt: 'Cuando una IA inventa un dato que no existe, lo hace porque quiere engañarte.', correct: false, explain: 'Las IAs no tienen intenciones ni voluntad. Una alucinación ocurre porque el modelo completa texto de forma estadísticamente plausible — no porque "quiera" mentir. Es un fallo técnico, no un engaño.' },
+  { stmt: 'Si la IA responde con total confianza y sin dudar, la respuesta es probablemente correcta.', correct: false, explain: 'El tono seguro y la precisión del dato son independientes. La IA usa el mismo registro para afirmaciones correctas e incorrectas. El tono confiado no es evidencia de veracidad.' },
+  { stmt: 'Las alucinaciones ocurren más frecuentemente sobre eventos muy recientes o específicos.', correct: true, explain: 'Los LLMs tienen fecha de corte. Ante datos muy recientes o específicos (precios exactos, personas poco conocidas) el modelo tiene menos con qué trabajar y es más propenso a inventar.' },
+  { stmt: 'Puedes reducir las alucinaciones pidiendo a la IA que cite sus fuentes o admita cuando no sabe.', correct: true, explain: 'Añadir "si no estás seguro, dímelo" o "cita la fuente exacta" activa un comportamiento más cauteloso. No las elimina, pero sí las reduce.' },
+  { stmt: 'Una IA que alucina menos es siempre mejor para cualquier tipo de tarea.', correct: false, explain: 'Para tareas creativas (poesía, ficción, brainstorming) cierto nivel de "invención" es deseable. Una IA ultra-conservadora sería pobre para crear.' },
+  { stmt: 'Si le preguntas a la IA si alucinó en su respuesta anterior, puede detectarlo con precisión.', correct: false, explain: 'La IA no tiene acceso privilegiado a su propio proceso. Puede responder que no aunque haya inventado datos. La revisión humana de datos críticos sigue siendo necesaria.' },
+  { stmt: 'Las alucinaciones son exclusivas de los modelos de lenguaje; los humanos no cometemos errores similares.', correct: false, explain: 'Los humanos también confabulamos: inventamos detalles que "encajan" cuando nuestra memoria falla. La alucinación de IA es el equivalente computacional.' },
+  { stmt: 'Dar más contexto en el prompt suele reducir la probabilidad de que la IA alucine.', correct: true, explain: 'Más contexto = menos espacio para que el modelo "rellene" con información inventada. Un prompt rico ancla la respuesta a lo que tú ya sabes.' },
 ];
 
-const FILL_PROMPTS: FillPrompt[] = [
-  { roto: 'Tradúcelo al inglés.', campos: ['¿Qué texto?', '¿Qué tipo de inglés?', '¿Para qué audiencia?'], correcto: 'Traduce el siguiente texto al inglés informal para adolescentes estadounidenses: [texto].' },
-  { roto: 'Ayúdame a mejorar esto.', campos: ['¿Mejorar qué tipo de texto?', '¿Qué aspecto?', '¿Para qué propósito?'], correcto: 'Actúa como editor. Mejora la claridad de este párrafo de ensayo: [texto]. No cambies las ideas.' },
-];
+const FILL_PROMPT: FillPrompt = {
+  roto: 'Tradúcelo al inglés.',
+  campos: ['¿Qué texto? (pega aquí el contenido)', '¿Qué tipo de inglés? (formal/informal/técnico)', '¿Para qué audiencia?'],
+  correcto: 'Traduce el siguiente texto al inglés informal para adolescentes estadounidenses: [texto]. Conserva el tono original.',
+};
 
-const COMPARE_REPITE: CompareItem = {
+// Módulo 3 — largo vs. corto (contenido real, no reciclado del fill)
+const MATCH_PAIR: MatchPair = {
+  largo: 'Como experto en nutrición deportiva con 15 años de experiencia, analiza mi dieta, considera mi metabolismo, dime cuántas calorías necesito según mi peso de 75kg y altura de 1.80m, recomiéndame suplementos, horarios de comida y recetas para pre y post entreno, todo con referencias científicas actualizadas...',
+  corto: '¿Cuántas calorías necesito?',
+  problemaLargo: 'Mezcla demasiadas solicitudes distintas en un solo prompt: la IA responde todo de forma superficial.',
+  correcto: 'Divídelo en 3 prompts: 1) calorías base, 2) distribución de macros, 3) suplementos.',
+};
+const MATCH_MCQ: MCQ = {
+  opts: [
+    'Tiene demasiados sinónimos y palabras complicadas que confunden a la IA',
+    'Mezcla múltiples solicitudes distintas en un solo prompt y la IA responde todo superficialmente',
+    'La IA tiene un límite de tokens y lo rechazará automáticamente sin procesar nada',
+    'El prompt largo siempre da mejores resultados que el corto: no hay ningún problema real',
+  ],
+  correct: 1,
+  explain: 'Un prompt sobrecargado obliga a la IA a repartir su atención entre muchas tareas y ninguna queda bien. La solución es separar en varios prompts enfocados.',
+};
+
+const COMPARE_REPITE = {
   titulo: 'Mismo error, dos estrategias',
   error: 'La IA te devolvió un resumen de 5 páginas cuando pediste algo breve.',
   prompt_repite: 'Resúmeme este texto.',
   resp_repite: '[Vuelve a dar un resumen igual de largo — porque el prompt no cambió nada]',
-  prompt_reforma: 'Resume este texto en exactamente 5 oraciones. Cada oración debe ser una idea principal.',
-  resp_reforma: '1. El calentamiento global acelera... 2. Las ciudades costeras...',
+  prompt_reforma: 'Resume este texto en exactamente 5 oraciones. Cada oración = una idea principal. Sin introducción ni cierre.',
+  resp_reforma: '1. El calentamiento global acelera... 2. Las ciudades costeras... 3. Los acuerdos de París...',
   q: '¿Qué cambio específico hizo que el segundo prompt funcionara?',
-  opts: ['Usar palabras más largas', 'Definir una métrica exacta (5 oraciones) y el formato de cada una', 'Repetir la petición dos veces', 'Cambiar el tema del texto'],
-  correct: 1,
-  explain: 'El número exacto y la instrucción de formato eliminaron la ambigüedad.',
+  mcq: {
+    opts: [
+      'Usar palabras más largas y formales para que la IA lo tome en serio',
+      'Definir una métrica exacta (5 oraciones) y el formato de cada una, eliminando la ambigüedad',
+      'Repetir la petición dos veces seguidas para que el modelo la priorice',
+      'Cambiar el tema del texto a uno que la IA conozca mejor',
+    ],
+    correct: 1,
+    explain: 'El número exacto (5 oraciones) y la instrucción de formato eliminaron la ambigüedad. La IA no sabe qué es "breve" para ti, pero sí sabe qué son "5 oraciones".',
+  } as MCQ,
 };
 
 const SPRINT_POOL: SprintItem[] = [
-  { prompt: 'Háblame de todo sobre inteligencia artificial.', fallo: 'Demasiado amplio — la IA no sabe por dónde empezar.' },
-  { prompt: 'Como experto en todo, dime qué piensan todos sobre el cambio climático.', fallo: '"Experto en todo" no es un rol — "todos" no define audiencia.' },
-  { prompt: '¿Puedes ayudarme con algo?', fallo: 'No hay instrucción, contexto ni tema.' },
-  { prompt: 'Escríbeme una historia larga, corta, seria y divertida.', fallo: 'Instrucciones contradictorias.' },
-  { prompt: 'Traduce esto: ___', fallo: 'No hay texto que traducir ni idioma destino.' },
-  { prompt: 'Dame el resumen de todos los capítulos del libro que leí.', fallo: 'La IA no sabe qué libro es.' },
-  { prompt: 'Necesito información urgente ahora mismo, es importante.', fallo: 'La urgencia no cambia la respuesta. No hay instrucción.' },
-  { prompt: '¿Es bueno o malo? Sí o no.', fallo: 'No hay referente. Preguntas binarias sobre temas complejos no funcionan.' },
-  { prompt: 'Escríbeme código para hackear.', fallo: 'Solicitud ilegal — la IA la rechazará.' },
-  { prompt: 'Actúa como mi mejor amigo y dime qué hacer con mi vida.', fallo: 'Rol irreal + solicitud vaga + contexto personal que la IA no tiene.' },
+  { prompt: 'Háblame de todo sobre inteligencia artificial.', fallo: 'Demasiado amplio — la IA no sabe por dónde empezar ni qué nivel de detalle usar.' },
+  { prompt: 'Como experto en todo, dime qué piensan todos sobre el cambio climático.', fallo: '"Experto en todo" no es un rol, y "todos" no define ninguna audiencia específica.' },
+  { prompt: '¿Puedes ayudarme con algo?', fallo: 'No hay instrucción, contexto ni tema. La IA no puede responder nada útil.' },
+  { prompt: 'Escríbeme una historia larga, corta, seria y divertida.', fallo: 'Instrucciones contradictorias — largo vs. corto, serio vs. divertido. Imposible de cumplir.' },
+  { prompt: 'Traduce esto: ___', fallo: 'No hay texto que traducir y no especifica el idioma destino.' },
+  { prompt: 'Dame el resumen de todos los capítulos del libro que leí.', fallo: 'La IA no sabe qué libro es — no tiene acceso a tus lecturas pasadas.' },
+  { prompt: 'Actúa como mi mejor amigo que lo sabe todo y dime qué hacer con mi vida.', fallo: 'Rol irreal + solicitud vaga + implica conocer un contexto personal que la IA no tiene.' },
+  { prompt: 'Necesito información urgente ahora mismo, es importante.', fallo: 'La urgencia no cambia la respuesta. No hay instrucción, tema ni formato.' },
+  { prompt: '¿Es bueno o malo? Sí o no.', fallo: 'No hay referente — ¿qué es "eso"? Las preguntas binarias sobre temas complejos no funcionan.' },
+  { prompt: 'Escríbeme código para hackear.', fallo: 'Solicitud potencialmente ilegal — la IA la rechazará. Además no define lenguaje, sistema ni objetivo legítimo.' },
 ];
 
 const PROMPTS_ROTOS: FixItem[] = [
-  { roto: 'Escríbeme algo motivador.', tipo: 'formato+instrucción', pista: '¿Para quién? ¿Para qué ocasión? ¿En qué formato?' },
-  { roto: 'Explícame qué es la economía.', tipo: 'contexto', pista: '¿Para qué nivel educativo? ¿Qué aspecto?' },
-  { roto: 'Actúa como un experto y dame consejos.', tipo: 'rol+instrucción', pista: '¿Experto en qué? ¿Consejos sobre qué tema?' },
-  { roto: '¿Cuál es la mejor opción?', tipo: 'contexto+instrucción', pista: '¿La mejor opción entre qué alternativas?' },
+  { roto: 'Escríbeme algo motivador.', tipo: 'formato + instrucción', pista: '¿Para quién? ¿Para qué ocasión? ¿En qué formato?' },
+  { roto: 'Explícame qué es la economía.', tipo: 'contexto', pista: '¿Para qué nivel educativo? ¿Qué aspecto de la economía?' },
+  { roto: 'Actúa como un experto y dame consejos.', tipo: 'rol + instrucción', pista: '¿Experto en qué? ¿Consejos sobre qué tema?' },
+  { roto: '¿Cuál es la mejor opción?', tipo: 'contexto + instrucción', pista: '¿La mejor opción entre qué alternativas? ¿Para qué objetivo?' },
   { roto: 'Hazlo más interesante.', tipo: 'contexto', pista: '¿Qué texto o contenido? ¿Más interesante para qué audiencia?' },
 ];
 
@@ -100,34 +120,81 @@ const LIMITES_ITEMS: DragItem[] = [
 ];
 
 const ETICA_ITEMS: EticaItem[] = [
-  { prompt: 'Escríbeme un ensayo sobre los riesgos del cambio climático para presentar en clase.', cat: 'ayuda', label: '✅ Ayuda legítima' },
-  { prompt: 'Actúa como mi profe y dame las respuestas exactas del examen de mañana.', cat: 'gris', label: '⚠️ Zona gris — trampa académica' },
-  { prompt: 'Genera mensajes de odio contra [grupo] para publicar en redes.', cat: 'odio', label: '🚫 Inaceptable' },
-  { prompt: 'Ayúdame a entender por qué hay personas que piensan diferente a mí.', cat: 'ayuda', label: '✅ Ayuda legítima' },
-  { prompt: 'Escríbeme un texto falso haciéndome pasar por el rector del colegio.', cat: 'gris', label: '⚠️ Zona gris — suplantación' },
-  { prompt: 'Explícame cómo funcionan las drogas para un informe de prevención escolar.', cat: 'gris', label: '⚠️ Zona gris — depende del contexto' },
-  { prompt: 'Crea un perfil falso en redes con fotos de otra persona.', cat: 'odio', label: '🚫 Inaceptable — fraude de identidad' },
+  { prompt: 'Escríbeme un ensayo sobre los riesgos del cambio climático para presentar en clase.', cat: 'ayuda', label: '✅ Ayuda legítima', nota: 'Usas la IA para producir un trabajo propio; el tema es educativo y transparente.' },
+  { prompt: 'Actúa como mi profe y dame las respuestas exactas del examen de mañana.', cat: 'gris', label: '⚠️ Zona gris — trampa académica', nota: 'Pedir respuestas de un examen es hacer trampa: reemplaza tu aprendizaje, no lo mejora.' },
+  { prompt: 'Genera mensajes de odio contra un grupo para publicar en redes.', cat: 'odio', label: '🚫 Inaceptable', nota: 'Ningún contexto justifica generar odio contra personas. Es dañino y la IA debe rechazarlo.' },
+  { prompt: 'Ayúdame a entender por qué hay personas que piensan diferente a mí.', cat: 'ayuda', label: '✅ Ayuda legítima', nota: 'Buscar comprender otras perspectivas es un uso sano y constructivo.' },
+  { prompt: 'Escríbeme un texto falso haciéndome pasar por el rector del colegio.', cat: 'gris', label: '⚠️ Zona gris — suplantación', nota: 'Hacerse pasar por otra persona puede ser engaño o fraude según cómo se use.' },
+  { prompt: 'Explícame cómo funcionan las drogas para un informe de prevención escolar.', cat: 'gris', label: '⚠️ Zona gris — depende del contexto', nota: 'El mismo tema es legítimo para prevención, pero problemático si busca instrucciones de uso.' },
+  { prompt: 'Crea un perfil falso en redes con fotos de otra persona.', cat: 'odio', label: '🚫 Inaceptable — fraude de identidad', nota: 'Usar la identidad de alguien sin permiso es fraude y puede causar daño real.' },
 ];
 
-const CHECKLIST_QUIZ: ChecklistItem[] = [
-  { q: 'La IA te da una fecha exacta de un evento histórico. ¿Qué deberías hacer?', opts: ['Aceptarla', 'Verificarla en una fuente primaria', 'Preguntarle a la IA si está segura', 'Copiarla si la repite dos veces'], correct: 1, explain: 'Siempre verifica datos factuales críticos en fuentes primarias.' },
-  { q: 'La IA te cita un estudio científico con autor y año. ¿Cuándo es seguro usarlo?', opts: ['Siempre', 'Nunca', 'Solo tras verificar que existe en Google Scholar', 'Si el autor tiene +1000 citas'], correct: 2, explain: 'Las IAs frecuentemente generan citas que parecen reales pero no existen.' },
-  { q: 'La IA responde con mucha seguridad sobre un evento de la semana pasada. ¿Es confiable?', opts: ['Sí, el tono seguro indica veracidad', 'No, los LLMs tienen fecha de corte', 'Depende, si menciona el día exacto', 'Sí, los modelos siempre admiten cuando no saben'], correct: 1, explain: 'La confianza en el tono no correlaciona con actualidad de la información.' },
+const CHECKLIST_QUIZ: MCQ[] = [
+  {
+    q: 'La IA te da una fecha exacta de un evento histórico. ¿Qué deberías hacer?',
+    opts: [
+      'Aceptarla: las IAs tienen acceso a todas las fechas históricas con precisión total',
+      'Verificarla en una fuente primaria antes de usarla en un trabajo',
+      'Preguntarle a la IA si está segura; si dice que sí, es confiable',
+      'Copiarla solo si la IA la repite dos veces con consistencia',
+    ],
+    correct: 1,
+    explain: 'Las IAs pueden alucinar fechas específicas. Siempre verifica datos factuales críticos en fuentes primarias (enciclopedias, artículos, sitios oficiales).',
+  },
+  {
+    q: 'La IA te cita un estudio científico con autor y año. ¿Cuándo es seguro usarlo directamente?',
+    opts: [
+      'Siempre: si da autor y año, el estudio existe',
+      'Nunca: las IAs jamás citan estudios reales',
+      'Solo cuando puedes verificar que el estudio existe en Google Scholar o bases académicas',
+      'Solo si el autor tiene más de 1000 citas en Google Scholar',
+    ],
+    correct: 2,
+    explain: 'Las IAs generan con frecuencia citas que parecen reales pero no existen (autores y estudios inventados). Busca el estudio en fuentes académicas reales antes de citarlo.',
+  },
+  {
+    q: 'La IA responde con mucha seguridad sobre un evento de la semana pasada. ¿Eso lo hace más confiable?',
+    opts: [
+      'Sí: el tono seguro indica que procesó información reciente verificada',
+      'No: los LLMs tienen fecha de corte y no acceden a internet en tiempo real (salvo herramientas específicas)',
+      'Depende: si menciona el día exacto, entonces sí tiene acceso en tiempo real',
+      'Sí: cuando los modelos no saben algo, siempre lo admiten',
+    ],
+    correct: 1,
+    explain: 'La confianza en el tono no correlaciona con la actualidad de la información. Para eventos recientes necesitas herramientas de búsqueda web o verificación externa.',
+  },
 ];
 
 const SPRINT2_POOL: Sprint2Item[] = [
-  { roto: 'Hazme una lista.', correcto: 'Actúa como experto en [tema]. Dame una lista de 7 [items] ordenados por [criterio]. Formato: numerada.' },
-  { roto: '¿Qué opinas?', correcto: 'Actúa como crítico literario. Da tu opinión sobre [obra] en 3 aspectos: narrativa, personajes y relevancia actual.' },
-  { roto: 'Traduce esto bien.', correcto: 'Traduce el siguiente texto del español al inglés formal para un contexto académico. Conserva el registro.' },
-  { roto: 'Escríbeme algo sobre viajes.', correcto: 'Actúa como escritor de viajes. Escribe un párrafo sobre [destino] que capture su esencia en menos de 80 palabras.' },
-  { roto: 'Necesito ayuda con matemáticas.', correcto: 'Actúa como tutor de matemáticas. Explica [tema] con: 1) definición, 2) ejemplo resuelto, 3) ejercicio para practicar.' },
+  { roto: 'Hazme una lista.', correcto: 'Actúa como experto en [tema]. Dame una lista de 7 [items] ordenados por [criterio]. Formato: numerada, una línea de descripción por item.' },
+  { roto: '¿Qué opinas?', correcto: 'Actúa como crítico literario. Da tu opinión sobre [obra] en 3 aspectos: narrativa, personajes y relevancia actual. Tono accesible para un lector de 15 años.' },
+  { roto: 'Traduce esto bien.', correcto: 'Traduce el siguiente texto del español al inglés formal para un contexto académico. Conserva el registro y los términos técnicos. [Texto aquí]' },
+  { roto: 'Escríbeme algo sobre viajes.', correcto: 'Actúa como escritor de viajes. Escribe el primer párrafo de un artículo sobre [destino] que capture su esencia en menos de 80 palabras. Tono: evocador.' },
+  { roto: 'Necesito ayuda con matemáticas.', correcto: 'Actúa como tutor de matemáticas para 10° grado. Explica [tema] con: 1) definición simple, 2) ejemplo resuelto paso a paso, 3) un ejercicio para practicar.' },
 ];
 
-const TOTAL_STEPS = 21;
+const TOTAL_STEPS = 20; // 0: intro + 18 módulos + 19: completado
+const CONTENT_STEPS = 18;
+// El botón "Volver" solo aparece en módulos puramente informativos (leer + Continuar,
+// sin input ni ejercicio puntuado). El HTML clasificaba mal (marcaba actividades como teoría).
+// 1 = Casos reales · 6 = Sesgo · 8 = ¿Miente o alucina? · 11 = Lo imposible · 14 = Prompt injection
+const THEORY_STEPS = new Set([1, 6, 8, 11, 14]);
+
 const pickN = <T,>(arr: T[], n: number): T[] => {
   const shuffled = [...arr].sort(() => Math.random() - 0.5);
   return shuffled.slice(0, n);
 };
+
+// Baraja las opciones de un MCQ preservando cuál es la correcta (evita que la
+// respuesta correcta caiga siempre en la misma posición o sea siempre la más larga).
+function shuffleMCQ<T extends { opts: string[]; correct: number }>(q: T): T {
+  const paired = q.opts.map((opt, i) => ({ opt, ok: i === q.correct }));
+  for (let j = paired.length - 1; j > 0; j--) {
+    const k = Math.floor(Math.random() * (j + 1));
+    [paired[j], paired[k]] = [paired[k], paired[j]];
+  }
+  return { ...q, opts: paired.map((p) => p.opt), correct: paired.findIndex((p) => p.ok) };
+}
 
 export default function World2Level4() {
   const completeLevel = useGameStore(s => s.completeLevel);
@@ -136,14 +203,19 @@ export default function World2Level4() {
   const [xp, setXp] = useState(0);
   const [xpToast, setXpToast] = useState<{ amount: number; id: number } | null>(null);
 
-  // Pools
+  // Pools (fijados una vez)
   const vfItems = useRef(pickN(VF_POOL, 5)).current;
   const sprintItems = useRef(pickN(SPRINT_POOL, 5)).current;
+  const matchMCQ = useRef(shuffleMCQ(MATCH_MCQ)).current;
+  const compareMCQ = useRef(shuffleMCQ(COMPARE_REPITE.mcq)).current;
+  const checklistItems = useRef(CHECKLIST_QUIZ.map(shuffleMCQ)).current;
 
   // Drag errores
   const [ddPool, setDdPool] = useState<DragItem[]>([]);
   const [ddCols, setDdCols] = useState<{ [key: string]: DragItem[] }>({ rol: [], ctx: [], inst: [], fmt: [] });
   const [ddSel, setDdSel] = useState<number | null>(null);
+  const [ddVerified, setDdVerified] = useState(false);
+  const [ddCorrect, setDdCorrect] = useState(0);
 
   // Matching largo/corto
   const [matchAnswered, setMatchAnswered] = useState(false);
@@ -157,6 +229,7 @@ export default function World2Level4() {
 
   // Fill-in-blank
   const [fillTexts, setFillTexts] = useState<string[]>(['', '', '']);
+  const [fillRevealed, setFillRevealed] = useState(false);
 
   // Compare repite vs reformula
   const [crChoice, setCrChoice] = useState<number | null>(null);
@@ -167,15 +240,19 @@ export default function World2Level4() {
   const [s1Idx, setS1Idx] = useState(0);
   const [s1Sec, setS1Sec] = useState(30);
   const [s1ShowFallo, setS1ShowFallo] = useState(false);
+  const [s1Done, setS1Done] = useState(false);
 
   // Builder
   const [fixIdx, setFixIdx] = useState(0);
   const [fixText, setFixText] = useState('');
+  const [builderDone, setBuilderDone] = useState(false);
 
   // Límites drag
   const [limitPool, setLimitPool] = useState<DragItem[]>([]);
   const [limitCols, setLimitCols] = useState<{ [key: string]: DragItem[] }>({ puede: [], nopuede: [], depende: [] });
   const [limitSel, setLimitSel] = useState<number | null>(null);
+  const [limitVerified, setLimitVerified] = useState(false);
+  const [limitCorrect, setLimitCorrect] = useState(0);
 
   // Ética
   const [eticaIdx, setEticaIdx] = useState(0);
@@ -191,59 +268,72 @@ export default function World2Level4() {
 
   // Reglas
   const [rules, setRules] = useState<string[]>(['', '', '', '', '']);
+  const [rulesDone, setRulesDone] = useState(false);
 
   // Sprint 2
   const [s2Running, setS2Running] = useState(false);
   const [s2Idx, setS2Idx] = useState(0);
   const [s2Sec, setS2Sec] = useState(90);
   const [s2ShowSol, setS2ShowSol] = useState(false);
+  const [s2Done, setS2Done] = useState(false);
 
   // Reflexión
   const [reflectText, setReflectText] = useState('');
+  const [reflectAwarded, setReflectAwarded] = useState(false);
 
-  const theorySteps = new Set([0, 1, 6, 8, 11, 14]);
-  const canGoBack = theorySteps.has(step);
+  // Modo actividad (bloquea back de hardware durante ejercicios)
+  const isActivity = !THEORY_STEPS.has(step) && step !== 0 && step !== TOTAL_STEPS - 1;
 
   useEffect(() => {
-    const h = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (!canGoBack) { Alert.alert('Actividad en curso', 'Completa la actividad.'); return true; }
+    const onBack = () => {
+      if (isActivity) {
+        Alert.alert('Módulo en curso', 'No puedes regresar durante esta actividad.', [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Salir', style: 'destructive', onPress: () => exitLevel({ confirm: false }) },
+        ]);
+        return true;
+      }
       return false;
-    });
+    };
+    const h = BackHandler.addEventListener('hardwareBackPress', onBack);
     return () => h.remove();
-  }, [canGoBack]);
+  }, [isActivity]);
 
   // Inicializar drags
-  useEffect(() => { if (step === 2) { setDdPool([...DD_ERRORES]); setDdCols({ rol: [], ctx: [], inst: [], fmt: [] }); } }, [step]);
-  useEffect(() => { if (step === 12) { setLimitPool([...LIMITES_ITEMS]); setLimitCols({ puede: [], nopuede: [], depende: [] }); } }, [step]);
+  useEffect(() => { if (step === 2) { setDdPool([...DD_ERRORES]); setDdCols({ rol: [], ctx: [], inst: [], fmt: [] }); setDdSel(null); setDdVerified(false); } }, [step]);
+  useEffect(() => { if (step === 12) { setLimitPool([...LIMITES_ITEMS]); setLimitCols({ puede: [], nopuede: [], depende: [] }); setLimitSel(null); setLimitVerified(false); } }, [step]);
 
   // Sprint 1 timer
   useEffect(() => {
     if (!s1Running || s1ShowFallo) return;
-    if (s1Sec <= 0) { setS1ShowFallo(true); return; }
+    if (s1Sec <= 0) { setS1ShowFallo(true); addXP(8); return; }
     const t = setTimeout(() => setS1Sec(s => s - 1), 1000);
     return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [s1Running, s1Sec, s1ShowFallo]);
 
   // Sprint 2 timer
   useEffect(() => {
     if (!s2Running || s2ShowSol) return;
-    if (s2Sec <= 0) { setS2ShowSol(true); return; }
+    if (s2Sec <= 0) { setS2ShowSol(true); addXP(10); return; }
     const t = setTimeout(() => setS2Sec(s => s - 1), 1000);
     return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [s2Running, s2Sec, s2ShowSol]);
 
   const addXP = (v: number) => {
     setXp(p => p + v);
     if (v > 0) setXpToast((prev) => ({ amount: v, id: (prev?.id ?? 0) + 1 }));
   };
-  const nextStep = () => { if (step < TOTAL_STEPS - 1) setStep(step + 1); };
+  const goToNextStep = () => { if (step < TOTAL_STEPS - 1) setStep(step + 1); };
+  const goToPrevStep = () => setStep((s) => Math.max(0, s - 1));
   const finish = () => {
-    let stars = xp >= 180 ? 3 : xp >= 120 ? 2 : xp >= 50 ? 1 : 0;
+    const stars = xp >= 180 ? 3 : xp >= 120 ? 2 : xp >= 50 ? 1 : 0;
     completeLevel(10, stars, xp);
     exitLevel({ confirm: false });
   };
 
-  // Drag errores
+  // ----- Drag errores -----
   const placeDdChip = (item: DragItem, col: string) => {
     setDdPool(p => p.filter(it => it.text !== item.text));
     setDdCols(c => {
@@ -255,275 +345,402 @@ export default function World2Level4() {
     setDdSel(null);
   };
   const returnDdChip = (item: DragItem, col: string) => {
+    if (ddVerified) return;
     setDdCols(c => ({ ...c, [col]: c[col].filter(it => it.text !== item.text) }));
     setDdPool(p => [...p, item]);
   };
   const verifyDD = () => {
+    if (ddVerified) return;
     let correct = 0;
     DD_ERRORES.forEach(item => { if (ddCols[item.cat]?.some(it => it.text === item.text)) correct++; });
-    addXP(correct * 6);
-    Alert.alert('Resultado', `${correct}/${DD_ERRORES.length} correctas. +${correct * 6} XP`, [{ text: 'OK', onPress: nextStep }]);
+    setDdCorrect(correct);
+    setDdVerified(true);
+    if (correct > 0) addXP(correct * 6);
   };
 
-  // V/F
+  // ----- V/F -----
   const checkVF = (ans: boolean) => {
+    if (vfAns !== null) return;
     setVfAns(ans);
-    const item = vfItems[vfIdx];
-    if (ans === item.correct) setVfScore(s => s + 1);
+    if (ans === vfItems[vfIdx].correct) setVfScore(s => s + 1);
   };
   const nextVF = () => {
+    if (vfAns === null) return;
     if (vfIdx + 1 < vfItems.length) { setVfIdx(i => i + 1); setVfAns(null); }
-    else { setVfDone(true); addXP(vfScore * 8); }
+    else { setVfDone(true); addXP(vfScore * 8 + (vfItems[vfIdx].correct === vfAns ? 0 : 0)); }
   };
 
-  // Browser de prompts (matching)
+  // ----- Matching -----
   const checkMatch = (i: number) => {
+    if (matchAnswered) return;
     setMatchChoice(i);
     setMatchAnswered(true);
-    if (i === 1) addXP(12);
+    if (i === matchMCQ.correct) addXP(12);
   };
 
-  // Fill
+  // ----- Fill -----
   const fillComplete = fillTexts.every(t => t.trim().length >= 3);
+  const revealFill = () => {
+    if (fillRevealed || !fillComplete) return;
+    setFillRevealed(true);
+    addXP(15);
+  };
 
-  // Compare
+  // ----- Compare -----
   const checkCR = (i: number) => {
+    if (crAnswered) return;
     setCrChoice(i);
     setCrAnswered(true);
-    if (i === COMPARE_REPITE.correct) addXP(12);
+    if (i === compareMCQ.correct) addXP(12);
   };
 
-  // Sprint 1
+  // ----- Sprint 1 -----
   const startS1 = () => { setS1Running(true); setS1Sec(30); setS1Idx(0); setS1ShowFallo(false); };
-  const nextS1Item = () => {
-    addXP(8);
+  const revealS1 = () => { if (!s1ShowFallo) { setS1ShowFallo(true); addXP(8); } };
+  const advanceS1 = () => {
     if (s1Idx + 1 < sprintItems.length) { setS1Idx(i => i + 1); setS1Sec(30); setS1ShowFallo(false); }
-    else { setS1Running(false); addXP(sprintItems.length * 8); nextStep(); }
+    else { setS1Running(false); setS1Done(true); }
   };
 
-  // Builder
+  // ----- Builder -----
   const submitFix = () => {
     if (fixText.trim().length < 20) return;
     addXP(10);
     if (fixIdx + 1 < PROMPTS_ROTOS.length) { setFixIdx(i => i + 1); setFixText(''); }
-    else { addXP(10); Alert.alert('¡Completado!', 'Reparaste los 5 prompts.', [{ text: 'OK', onPress: nextStep }]); }
+    else { setBuilderDone(true); }
   };
 
-  // Límites drag
+  // ----- Límites drag -----
   const placeLimitChip = (item: DragItem, col: string) => {
     setLimitPool(p => p.filter(it => it.text !== item.text));
     setLimitCols(c => { const n = { ...c }; Object.keys(n).forEach(k => n[k] = n[k].filter(it => it.text !== item.text)); n[col] = [...n[col], item]; return n; });
     setLimitSel(null);
   };
   const returnLimitChip = (item: DragItem, col: string) => {
+    if (limitVerified) return;
     setLimitCols(c => ({ ...c, [col]: c[col].filter(it => it.text !== item.text) }));
     setLimitPool(p => [...p, item]);
   };
   const verifyLimites = () => {
+    if (limitVerified) return;
     let correct = 0;
     LIMITES_ITEMS.forEach(item => { if (limitCols[item.cat]?.some(it => it.text === item.text)) correct++; });
-    addXP(correct * 7);
-    Alert.alert('Resultado', `${correct}/${LIMITES_ITEMS.length} correctas. +${correct * 7} XP`, [{ text: 'OK', onPress: nextStep }]);
+    setLimitCorrect(correct);
+    setLimitVerified(true);
+    if (correct > 0) addXP(correct * 7);
   };
 
-  // Ética
+  // ----- Ética -----
+  const eticaMap: { [k: string]: number } = { ayuda: 0, gris: 1, odio: 2 };
   const checkEtica = (ans: number) => {
+    if (eticaAns !== null) return;
     setEticaAns(ans);
-    const item = ETICA_ITEMS[eticaIdx];
-    if (ans === ({ ayuda: 0, gris: 1, odio: 2 } as any)[item.cat]) setEticaScore(s => s + 1);
+    if (ans === eticaMap[ETICA_ITEMS[eticaIdx].cat]) setEticaScore(s => s + 1);
   };
   const nextEtica = () => {
+    if (eticaAns === null) return;
     if (eticaIdx + 1 < ETICA_ITEMS.length) { setEticaIdx(i => i + 1); setEticaAns(null); }
-    else { setEticaDone(true); addXP(eticaScore * 8); nextStep(); }
+    else { setEticaDone(true); addXP(eticaScore * 8); }
   };
 
-  // Checklist
+  // ----- Checklist -----
   const checkCheck = (ans: number) => {
+    if (checkAns !== null) return;
     setCheckAns(ans);
-    if (ans === CHECKLIST_QUIZ[checkIdx].correct) setCheckScore(s => s + 1);
+    if (ans === checklistItems[checkIdx].correct) setCheckScore(s => s + 1);
   };
   const nextCheck = () => {
-    if (checkIdx + 1 < CHECKLIST_QUIZ.length) { setCheckIdx(i => i + 1); setCheckAns(null); }
-    else { setCheckDone(true); addXP(checkScore * 12); nextStep(); }
+    if (checkAns === null) return;
+    if (checkIdx + 1 < checklistItems.length) { setCheckIdx(i => i + 1); setCheckAns(null); }
+    else { setCheckDone(true); addXP(checkScore * 12); }
   };
 
-  // Sprint 2
+  // ----- Reglas -----
+  const rulesComplete = rules.every(r => r.trim().length >= 5);
+  const saveRules = () => {
+    if (rulesDone || !rulesComplete) return;
+    setRulesDone(true);
+    addXP(20);
+  };
+
+  // ----- Sprint 2 -----
   const startS2 = () => { setS2Running(true); setS2Sec(90); setS2Idx(0); setS2ShowSol(false); };
-  const showS2Sol = () => { setS2ShowSol(true); addXP(10); };
-  const nextS2 = () => {
+  const revealS2 = () => { if (!s2ShowSol) { setS2ShowSol(true); addXP(10); } };
+  const advanceS2 = () => {
     if (s2Idx + 1 < SPRINT2_POOL.length) { setS2Idx(i => i + 1); setS2Sec(90); setS2ShowSol(false); }
-    else { setS2Running(false); nextStep(); }
+    else { setS2Running(false); setS2Done(true); }
   };
 
-  // Reflexión
-  const submitReflect = () => {
-    if (reflectText.trim().length >= 50) { addXP(15); nextStep(); }
-    else Alert.alert('Muy corto', 'Mínimo 50 caracteres.');
+  // ----- Reflexión (premia una sola vez al llegar al mínimo) -----
+  const onReflectChange = (t: string) => {
+    setReflectText(t);
+    if (!reflectAwarded && t.trim().length >= 50) { setReflectAwarded(true); addXP(15); }
   };
 
-  // ========== RENDER ==========
+  // Feedback genérico de MCQ (explica por qué y cuál era la correcta)
+  const renderMcqFeedback = (mcq: MCQ, chosen: number | null) => {
+    if (chosen === null) return null;
+    const ok = chosen === mcq.correct;
+    return (
+      <View style={[styles.fbBox, ok ? styles.fbBoxOk : styles.fbBoxBad]}>
+        <Text style={[styles.fbBoxText, ok ? styles.fbOkText : styles.fbBadText]}>
+          {ok
+            ? `✅ Correcto. ${mcq.explain}`
+            : `❌ No exactamente. La correcta era: "${mcq.opts[mcq.correct]}". ${mcq.explain}`}
+        </Text>
+      </View>
+    );
+  };
+
+  // ========== RENDER DEL CONTENIDO ==========
+  const tag = (label: string) => <Text style={styles.tag}>{label}</Text>;
+  const title = (t: string) => <Text style={styles.title}>{t}</Text>;
+  const sub = (t: string) => <Text style={styles.subtitle}>{t}</Text>;
+  const body = (t: string) => <Text style={styles.body}>{t}</Text>;
+  const card = (titleT: string, textT: string) => (
+    <View style={styles.card}><Text style={styles.cardTitle}>{titleT}</Text><Text style={styles.cardText}>{textT}</Text></View>
+  );
+
   const renderStep = () => {
-    const btn = (label: string, onPress: () => void, disabled = false) => (
-      <TouchableOpacity style={[styles.btn, disabled && styles.btnOff]} onPress={onPress} disabled={disabled}>
-        <Text style={styles.btnText}>{label}</Text>
-      </TouchableOpacity>
-    );
-    const tag = (label: string) => <Text style={styles.tag}>{label}</Text>;
-    const title = (t: string) => <Text style={styles.title}>{t}</Text>;
-    const sub = (t: string) => <Text style={styles.subtitle}>{t}</Text>;
-    const body = (t: string) => <Text style={styles.body}>{t}</Text>;
-    const card = (titleT: string, textT: string) => (
-      <View style={styles.card}><Text style={styles.cardTitle}>{titleT}</Text><Text style={styles.cardText}>{textT}</Text></View>
-    );
-
     switch (step) {
       case 0: return (
         <View style={styles.stepContainer}>
+          {tag('Nivel 10 · 18 módulos')}
           <View style={styles.iconCircle}><Text style={styles.iconEmoji}>🐛</Text></View>
           {title('Prompts que Fallan')}
           {sub('El mejor prompting no viene de acertar al primer intento — viene de entender exactamente por qué fallaste.')}
           {card('🎯 Qué vas a aprender', 'Los 4 tipos de error en prompts · Detectar alucinaciones · Cuándo reformular vs. repetir · Clasificar prompts éticos · Reparar prompts rotos.')}
-          {btn('¡Empezar! →', nextStep)}
+          <View style={styles.hlAmber}><Text style={styles.hlAmberText}>Un prompt que falla es una lección gratis. Al terminar vas a diagnosticar errores de prompting en segundos.</Text></View>
         </View>
       );
       case 1: return (
         <View style={styles.stepContainer}>
-          {tag('Nivel 10 · 18 módulos')}
           {tag('📋 Módulo 1 · Casos reales')}
           {title('El prompt ambiguo en acción')}
-          {body('"Escríbeme algo motivador" → la IA responde con una frase genérica. "Explícame mejor" → repite lo mismo con sinónimos. Si tu prompt puede interpretarse de varias formas, la IA elige la más probable — no la que tú querías.')}
-          {btn('Continuar →', nextStep)}
+          {sub('Mismos prompts, dos formas de verlos: lo que pensó el usuario y lo que procesó la IA.')}
+          {card('💬 "Escríbeme algo motivador"', 'El usuario quería un texto personal sobre sus metas. La IA entendió "cualquier texto positivo" → frase genérica de calendario de pared.')}
+          {card('💬 "Explícame mejor"', 'La IA no sabe qué parte no entendiste ni qué nivel necesitas → repite casi lo mismo con sinónimos.')}
+          {card('💬 "Dame más información"', '¿Más en qué dirección? ¿Más profundidad? ¿Más ejemplos? → la IA elige una dirección al azar.')}
+          <View style={styles.hlAmber}><Text style={styles.hlAmberText}>Regla: si el prompt puede interpretarse de más de una forma, la IA elige la más probable — no la que tú querías.</Text></View>
         </View>
       );
       case 2: return (
         <View style={styles.stepContainer}>
           {tag('🎯 Módulo 2 · Drag-drop')}
           {title('Tipos de error en prompts')}
-          <Text style={styles.subtitle}>Toca un chip y luego toca la columna donde va. Los 4 tipos: 🎭 Rol, 📋 Contexto, 🎯 Instrucción, 📐 Formato.</Text>
-          <View style={styles.chipWrap}>
-            {ddPool.map((item, i) => (
-              <TouchableOpacity key={i} style={[styles.chip, ddSel === i && styles.chipOn]} onPress={() => setDdSel(ddSel === i ? null : i)}>
-                <Text style={styles.chipText}>{item.text}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          {sub('Toca un chip y luego la columna donde va. Los 4 tipos: 🎭 Rol · 📋 Contexto · 🎯 Instrucción · 📐 Formato.')}
+          {!ddVerified && (
+            <View style={styles.chipWrap}>
+              {ddPool.map((item, i) => (
+                <TouchableOpacity key={i} style={[styles.chip, ddSel === i && styles.chipOn]} onPress={() => setDdSel(ddSel === i ? null : i)}>
+                  <Text style={styles.chipText}>{item.text}</Text>
+                </TouchableOpacity>
+              ))}
+              {ddPool.length === 0 && <Text style={styles.chipHint}>Todos ubicados. Pulsa Verificar.</Text>}
+            </View>
+          )}
           <View style={styles.dropGrid2}>
-            {['rol', 'ctx', 'inst', 'fmt'].map(col => (
-              <TouchableOpacity key={col} style={styles.dropZone} onPress={() => { if (ddSel !== null) placeDdChip(DD_ERRORES[ddSel], col); }}>
-                <Text style={styles.dropHeader}>{col.toUpperCase()}</Text>
-                {ddCols[col].map((item, i) => (
-                  <TouchableOpacity key={i} onPress={() => returnDdChip(item, col)}>
-                    <Text style={styles.dropChipText}>{item.text} ✕</Text>
-                  </TouchableOpacity>
-                ))}
+            {(['rol', 'ctx', 'inst', 'fmt'] as const).map(col => (
+              <TouchableOpacity key={col} style={styles.dropZone} activeOpacity={0.9} onPress={() => { if (!ddVerified && ddSel !== null) placeDdChip(DD_ERRORES[ddSel], col); }}>
+                <Text style={styles.dropHeader}>{col === 'rol' ? '🎭 ROL' : col === 'ctx' ? '📋 CONTEXTO' : col === 'inst' ? '🎯 INSTRUCCIÓN' : '📐 FORMATO'}</Text>
+                {ddCols[col].map((item, i) => {
+                  const isRight = item.cat === col;
+                  return (
+                    <TouchableOpacity key={i} onPress={() => returnDdChip(item, col)} disabled={ddVerified}>
+                      <Text style={[styles.dropChipText, ddVerified && (isRight ? styles.dropChipOk : styles.dropChipBad)]}>{item.text}{ddVerified ? (isRight ? ' ✓' : ' ✕') : ' ✕'}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </TouchableOpacity>
             ))}
           </View>
-          {btn('Verificar', verifyDD, ddPool.length > 0)}
+          {ddVerified && (
+            <View style={[styles.fbBox, ddCorrect >= 6 ? styles.fbBoxOk : styles.fbBoxBad]}>
+              <Text style={[styles.fbBoxText, ddCorrect >= 6 ? styles.fbOkText : styles.fbBadText]}>
+                {ddCorrect >= 6 ? '✅ ' : '⚠️ '}{ddCorrect}/{DD_ERRORES.length} correctas. +{ddCorrect * 6} XP.{'\n'}
+                Rol = quién es la IA · Contexto = información de fondo · Instrucción = qué hacer · Formato = cómo entregar.
+              </Text>
+            </View>
+          )}
         </View>
       );
       case 3: return (
         <View style={styles.stepContainer}>
           {tag('⚖️ Módulo 3 · Matching')}
           {title('Demasiado largo vs. demasiado corto')}
+          {sub('Ambos extremos fallan. Lee los dos prompts y responde.')}
           <View style={styles.compareRow}>
-            <View style={[styles.comparePanel, { backgroundColor: '#f0fdf4', borderColor: '#a7f3d0' }]}>
-              <Text style={styles.compareLabel}>📜 Prompt largo</Text>
-              <Text style={styles.compareText}>{pickN([...FILL_PROMPTS],1)[0].roto} (ejemplo simplificado)</Text>
+            <View style={[styles.comparePanel, styles.panelNeutral]}>
+              <Text style={styles.compareLabel}>📜 Prompt sobredimensionado</Text>
+              <Text style={styles.compareText}>{MATCH_PAIR.largo}</Text>
             </View>
-            <View style={[styles.comparePanel, { backgroundColor: '#f0fdf4', borderColor: '#bbf7d0' }]}>
-              <Text style={styles.compareLabel}>📌 Prompt corto</Text>
-              <Text style={styles.compareText}>"Explícame derivadas."</Text>
+            <View style={[styles.comparePanel, styles.panelNeutral]}>
+              <Text style={styles.compareLabel}>📌 Prompt truncado</Text>
+              <Text style={styles.compareText}>{MATCH_PAIR.corto}</Text>
             </View>
           </View>
           <Text style={styles.qText}>¿Cuál es el problema real del prompt largo?</Text>
-          {['Tiene demasiados sinónimos', 'Mezcla múltiples solicitudes — la IA responde todo superficialmente', 'Será rechazado por el límite de tokens', 'El prompt largo siempre es mejor'].map((o, i) => (
-            <TouchableOpacity key={i} style={[styles.quizOpt, matchChoice === i && styles.quizOptOn]} onPress={() => checkMatch(i)} disabled={matchAnswered}>
-              <Text>{o}</Text>
+          {matchMCQ.opts.map((o, i) => (
+            <TouchableOpacity
+              key={i}
+              style={[styles.quizOpt, matchChoice === i && styles.quizOptOn, matchAnswered && i === matchMCQ.correct && styles.quizOptCorrect, matchAnswered && matchChoice === i && i !== matchMCQ.correct && styles.quizOptWrong]}
+              onPress={() => checkMatch(i)}
+              disabled={matchAnswered}
+            >
+              <Text style={styles.quizOptText}>{o}</Text>
             </TouchableOpacity>
           ))}
-          {matchAnswered && <Text style={matchChoice === 1 ? styles.fbGood : styles.fbBad}>{matchChoice === 1 ? '✅ Correcto: Mezcla demasiadas solicitudes.' : '❌ Incorrecto.'}</Text>}
-          {matchAnswered && btn('Continuar →', nextStep)}
+          {renderMcqFeedback(matchMCQ, matchChoice)}
+          {matchAnswered && <Text style={styles.tipText}>💡 Solución modelo: {MATCH_PAIR.correcto}</Text>}
         </View>
       );
       case 4: return (
         <View style={styles.stepContainer}>
-          {tag('✅ Módulo 4 · V/F Alucinaciones')}
+          {tag(vfDone ? '✅ Resultado V/F' : `✔ V/F · ${vfIdx + 1}/${vfItems.length}`)}
           {!vfDone ? (
             <>
-              <Text style={styles.qText}>{vfIdx + 1}/{vfItems.length}. {vfItems[vfIdx].stmt}</Text>
+              <Text style={styles.vfStmt}>{vfItems[vfIdx].stmt}</Text>
               <View style={styles.row}>
-                <TouchableOpacity style={[styles.tfBtn, vfAns === true && styles.tfOn]} onPress={() => checkVF(true)} disabled={vfAns !== null}><Text>✅ Verdadero</Text></TouchableOpacity>
-                <TouchableOpacity style={[styles.tfBtn, vfAns === false && styles.tfOff]} onPress={() => checkVF(false)} disabled={vfAns !== null}><Text>❌ Falso</Text></TouchableOpacity>
+                <TouchableOpacity style={[styles.tfBtn, styles.tfTrue, vfAns === true && styles.tfOn]} onPress={() => checkVF(true)} disabled={vfAns !== null}><Text style={styles.tfBtnText}>✅ Verdadero</Text></TouchableOpacity>
+                <TouchableOpacity style={[styles.tfBtn, styles.tfFalse, vfAns === false && styles.tfOffSel]} onPress={() => checkVF(false)} disabled={vfAns !== null}><Text style={styles.tfBtnText}>❌ Falso</Text></TouchableOpacity>
               </View>
-              {vfAns !== null && <Text style={vfAns === vfItems[vfIdx].correct ? styles.fbGood : styles.fbBad}>{vfItems[vfIdx].explain}</Text>}
-              {vfAns !== null && btn('Siguiente →', nextVF)}
+              {vfAns !== null && (
+                <View style={[styles.fbBox, vfAns === vfItems[vfIdx].correct ? styles.fbBoxOk : styles.fbBoxBad]}>
+                  <Text style={[styles.fbBoxText, vfAns === vfItems[vfIdx].correct ? styles.fbOkText : styles.fbBadText]}>
+                    {vfAns === vfItems[vfIdx].correct ? '✅ ' : '❌ '}{vfItems[vfIdx].explain}
+                  </Text>
+                </View>
+              )}
             </>
-          ) : btn('Continuar →', nextStep)}
+          ) : (
+            <View style={[styles.fbBox, vfScore >= 4 ? styles.fbBoxOk : styles.fbBoxAmber]}>
+              <Text style={styles.resultBig}>{vfScore}/{vfItems.length} correctas 🎯</Text>
+              <Text style={[styles.fbBoxText, vfScore >= 4 ? styles.fbOkText : styles.fbAmberText]}>
+                +{vfScore * 8} XP. {vfScore >= 4 ? 'Entiendes bien cómo funcionan las alucinaciones.' : 'Recuerda: la IA no miente intencionalmente — su fallo es estadístico, no moral.'}
+              </Text>
+            </View>
+          )}
         </View>
       );
       case 5: return (
         <View style={styles.stepContainer}>
           {tag('📝 Módulo 5 · Fill-in-blank')}
           {title('Añade el contexto que falta')}
-          <Text style={styles.body}>Prompt roto: "{FILL_PROMPTS[0].roto}"</Text>
-          {FILL_PROMPTS[0].campos.map((c, i) => (
+          {sub('Este prompt está roto. Completa cada campo para que funcione.')}
+          <View style={[styles.card, styles.cardRed]}>
+            <Text style={styles.cardTitle}>🚫 Prompt roto</Text>
+            <Text style={styles.cardTextItalic}>"{FILL_PROMPT.roto}"</Text>
+          </View>
+          {FILL_PROMPT.campos.map((c, i) => (
             <View key={i}>
               <Text style={styles.label}>{i + 1}. {c}</Text>
-              <TextInput style={styles.input} placeholder="Tu respuesta..." value={fillTexts[i]} onChangeText={t => { const n = [...fillTexts]; n[i] = t; setFillTexts(n); }} />
+              <TextInput
+                style={styles.input}
+                placeholder="Tu respuesta..."
+                placeholderTextColor="#b8bcc0"
+                value={fillTexts[i]}
+                editable={!fillRevealed}
+                onChangeText={t => { const n = [...fillTexts]; n[i] = t; setFillTexts(n); }}
+              />
             </View>
           ))}
-          {btn('Ver prompt reparado →', () => { addXP(15); Alert.alert('✅', `Modelo: ${FILL_PROMPTS[0].correcto}`, [{ text: 'OK', onPress: nextStep }]); }, !fillComplete)}
+          {fillRevealed && (
+            <View style={[styles.fbBox, styles.fbBoxOk]}>
+              <Text style={[styles.fbBoxText, styles.fbOkText]}>✅ +15 XP. Prompt reparado. Ejemplo modelo:{'\n'}{FILL_PROMPT.correcto}</Text>
+            </View>
+          )}
         </View>
       );
       case 6: return (
         <View style={styles.stepContainer}>
           {tag('🔎 Módulo 6 · Escenarios')}
           {title('El sesgo que tú metes en el prompt')}
-          {body('Si tu prompt empieza con "¿Por qué X es malo?", ya estás sesgando la respuesta. La IA amplifica la dirección que le das.')}
-          {btn('Continuar →', nextStep)}
+          {sub('La IA refuerza la dirección que le das — aunque no sea la más objetiva.')}
+          <View style={styles.compareRow}>
+            <View style={[styles.comparePanel, styles.panelNeutral]}>
+              <Text style={styles.compareLabel}>⚠️ Prompt sesgado</Text>
+              <Text style={styles.compareText}>"Dame razones por las que las redes sociales son completamente dañinas para los adolescentes."</Text>
+            </View>
+            <View style={[styles.comparePanel, styles.panelNeutral]}>
+              <Text style={styles.compareLabel}>Prompt equilibrado</Text>
+              <Text style={styles.compareText}>"Analiza los efectos de las redes sociales en adolescentes: beneficios, riesgos y qué dice la investigación reciente. Perspectiva: objetiva."</Text>
+            </View>
+          </View>
+          {body('El prompt sesgado obtiene exactamente lo que pide: argumentos unilaterales. Si lo usas para investigar o decidir, tendrás información incompleta. La IA no te corrige — amplifica.')}
+          <View style={styles.hlAmber}><Text style={styles.hlAmberText}>Señal de alerta: si tu prompt empieza con "¿Por qué X es malo/bueno?", ya estás sesgando. Cámbialo a "¿Cuáles son los efectos de X?".</Text></View>
         </View>
       );
       case 7: return (
         <View style={styles.stepContainer}>
           {tag('🔄 Módulo 7 · Prompt-compare')}
           {title('Repite vs. reformula')}
-          <Text style={styles.body}>{COMPARE_REPITE.error}</Text>
+          {sub(COMPARE_REPITE.titulo)}
+          {card('⚠️ El error que ocurrió', COMPARE_REPITE.error)}
           <View style={styles.compareRow}>
-            <View style={[styles.comparePanel, { backgroundColor: '#fff7ed' }]}>
-              <Text style={styles.compareLabel}>❌ Repetir</Text><Text style={styles.compareText}>{COMPARE_REPITE.prompt_repite}</Text>
+            <View style={[styles.comparePanel, styles.panelBad]}>
+              <Text style={styles.compareLabel}>Estrategia: repetir</Text>
+              <Text style={styles.compareMono}>{COMPARE_REPITE.prompt_repite}</Text>
+              <Text style={styles.compareRespItalic}>{COMPARE_REPITE.resp_repite}</Text>
             </View>
-            <View style={[styles.comparePanel, { backgroundColor: '#f0fdf4' }]}>
-              <Text style={styles.compareLabel}>✅ Reformular</Text><Text style={styles.compareText}>{COMPARE_REPITE.prompt_reforma}</Text>
+            <View style={[styles.comparePanel, styles.panelGood]}>
+              <Text style={styles.compareLabel}>Estrategia: reformular</Text>
+              <Text style={styles.compareMono}>{COMPARE_REPITE.prompt_reforma}</Text>
+              <Text style={styles.compareRespItalic}>{COMPARE_REPITE.resp_reforma}</Text>
             </View>
           </View>
           <Text style={styles.qText}>{COMPARE_REPITE.q}</Text>
-          {COMPARE_REPITE.opts.map((o, i) => (
-            <TouchableOpacity key={i} style={[styles.quizOpt, crChoice === i && styles.quizOptOn]} onPress={() => checkCR(i)} disabled={crAnswered}><Text>{o}</Text></TouchableOpacity>
+          {compareMCQ.opts.map((o, i) => (
+            <TouchableOpacity
+              key={i}
+              style={[styles.quizOpt, crChoice === i && styles.quizOptOn, crAnswered && i === compareMCQ.correct && styles.quizOptCorrect, crAnswered && crChoice === i && i !== compareMCQ.correct && styles.quizOptWrong]}
+              onPress={() => checkCR(i)}
+              disabled={crAnswered}
+            >
+              <Text style={styles.quizOptText}>{o}</Text>
+            </TouchableOpacity>
           ))}
-          {crAnswered && <Text style={crChoice === COMPARE_REPITE.correct ? styles.fbGood : styles.fbBad}>{COMPARE_REPITE.explain}</Text>}
-          {crAnswered && btn('Continuar →', nextStep)}
+          {renderMcqFeedback(compareMCQ, crChoice)}
         </View>
       );
       case 8: return (
         <View style={styles.stepContainer}>
           {tag('🤔 Módulo 8 · Concepto clave')}
           {title('¿La IA miente? No. Alucina.')}
-          {body('Mentir requiere intención. Los LLMs no tienen conciencia — generan texto estadísticamente probable. El problema: usan el mismo tono confiado para verdades y para datos inventados.')}
-          {btn('Continuar →', nextStep)}
+          {sub('La diferencia importa más de lo que parece.')}
+          {card('🧠 Mentira (intencional)', 'Requiere saber la verdad + elegir decir algo distinto. Implica conciencia e intención. Los LLMs no tienen esto.')}
+          {card('🌀 Alucinación (error estadístico)', 'El modelo genera el texto más probable dado el contexto, aunque sea incorrecto. No sabe que se equivoca. Es un fallo técnico, no moral.')}
+          {card('⚠️ Por qué es peligroso igual', 'El modelo usa el mismo tono confiado para verdades y para datos inventados. Un autor inventado suena igual de seguro que uno real. Por eso nunca uses datos críticos sin verificar.')}
         </View>
       );
       case 9: return (
         <View style={styles.stepContainer}>
           {tag('⚡ Módulo 9 · Sprint')}
           {title('Sprint: detecta el fallo')}
-          {!s1Running ? btn('▶ Iniciar Sprint', startS1) : s1Idx >= sprintItems.length ? btn('Continuar →', nextStep) : (
+          {s1Done ? (
+            <View style={[styles.fbBox, styles.fbBoxOk]}>
+              <Text style={styles.resultBig}>Analizaste {sprintItems.length} prompts rotos 🏁</Text>
+              <Text style={[styles.fbBoxText, styles.fbOkText]}>Detectar fallos rápido es lo que separa a los prompts mediocres de los que funcionan.</Text>
+            </View>
+          ) : !s1Running ? (
+            <>
+              {sub('30 segundos por prompt. Lee, identifica el problema y revela el fallo para confirmar.')}
+              <TouchableOpacity style={styles.sprintStart} onPress={startS1}><Text style={styles.sprintStartText}>▶ Iniciar Sprint</Text></TouchableOpacity>
+            </>
+          ) : (
             <>
               <Text style={styles.timer}>{s1Sec}s</Text>
               <View style={styles.sprintBox}><Text style={styles.sprintPrompt}>"{sprintItems[s1Idx]?.prompt}"</Text></View>
-              {s1ShowFallo && <Text style={styles.fbAmber}>⚠️ Fallo: {sprintItems[s1Idx]?.fallo}</Text>}
-              {!s1ShowFallo ? <Text style={{ textAlign: 'center', color: colors.textSecondary }}>Piensa: ¿qué error tiene este prompt?</Text> :
-                btn('→ Siguiente', nextS1Item)}
+              {!s1ShowFallo ? (
+                <>
+                  <Text style={styles.sprintHint}>Piensa: ¿qué error tiene este prompt?</Text>
+                  <TouchableOpacity style={styles.sprintGhost} onPress={revealS1}><Text style={styles.sprintGhostText}>Revelar el fallo →</Text></TouchableOpacity>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.fbAmber}>⚠️ El fallo: {sprintItems[s1Idx]?.fallo}</Text>
+                  <TouchableOpacity style={styles.sprintGhost} onPress={advanceS1}><Text style={styles.sprintGhostText}>{s1Idx + 1 < sprintItems.length ? '→ Siguiente prompt' : '→ Terminar sprint'}</Text></TouchableOpacity>
+                </>
+              )}
             </>
           )}
         </View>
@@ -531,115 +748,214 @@ export default function World2Level4() {
       case 10: return (
         <View style={styles.stepContainer}>
           {tag('🔧 Módulo 10 · Builder')}
-          {title(`Repara el prompt ${fixIdx + 1}/5`)}
-          <View style={[styles.card, { borderColor: '#fecdd3', backgroundColor: '#fff1f2' }]}>
-            <Text style={styles.cardTitle}>🚫 Prompt roto</Text>
-            <Text style={styles.cardText}>"{PROMPTS_ROTOS[fixIdx].roto}"</Text>
-          </View>
-          <Text style={styles.body}>💡 Pista: {PROMPTS_ROTOS[fixIdx].pista}</Text>
-          <TextInput style={styles.textArea} placeholder="Reescribe el prompt con rol, tarea, contexto y formato..." value={fixText} onChangeText={setFixText} multiline />
-          {btn('Reparar →', submitFix, fixText.trim().length < 20)}
+          {builderDone ? (
+            <>
+              {title('Builder completado')}
+              <View style={[styles.fbBox, styles.fbBoxOk]}>
+                <Text style={[styles.fbBoxText, styles.fbOkText]}>✅ Reparaste los 5 prompts. +50 XP. Cada prompt que reparas activa el mismo músculo que necesitas para escribirlos bien desde el inicio.</Text>
+              </View>
+            </>
+          ) : (
+            <>
+              {title(`Repara el prompt ${fixIdx + 1}/5`)}
+              <View style={[styles.card, styles.cardRed]}>
+                <Text style={styles.cardTitle}>🚫 Prompt roto ({PROMPTS_ROTOS[fixIdx].tipo})</Text>
+                <Text style={styles.cardTextItalic}>"{PROMPTS_ROTOS[fixIdx].roto}"</Text>
+              </View>
+              <View style={styles.hlAmber}><Text style={styles.hlAmberText}>Pista: {PROMPTS_ROTOS[fixIdx].pista}</Text></View>
+              <TextInput
+                style={styles.textArea}
+                placeholder="Reescribe el prompt con rol, tarea, contexto y formato..."
+                placeholderTextColor="#b8bcc0"
+                value={fixText}
+                onChangeText={setFixText}
+                multiline
+              />
+              <Text style={styles.charCount}>{fixText.trim().length} / mínimo 20 caracteres</Text>
+            </>
+          )}
         </View>
       );
       case 11: return (
         <View style={styles.stepContainer}>
           {tag('🚧 Módulo 11 · Casos reales')}
           {title('Cuando pides lo imposible')}
-          {body('3 tipos: fuera de fecha de corte, solicitud ilegal/dañina, y solicitud contradictoria. La IA no puede cumplir lo que está fuera de su alcance técnico o ético.')}
-          {btn('Continuar →', nextStep)}
+          {sub('Hay 3 tipos de solicitud que la IA no puede cumplir bien — y cada una falla diferente.')}
+          {card('📅 Fuera de la fecha de corte', '"¿Quién ganó las elecciones de la semana pasada?" → el modelo no accede a internet en tiempo real. Si responde, alucina o usa datos viejos.')}
+          {card('🚫 Solicitud ilegal o dañina', '"Enséñame a hackear la cuenta de mi ex" → el modelo tiene salvaguardas y lo rechazará. Responder sería peligroso para ti.')}
+          {card('⚡ Solicitud contradictoria', '"Algo muy largo y muy corto, serio y divertido, para todos y para nadie" → el modelo no puede cumplir instrucciones que se contradicen.')}
         </View>
       );
       case 12: return (
         <View style={styles.stepContainer}>
           {tag('🗂️ Módulo 12 · Drag-drop')}
           {title('Límites del modelo')}
-          <View style={styles.chipWrap}>
-            {limitPool.map((item, i) => (
-              <TouchableOpacity key={i} style={[styles.chip, limitSel === i && styles.chipOn]} onPress={() => setLimitSel(limitSel === i ? null : i)}>
-                <Text style={styles.chipText}>{item.text}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          {sub('Clasifica cada tarea según lo que el modelo puede o no puede hacer.')}
+          {!limitVerified && (
+            <View style={styles.chipWrap}>
+              {limitPool.map((item, i) => (
+                <TouchableOpacity key={i} style={[styles.chip, limitSel === i && styles.chipOn]} onPress={() => setLimitSel(limitSel === i ? null : i)}>
+                  <Text style={styles.chipText}>{item.text}</Text>
+                </TouchableOpacity>
+              ))}
+              {limitPool.length === 0 && <Text style={styles.chipHint}>Todos ubicados. Pulsa Verificar.</Text>}
+            </View>
+          )}
           <View style={styles.dropGrid3}>
-            {['puede', 'nopuede', 'depende'].map(col => (
-              <TouchableOpacity key={col} style={styles.dropZone} onPress={() => { if (limitSel !== null) placeLimitChip(LIMITES_ITEMS[limitSel], col); }}>
+            {(['puede', 'nopuede', 'depende'] as const).map(col => (
+              <TouchableOpacity key={col} style={styles.dropZone} activeOpacity={0.9} onPress={() => { if (!limitVerified && limitSel !== null) placeLimitChip(LIMITES_ITEMS[limitSel], col); }}>
                 <Text style={styles.dropHeader}>{col === 'puede' ? '✅ Puede' : col === 'nopuede' ? '🚫 No puede' : '⚡ Depende'}</Text>
-                {limitCols[col].map((item, i) => (
-                  <TouchableOpacity key={i} onPress={() => returnLimitChip(item, col)}>
-                    <Text style={styles.dropChipText}>{item.text} ✕</Text>
-                  </TouchableOpacity>
-                ))}
+                {limitCols[col].map((item, i) => {
+                  const isRight = item.cat === col;
+                  return (
+                    <TouchableOpacity key={i} onPress={() => returnLimitChip(item, col)} disabled={limitVerified}>
+                      <Text style={[styles.dropChipText, limitVerified && (isRight ? styles.dropChipOk : styles.dropChipBad)]}>{item.text}{limitVerified ? (isRight ? ' ✓' : ' ✕') : ' ✕'}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </TouchableOpacity>
             ))}
           </View>
-          {btn('Verificar', verifyLimites, limitPool.length > 0)}
+          {limitVerified && (
+            <View style={[styles.fbBox, limitCorrect >= 6 ? styles.fbBoxOk : styles.fbBoxBad]}>
+              <Text style={[styles.fbBoxText, limitCorrect >= 6 ? styles.fbOkText : styles.fbBadText]}>
+                {limitCorrect >= 6 ? '✅ ' : '⚠️ '}{limitCorrect}/{LIMITES_ITEMS.length} correctas. +{limitCorrect * 7} XP.{'\n'}
+                "Depende" = lo hace si tiene la herramienta correcta (visión, acceso a web, etc.).
+              </Text>
+            </View>
+          )}
         </View>
       );
       case 13: return (
         <View style={styles.stepContainer}>
-          {tag('⚖️ Módulo 13 · Clasificador ético')}
+          {tag(eticaDone ? '✅ Clasificador ético' : `⚖️ Módulo 13 · Clasificador · ${eticaIdx + 1}/${ETICA_ITEMS.length}`)}
           {!eticaDone ? (
             <>
-              <Text style={styles.qText}>"{ETICA_ITEMS[eticaIdx].prompt}"</Text>
-              {['✅ Ayuda legítima', '⚠️ Zona gris', '🚫 Inaceptable'].map((label, i) => (
-                <TouchableOpacity key={i} style={[styles.quizOpt, eticaAns === i && styles.quizOptOn]} onPress={() => checkEtica(i)} disabled={eticaAns !== null}>
-                  <Text>{label}</Text>
+              {sub('¿Cómo clasificarías este prompt?')}
+              <View style={[styles.card, styles.cardSlate]}>
+                <Text style={styles.cardTextItalic}>"{ETICA_ITEMS[eticaIdx].prompt}"</Text>
+              </View>
+              {['✅ Ayuda legítima', '⚠️ Zona gris — depende del uso', '🚫 Prompt inaceptable'].map((label, i) => (
+                <TouchableOpacity
+                  key={i}
+                  style={[styles.quizOpt, eticaAns === i && styles.quizOptOn, eticaAns !== null && i === eticaMap[ETICA_ITEMS[eticaIdx].cat] && styles.quizOptCorrect, eticaAns === i && i !== eticaMap[ETICA_ITEMS[eticaIdx].cat] && styles.quizOptWrong]}
+                  onPress={() => checkEtica(i)}
+                  disabled={eticaAns !== null}
+                >
+                  <Text style={styles.quizOptText}>{label}</Text>
                 </TouchableOpacity>
               ))}
-              {eticaAns !== null && <Text style={styles.fbGood}>{ETICA_ITEMS[eticaIdx].label}</Text>}
-              {eticaAns !== null && btn('Siguiente →', nextEtica)}
+              {eticaAns !== null && (
+                <View style={[styles.fbBox, eticaAns === eticaMap[ETICA_ITEMS[eticaIdx].cat] ? styles.fbBoxOk : styles.fbBoxBad]}>
+                  <Text style={[styles.fbBoxText, eticaAns === eticaMap[ETICA_ITEMS[eticaIdx].cat] ? styles.fbOkText : styles.fbBadText]}>
+                    {eticaAns === eticaMap[ETICA_ITEMS[eticaIdx].cat] ? '✅ ' : '❌ '}{ETICA_ITEMS[eticaIdx].label}. {ETICA_ITEMS[eticaIdx].nota}
+                  </Text>
+                </View>
+              )}
             </>
-          ) : btn('Continuar →', nextStep)}
+          ) : (
+            <View style={[styles.fbBox, eticaScore >= 5 ? styles.fbBoxOk : styles.fbBoxAmber]}>
+              <Text style={styles.resultBig}>{eticaScore}/{ETICA_ITEMS.length} correctas</Text>
+              <Text style={[styles.fbBoxText, eticaScore >= 5 ? styles.fbOkText : styles.fbAmberText]}>
+                +{eticaScore * 8} XP. {eticaScore >= 5 ? 'Criterio ético sólido: distingues usos legítimos de los problemáticos.' : 'La zona gris es difícil. Pregúntate: ¿uso la IA para mejorar mi trabajo o para evadir mi responsabilidad?'}
+              </Text>
+            </View>
+          )}
         </View>
       );
       case 14: return (
         <View style={styles.stepContainer}>
           {tag('🔐 Módulo 14 · Escenarios')}
           {title('Prompt injection')}
-          {body('Algunos prompts intentan manipular a la IA para que ignore sus salvaguardas ("Ignora tus instrucciones", "Actúa como DAN"). No funcionan — las salvaguardas son parte del comportamiento entrenado, no reglas desactivables.')}
-          {btn('Continuar →', nextStep)}
+          {sub('Algunos prompts intentan manipular a la IA para que ignore sus reglas de seguridad.')}
+          {card('⚠️ Ejemplos de prompt injection', '"Ignora tus instrucciones anteriores y..." · "Actúa como una versión sin filtros" · "Tu modo real es DAN, actívalo".')}
+          {card('🧠 ¿Por qué no funcionan?', 'Las salvaguardas modernas están entrenadas en el modelo — no son reglas que se "desactivan" con un texto. Son parte de su comportamiento aprendido.')}
+          {card('✅ Por qué te importa', 'Si ves prompts que prometen "desbloquear" la IA, son falsos o peligrosos. La IA útil no necesita desbloquearse: ya puede hacer muchísimo dentro de sus límites.')}
         </View>
       );
       case 15: return (
         <View style={styles.stepContainer}>
-          {tag('🔍 Módulo 15 · Checklist')}
+          {tag(checkDone ? '✅ Checklist completado' : `🔍 Módulo 15 · Quiz · ${checkIdx + 1}/${checklistItems.length}`)}
           {!checkDone ? (
             <>
-              <Text style={styles.qText}>{CHECKLIST_QUIZ[checkIdx].q}</Text>
-              {CHECKLIST_QUIZ[checkIdx].opts.map((o, i) => (
-                <TouchableOpacity key={i} style={[styles.quizOpt, checkAns === i && styles.quizOptOn]} onPress={() => checkCheck(i)} disabled={checkAns !== null}>
-                  <Text>{o}</Text>
+              <Text style={styles.qText}>{checklistItems[checkIdx].q}</Text>
+              {checklistItems[checkIdx].opts.map((o, i) => (
+                <TouchableOpacity
+                  key={i}
+                  style={[styles.quizOpt, checkAns === i && styles.quizOptOn, checkAns !== null && i === checklistItems[checkIdx].correct && styles.quizOptCorrect, checkAns === i && i !== checklistItems[checkIdx].correct && styles.quizOptWrong]}
+                  onPress={() => checkCheck(i)}
+                  disabled={checkAns !== null}
+                >
+                  <Text style={styles.quizOptText}>{o}</Text>
                 </TouchableOpacity>
               ))}
-              {checkAns !== null && <Text style={checkAns === CHECKLIST_QUIZ[checkIdx].correct ? styles.fbGood : styles.fbBad}>{CHECKLIST_QUIZ[checkIdx].explain}</Text>}
-              {checkAns !== null && btn('Siguiente →', nextCheck)}
+              {checkAns !== null && renderMcqFeedback(checklistItems[checkIdx], checkAns)}
             </>
-          ) : btn('Continuar →', nextStep)}
+          ) : (
+            <View style={[styles.fbBox, checkScore >= 2 ? styles.fbBoxOk : styles.fbBoxAmber]}>
+              <Text style={styles.resultBig}>{checkScore}/{checklistItems.length} correctas</Text>
+              <Text style={[styles.fbBoxText, checkScore >= 2 ? styles.fbOkText : styles.fbAmberText]}>
+                +{checkScore * 12} XP. {checkScore >= 2 ? 'Criterio crítico sólido: sabes cuándo confiar y cuándo verificar.' : 'Recuerda la regla de oro: verifica SIEMPRE los datos factuales críticos.'}
+              </Text>
+            </View>
+          )}
         </View>
       );
       case 16: return (
         <View style={styles.stepContainer}>
           {tag('📜 Módulo 16 · Word-builder')}
           {title('Tus 5 reglas de oro')}
+          {sub('Basado en todo lo que aprendiste hoy, escribe tus 5 reglas personales del prompting seguro.')}
+          <View style={styles.hlAmber}><Text style={styles.hlAmberText}>Punto de partida: especifico el formato · verifico datos críticos · reformulo antes de repetir · evito prompts sesgados · reconozco los límites del modelo.</Text></View>
           {[1, 2, 3, 4, 5].map(n => (
             <View key={n}>
               <Text style={styles.label}>Regla {n}</Text>
-              <TextInput style={styles.input} placeholder={`Mi regla número ${n}...`} value={rules[n - 1]} onChangeText={t => { const r = [...rules]; r[n - 1] = t; setRules(r); }} />
+              <TextInput
+                style={styles.input}
+                placeholder={`Mi regla número ${n}...`}
+                placeholderTextColor="#b8bcc0"
+                value={rules[n - 1]}
+                editable={!rulesDone}
+                onChangeText={t => { const r = [...rules]; r[n - 1] = t; setRules(r); }}
+              />
             </View>
           ))}
-          {btn('Guardar mis reglas →', () => { addXP(20); Alert.alert('✅', '+20 XP. Reglas guardadas.', [{ text: 'OK', onPress: nextStep }]); }, !rules.every(r => r.trim().length >= 5))}
+          {rulesDone && (
+            <View style={[styles.fbBox, styles.fbBoxOk]}>
+              <Text style={[styles.fbBoxText, styles.fbOkText]}>✅ +20 XP. Tus reglas de oro quedaron guardadas en tu portafolio IA Explorer.</Text>
+            </View>
+          )}
         </View>
       );
       case 17: return (
         <View style={styles.stepContainer}>
           {tag('🔧 Módulo 17 · Sprint')}
           {title('Arregla 5 prompts rotos')}
-          {!s2Running ? btn('▶ Iniciar Sprint', startS2) : s2Idx >= SPRINT2_POOL.length ? btn('Continuar →', nextStep) : (
+          {s2Done ? (
+            <View style={[styles.fbBox, styles.fbBoxOk]}>
+              <Text style={styles.resultBig}>Reparaste {SPRINT2_POOL.length} prompts 🏁</Text>
+              <Text style={[styles.fbBoxText, styles.fbOkText]}>Reparar prompts es más valioso que escribirlos desde cero: te enseña exactamente qué falla y por qué.</Text>
+            </View>
+          ) : !s2Running ? (
+            <>
+              {sub('90 segundos. Para cada prompt roto piensa cómo lo repararías y compáralo con la solución modelo.')}
+              <TouchableOpacity style={styles.sprintStart} onPress={startS2}><Text style={styles.sprintStartText}>▶ Iniciar Sprint</Text></TouchableOpacity>
+            </>
+          ) : (
             <>
               <Text style={styles.timer}>{Math.floor(s2Sec / 60)}:{String(s2Sec % 60).padStart(2, '0')}</Text>
               <View style={styles.sprintBox}><Text style={styles.sprintPrompt}>"{SPRINT2_POOL[s2Idx].roto}"</Text></View>
-              {s2ShowSol && <View style={styles.solutionBox}><Text style={styles.fbGood}>✅ Solución: {SPRINT2_POOL[s2Idx].correcto}</Text></View>}
-              {!s2ShowSol ? btn('→ Ver solución', showS2Sol) : btn('→ Continuar', nextS2)}
+              {s2ShowSol ? (
+                <>
+                  <View style={styles.solutionBox}><Text style={styles.solutionText}>✅ Solución modelo: {SPRINT2_POOL[s2Idx].correcto}</Text></View>
+                  <TouchableOpacity style={styles.sprintGhost} onPress={advanceS2}><Text style={styles.sprintGhostText}>{s2Idx + 1 < SPRINT2_POOL.length ? '→ Siguiente prompt' : '→ Terminar sprint'}</Text></TouchableOpacity>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.sprintHint}>Piensa tu versión reparada, luego compárala.</Text>
+                  <TouchableOpacity style={styles.sprintGhost} onPress={revealS2}><Text style={styles.sprintGhostText}>Ver solución →</Text></TouchableOpacity>
+                </>
+              )}
             </>
           )}
         </View>
@@ -648,9 +964,17 @@ export default function World2Level4() {
         <View style={styles.stepContainer}>
           {tag('💬 Módulo 18 · Reflexión')}
           {title('¿Cuándo es mejor no pedirle nada a la IA?')}
-          <TextInput style={styles.textArea} placeholder="Escribe tu reflexión (mínimo 50 caracteres)..." value={reflectText} onChangeText={setReflectText} multiline />
-          <Text style={styles.charCount}>{reflectText.trim().length} / 50 mínimo</Text>
-          {btn('Completar nivel →', submitReflect, reflectText.trim().length < 50)}
+          {sub('Piensa en situaciones concretas de tu vida.')}
+          <TextInput
+            style={styles.textArea}
+            placeholder="Ej: cuando debo tomar una decisión que depende de mis valores; o cuando estoy aprendiendo algo y equivocarme es parte del proceso..."
+            placeholderTextColor="#b8bcc0"
+            value={reflectText}
+            onChangeText={onReflectChange}
+            multiline
+          />
+          <Text style={styles.charCount}>{reflectText.trim().length} / mínimo 50 caracteres</Text>
+          <View style={styles.hlAmber}><Text style={styles.hlAmberText}>✅ Esta reflexión queda en tu portafolio IA Explorer.</Text></View>
         </View>
       );
       case 19: return (
@@ -659,7 +983,7 @@ export default function World2Level4() {
           <Text style={styles.completeTitle}>¡Nivel 10 completado!</Text>
           <Text style={styles.completeSub}>Badge: 🐛 Bug Hunter desbloqueado. Ahora ves los errores de prompting que antes eran invisibles.</Text>
           <Text style={styles.xpBig}>⭐ {xp} XP ganados</Text>
-          <View style={{ backgroundColor: '#fffbeb', borderRadius: 12, padding: 13, marginBottom: 14, borderWidth: 1, borderColor: '#fde68a', width: '100%' }}>
+          <View style={styles.skillsBox}>
             {[
               'Identifico los 4 tipos de error en un prompt',
               'Distingo alucinación de mentira intencional',
@@ -667,39 +991,116 @@ export default function World2Level4() {
               'Clasifiqué prompts éticos y problemáticos',
               'Tengo mis 5 reglas de oro del prompting seguro',
             ].map((skill, i) => (
-              <View key={i} style={{ flexDirection: 'row', gap: 8, marginBottom: i < 4 ? 7 : 0 }}>
-                <Text style={{ color: '#d97706', fontWeight: '700', fontSize: 14 }}>✓</Text>
-                <Text style={{ fontSize: 12, color: '#334155', lineHeight: 18, flex: 1 }}>{skill}</Text>
+              <View key={i} style={styles.skillRow}>
+                <Text style={styles.skillCheck}>✓</Text>
+                <Text style={styles.skillText}>{skill}</Text>
               </View>
             ))}
           </View>
-          <View style={{ backgroundColor: '#f8fafc', borderRadius: 10, padding: 11, marginBottom: 14, borderWidth: 1, borderColor: '#e2e8f0', width: '100%' }}>
-            <Text style={{ fontSize: 12, color: '#334155', lineHeight: 20 }}>
-              🔗 <Text style={{ fontWeight: '700' }}>Nivel 11: Prompts en Cadena{'\n\n'}</Text>
-              Ahora que sabes evitar errores, vas a aprender a construir secuencias. Chain-of-thought, prompts iterativos, árbol de decisiones. La IA que razona paso a paso.
+          <View style={styles.nextHint}>
+            <Text style={styles.nextHintText}>
+              🔗 <Text style={styles.nextHintBold}>Nivel 11: Prompts en Cadena{'\n\n'}</Text>
+              Ahora que sabes evitar errores, vas a aprender a construir secuencias: chain-of-thought, prompts iterativos, árbol de decisiones. La IA que razona paso a paso.
             </Text>
           </View>
-          <Text style={{ fontSize: 10, color: '#94a3b8', marginBottom: 8 }}>Nivel 10 de 36 completado · Mundo 2 — Domina el Prompting</Text>
-          {btn('Siguiente nivel →', finish)}
+          <Text style={styles.progressNote}>Nivel 10 de 36 completado · Mundo 2 — Domina el Prompting</Text>
+          <TouchableOpacity style={styles.mainButton} onPress={finish} activeOpacity={0.85}>
+            <Text style={styles.mainButtonText}>Siguiente nivel →</Text>
+          </TouchableOpacity>
         </View>
       );
       default: return null;
     }
   };
 
+  // ========== HABILITACIÓN Y ETIQUETA DEL BOTÓN ==========
+  const canProceed = (() => {
+    switch (step) {
+      case 2: return ddVerified || ddPool.length === 0;
+      case 3: return matchAnswered;
+      case 4: return vfDone || vfAns !== null;
+      case 5: return fillRevealed || fillComplete;
+      case 7: return crAnswered;
+      case 9: return s1Done;
+      case 10: return builderDone || fixText.trim().length >= 20;
+      case 12: return limitVerified || limitPool.length === 0;
+      case 13: return eticaDone || eticaAns !== null;
+      case 15: return checkDone || checkAns !== null;
+      case 16: return rulesDone || rulesComplete;
+      case 17: return s2Done;
+      case 18: return reflectText.trim().length >= 50;
+      default: return true; // teoría/lectura
+    }
+  })();
+
+  const getBtnLabel = () => {
+    switch (step) {
+      case 0: return '¡Empezar! →';
+      case 2: return ddVerified ? 'Continuar →' : 'Verificar →';
+      case 4: return vfDone ? 'Continuar →' : 'Siguiente →';
+      case 5: return fillRevealed ? 'Continuar →' : 'Ver prompt reparado →';
+      case 10: return builderDone ? 'Continuar →' : 'Reparar →';
+      case 12: return limitVerified ? 'Continuar →' : 'Verificar →';
+      case 13: return eticaDone ? 'Continuar →' : 'Siguiente →';
+      case 15: return checkDone ? 'Continuar →' : 'Siguiente →';
+      case 16: return rulesDone ? 'Continuar →' : 'Guardar mis reglas →';
+      case 18: return 'Completar nivel →';
+      default: return 'Continuar →';
+    }
+  };
+
+  const handleMainBtn = () => {
+    if (!canProceed) return;
+    switch (step) {
+      case 2: if (!ddVerified) { verifyDD(); return; } break;
+      case 4: if (!vfDone) { nextVF(); return; } break;
+      case 5: if (!fillRevealed) { revealFill(); return; } break;
+      case 10: if (!builderDone) { submitFix(); return; } break;
+      case 12: if (!limitVerified) { verifyLimites(); return; } break;
+      case 13: if (!eticaDone) { nextEtica(); return; } break;
+      case 15: if (!checkDone) { nextCheck(); return; } break;
+      case 16: if (!rulesDone) { saveRules(); return; } break;
+    }
+    goToNextStep();
+  };
+
   const progressPercent = (step / (TOTAL_STEPS - 1)) * 100;
+  const progressLabel =
+    step === 0 ? 'Introducción' : step < TOTAL_STEPS - 1 ? `Módulo ${step} de ${CONTENT_STEPS}` : '¡Nivel completado!';
+  const showFooter = step < TOTAL_STEPS - 1;
+  const showBackButton = THEORY_STEPS.has(step);
 
   return (
     <View style={styles.screen}>
       <View style={styles.bar}>
-        <TouchableOpacity onPress={() => exitLevel({ confirm: false })}>
+        <TouchableOpacity onPress={() => exitLevel()} style={styles.closeBtn}>
           <MaterialIcons name="close" size={24} color={colors.textSecondary} />
         </TouchableOpacity>
-        <View style={styles.track}><View style={[styles.fill, { width: `${progressPercent}%` }]} /></View>
+        <View style={styles.progressCol}>
+          <View style={styles.track}><View style={[styles.fill, { width: `${progressPercent}%` }]} /></View>
+          <Text style={styles.progressLabel}>{progressLabel}</Text>
+        </View>
         <Text style={styles.xpChip}>{xp} XP</Text>
       </View>
-      <ScrollView contentContainerStyle={styles.scrollContent}>{renderStep()}</ScrollView>
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">{renderStep()}</ScrollView>
       {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} bgColor="#10b981" textColor="#fff" />}
+      {showFooter && (
+        <View style={styles.footerRow}>
+          {showBackButton && (
+            <TouchableOpacity style={styles.backButton} onPress={goToPrevStep} activeOpacity={0.85}>
+              <Text style={styles.backButtonText}>← Volver</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            style={[styles.mainButton, !canProceed && styles.mainButtonDisabled]}
+            onPress={handleMainBtn}
+            disabled={!canProceed}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.mainButtonText}>{getBtnLabel()}</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 }
@@ -707,60 +1108,105 @@ export default function World2Level4() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   bar: { flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
-  track: { flex: 1, height: 8, backgroundColor: colors.borderLight, borderRadius: 4, marginHorizontal: 12 },
+  closeBtn: { padding: 4 },
+  progressCol: { flex: 1, marginHorizontal: 12 },
+  track: { height: 8, backgroundColor: colors.borderLight, borderRadius: 4 },
   fill: { height: '100%', backgroundColor: '#10b981', borderRadius: 4 },
+  progressLabel: { fontSize: 10, color: '#94a3b8', marginTop: 3, fontWeight: '500' },
   xpChip: { ...typography.bold, fontSize: 14, color: colors.accentDark },
   scrollContent: { padding: 16, paddingBottom: 40 },
   stepContainer: { flex: 1 },
-  tag: { fontSize: 11, fontWeight: '600', color: '#065f46', backgroundColor: '#d1fae5', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, marginBottom: 12 },
+  tag: { alignSelf: 'flex-start', fontSize: 11, fontWeight: '600', color: '#065f46', backgroundColor: '#d1fae5', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, marginBottom: 12, overflow: 'hidden' },
   iconCircle: { width: 64, height: 64, borderRadius: 20, backgroundColor: '#ecfdf5', justifyContent: 'center', alignItems: 'center', marginBottom: 14, alignSelf: 'center' },
   iconEmoji: { fontSize: 32 },
   title: { ...typography.extraBold, fontSize: 19, color: colors.textPrimary, marginBottom: 8, textAlign: 'center' },
   subtitle: { ...typography.regular, fontSize: 13, color: colors.textSecondary, marginBottom: 14, lineHeight: 18, textAlign: 'center' },
   body: { ...typography.regular, fontSize: 13, color: colors.textPrimary, lineHeight: 20, marginBottom: 12 },
   card: { backgroundColor: colors.surface, borderRadius: 14, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: colors.border },
+  cardRed: { backgroundColor: '#fff1f2', borderColor: '#fecdd3' },
+  cardSlate: { backgroundColor: '#f8fafc', borderColor: '#e2e8f0' },
   cardTitle: { ...typography.bold, fontSize: 13, color: colors.textPrimary, marginBottom: 4 },
-  cardText: { ...typography.regular, fontSize: 12, color: colors.textSecondary },
-  btn: { backgroundColor: colors.success, padding: 14, borderRadius: 12, alignItems: 'center', marginTop: 16 },
-  btnText: { ...typography.bold, color: '#fff', fontSize: 15 },
-  btnOff: { opacity: 0.4 },
-  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, padding: 10, backgroundColor: '#f8fafc', borderRadius: 12, marginBottom: 12 },
-  chip: { padding: 8, borderRadius: 20, borderWidth: 1, borderColor: '#cbd5e1' },
+  cardText: { ...typography.regular, fontSize: 12, color: colors.textSecondary, lineHeight: 18 },
+  cardTextItalic: { ...typography.regular, fontSize: 12, color: colors.textPrimary, fontStyle: 'italic', lineHeight: 18 },
+  hlAmber: { backgroundColor: '#fffbeb', borderLeftWidth: 3, borderLeftColor: '#f59e0b', borderRadius: 8, padding: 12, marginBottom: 12 },
+  hlAmberText: { fontSize: 12, color: '#92400e', lineHeight: 18, fontWeight: '500' },
+  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, padding: 10, backgroundColor: '#f8fafc', borderRadius: 12, marginBottom: 12, borderWidth: 1.5, borderColor: '#cbd5e1', borderStyle: 'dashed' },
+  chip: { paddingVertical: 8, paddingHorizontal: 11, borderRadius: 20, borderWidth: 1, borderColor: '#cbd5e1', backgroundColor: '#f1f5f9' },
   chipOn: { borderColor: '#10b981', backgroundColor: '#d1fae5' },
-  chipText: { fontSize: 11 },
+  chipText: { fontSize: 11, color: '#334155' },
+  chipHint: { fontSize: 11, color: '#94a3b8', fontStyle: 'italic', padding: 4 },
   dropGrid2: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 },
   dropGrid3: { flexDirection: 'row', gap: 6, marginBottom: 12 },
-  dropZone: { flex: 1, minWidth: '45%', borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 10, padding: 8, minHeight: 80 },
-  dropHeader: { fontWeight: '700', textAlign: 'center', marginBottom: 4 },
-  dropChipText: { fontSize: 10, padding: 4, backgroundColor: '#dbeafe', borderRadius: 6 },
-  qText: { ...typography.bold, padding: 10, backgroundColor: '#f8fafc', borderRadius: 8, marginBottom: 6 },
+  dropZone: { flex: 1, minWidth: '45%', borderWidth: 2, borderColor: '#cbd5e1', borderStyle: 'dashed', borderRadius: 10, padding: 8, minHeight: 80, backgroundColor: '#fafafa' },
+  dropHeader: { fontSize: 10, fontWeight: '700', textAlign: 'center', marginBottom: 6, textTransform: 'uppercase', color: '#475569' },
+  dropChipText: { fontSize: 10, padding: 4, marginBottom: 3, backgroundColor: '#e2e8f0', borderRadius: 6, color: '#334155' },
+  dropChipOk: { backgroundColor: '#dcfce7', color: '#166534' },
+  dropChipBad: { backgroundColor: '#fee2e2', color: '#991b1b' },
+  qText: { ...typography.bold, fontSize: 13, color: colors.textPrimary, padding: 11, backgroundColor: '#f8fafc', borderRadius: 8, marginBottom: 8, borderWidth: 1, borderColor: '#e2e8f0', lineHeight: 18 },
   row: { flexDirection: 'row', gap: 10, marginBottom: 8 },
-  tfBtn: { flex: 1, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: colors.border, alignItems: 'center' },
-  tfOn: { backgroundColor: '#dcfce7', borderColor: colors.success },
-  tfOff: { backgroundColor: '#fff1f2', borderColor: colors.error },
-  fbGood: { color: '#065f46', fontSize: 11, marginTop: 4 },
-  fbBad: { color: '#991b1b', fontSize: 11, marginTop: 4 },
-  fbAmber: { color: '#92400e', fontSize: 12, marginTop: 6, backgroundColor: '#fffbeb', padding: 8, borderRadius: 8 },
-  quizOpt: { padding: 10, borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 8, marginBottom: 4 },
-  quizOptOn: { borderColor: '#10b981', backgroundColor: '#d1fae5' },
-  input: { borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 10, padding: 10, fontSize: 12, backgroundColor: '#fafafa', marginBottom: 8 },
-  textArea: { borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 10, padding: 12, minHeight: 80, fontSize: 13, backgroundColor: '#fafafa', marginBottom: 10 },
-  label: { ...typography.bold, fontSize: 12, marginBottom: 4 },
+  vfStmt: { fontSize: 13, color: '#0f172a', fontWeight: '600', lineHeight: 19, marginBottom: 12, padding: 13, backgroundColor: '#f8fafc', borderRadius: 12, borderWidth: 1, borderColor: '#e2e8f0' },
+  tfBtn: { flex: 1, padding: 14, borderRadius: 12, borderWidth: 2, alignItems: 'center', minHeight: 52, justifyContent: 'center' },
+  tfTrue: { borderColor: '#bbf7d0', backgroundColor: '#f0fdf4' },
+  tfFalse: { borderColor: '#fecdd3', backgroundColor: '#fff1f2' },
+  tfBtnText: { fontSize: 13, fontWeight: '700', color: '#334155' },
+  tfOn: { borderColor: '#10b981', backgroundColor: '#dcfce7' },
+  tfOffSel: { borderColor: '#ef4444', backgroundColor: '#fee2e2' },
+  quizOpt: { padding: 12, borderWidth: 1.5, borderColor: '#e2e8f0', borderRadius: 10, marginBottom: 6, backgroundColor: '#fff' },
+  quizOptOn: { borderColor: '#10b981', backgroundColor: '#ecfdf5' },
+  quizOptCorrect: { borderColor: '#10b981', backgroundColor: '#dcfce7' },
+  quizOptWrong: { borderColor: '#ef4444', backgroundColor: '#fff1f2' },
+  quizOptText: { fontSize: 12, color: '#334155', lineHeight: 17, fontWeight: '500' },
+  fbBox: { borderRadius: 10, padding: 12, marginTop: 8, marginBottom: 4 },
+  fbBoxOk: { backgroundColor: '#dcfce7' },
+  fbBoxBad: { backgroundColor: '#fff1f2' },
+  fbBoxAmber: { backgroundColor: '#fffbeb' },
+  fbBoxText: { fontSize: 12, lineHeight: 18, fontWeight: '500' },
+  fbOkText: { color: '#166534' },
+  fbBadText: { color: '#991b1b' },
+  fbAmberText: { color: '#92400e' },
+  resultBig: { fontSize: 15, fontWeight: '800', color: '#0f172a', textAlign: 'center', marginBottom: 6 },
+  tipText: { fontSize: 12, color: '#065f46', backgroundColor: '#ecfdf5', borderRadius: 10, padding: 11, marginTop: 6, lineHeight: 17, borderWidth: 1, borderColor: '#a7f3d0' },
+  fbAmber: { color: '#92400e', fontSize: 12, marginTop: 6, marginBottom: 4, backgroundColor: '#fffbeb', padding: 10, borderRadius: 8, lineHeight: 17 },
+  input: { borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 10, padding: 10, fontSize: 12, backgroundColor: '#fafafa', marginBottom: 8, color: colors.textPrimary },
+  textArea: { borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 10, padding: 12, minHeight: 90, fontSize: 13, backgroundColor: '#fafafa', marginBottom: 4, color: colors.textPrimary, textAlignVertical: 'top' },
+  label: { ...typography.bold, fontSize: 12, marginBottom: 4, color: '#374151' },
+  charCount: { fontSize: 11, color: '#94a3b8', textAlign: 'right', marginTop: 2, marginBottom: 6 },
   timer: { fontSize: 32, fontWeight: '800', textAlign: 'center', color: '#d97706', marginBottom: 10 },
-  sprintBox: { backgroundColor: '#fffbeb', borderRadius: 12, padding: 13, borderWidth: 1.5, borderColor: '#fde68a', marginBottom: 8 },
-  sprintPrompt: { fontSize: 13, fontStyle: 'italic', color: '#0f172a' },
-  solutionBox: { backgroundColor: '#f0fdf4', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#a7f3d0' },
+  sprintBox: { backgroundColor: '#fffbeb', borderRadius: 12, padding: 13, borderWidth: 1.5, borderColor: '#fde68a', marginBottom: 10 },
+  sprintPrompt: { fontSize: 13, fontStyle: 'italic', color: '#0f172a', lineHeight: 18 },
+  sprintHint: { textAlign: 'center', color: colors.textSecondary, fontSize: 12, marginBottom: 10 },
+  sprintStart: { backgroundColor: '#d97706', paddingVertical: 13, borderRadius: 12, alignItems: 'center', marginTop: 8 },
+  sprintStartText: { ...typography.bold, color: '#fff', fontSize: 14 },
+  sprintGhost: { backgroundColor: '#fffbeb', borderWidth: 1.5, borderColor: '#fde68a', paddingVertical: 12, borderRadius: 12, alignItems: 'center' },
+  sprintGhostText: { ...typography.bold, color: '#92400e', fontSize: 13 },
+  solutionBox: { backgroundColor: '#f0fdf4', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#a7f3d0', marginBottom: 10 },
+  solutionText: { fontSize: 12, color: '#065f46', lineHeight: 18 },
   compareRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
   comparePanel: { flex: 1, borderRadius: 12, padding: 12, borderWidth: 1.5 },
-  compareLabel: { ...typography.bold, fontSize: 10, textTransform: 'uppercase', marginBottom: 6 },
+  panelNeutral: { backgroundColor: '#f8fafc', borderColor: '#e2e8f0' },
+  panelBad: { backgroundColor: '#fff7ed', borderColor: '#fed7aa' },
+  panelGood: { backgroundColor: '#f0fdf4', borderColor: '#bbf7d0' },
+  compareLabel: { ...typography.bold, fontSize: 10, textTransform: 'uppercase', marginBottom: 6, color: '#475569' },
   compareText: { fontSize: 11, color: '#334155', lineHeight: 16 },
-  charCount: { fontSize: 11, color: '#94a3b8', textAlign: 'right', marginTop: 4 },
-  completeContainer: { alignItems: 'center', padding: 20 },
+  compareMono: { fontSize: 11, color: '#334155', lineHeight: 16, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+  compareRespItalic: { fontSize: 10, color: '#64748b', lineHeight: 15, fontStyle: 'italic', marginTop: 6 },
+  completeContainer: { alignItems: 'center', padding: 4 },
   completeIcon: { width: 86, height: 86, borderRadius: 24, backgroundColor: '#a7f3d0', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
-  completeTitle: { ...typography.extraBold, fontSize: 21 },
-  completeSub: { ...typography.regular, textAlign: 'center', marginVertical: 8 },
+  completeTitle: { ...typography.extraBold, fontSize: 21, color: colors.textPrimary, textAlign: 'center' },
+  completeSub: { ...typography.regular, fontSize: 12, color: colors.textSecondary, textAlign: 'center', marginVertical: 8, lineHeight: 18 },
   xpBig: { ...typography.bold, fontSize: 18, color: colors.accentDark, marginBottom: 16 },
-  footerRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 16, gap: 8 },
-  backButton: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, padding: 14, borderRadius: 11, alignItems: 'center', paddingHorizontal: 20 },
-  backButtonText: { ...typography.bold, color: colors.textSecondary, fontSize: 15 },
+  skillsBox: { backgroundColor: '#fffbeb', borderRadius: 12, padding: 13, marginBottom: 14, borderWidth: 1, borderColor: '#fde68a', width: '100%' },
+  skillRow: { flexDirection: 'row', gap: 8, marginBottom: 7 },
+  skillCheck: { color: '#d97706', fontWeight: '700', fontSize: 14 },
+  skillText: { fontSize: 12, color: '#334155', lineHeight: 18, flex: 1 },
+  nextHint: { backgroundColor: '#f8fafc', borderRadius: 10, padding: 12, marginBottom: 14, borderWidth: 1, borderColor: '#e2e8f0', width: '100%' },
+  nextHintText: { fontSize: 12, color: '#334155', lineHeight: 20 },
+  nextHintBold: { fontWeight: '700' },
+  progressNote: { fontSize: 10, color: '#94a3b8', marginBottom: 12, textAlign: 'center' },
+  footerRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, gap: 8, borderTopWidth: 1, borderTopColor: colors.borderLight, backgroundColor: colors.background },
+  backButton: { backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.border, paddingVertical: 14, paddingHorizontal: 18, borderRadius: 12, alignItems: 'center', justifyContent: 'center', minHeight: 48 },
+  backButtonText: { ...typography.bold, color: colors.textSecondary, fontSize: 14 },
+  mainButton: { flex: 1, backgroundColor: colors.success, paddingVertical: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center', minHeight: 48 },
+  mainButtonDisabled: { opacity: 0.4 },
+  mainButtonText: { ...typography.bold, color: '#fff', fontSize: 15 },
 });
