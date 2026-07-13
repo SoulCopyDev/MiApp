@@ -243,19 +243,35 @@ const ACERTIJO = {
   solucion: 'Si H = 4 y M = 3: para mí, hermanos = 4, hermanas = 2. ¿Se cumple 4 = 2×2? Sí. Total: 4 hermanos + 3 hermanas.',
 };
 
-// ---------- Presentación ----------
+// ---------- Presentación (paleta fiel al CSS del HTML) ----------
 function Bold({ children }: { children: ReactNode }) { return <Text style={styles.bold}>{children}</Text>; }
-function Tag({ bg, fg, label }: { bg: string; fg: string; label: string }) {
-  return <Text style={[styles.tag, { backgroundColor: bg, color: fg }]}>{label}</Text>;
+// Tags del template: la mayoría son esmeralda; quiz ámbar; reflexión pizarra.
+const TAG_VARIANTS = { emerald: { bg: '#ecfdf5', fg: '#065f46' }, amber: { bg: '#fef3c7', fg: '#92400e' }, slate: { bg: '#f1f5f9', fg: '#475569' } };
+function Tag({ variant = 'emerald', label }: { variant?: keyof typeof TAG_VARIANTS; label: string }) {
+  const v = TAG_VARIANTS[variant];
+  return <Text style={[styles.tag, { backgroundColor: v.bg, color: v.fg }]}>{label}</Text>;
 }
-function Card({ bg, border, title, children }: { bg: string; border: string; title?: string; children: ReactNode }) {
+// Card = layout card-row del HTML: chip de ícono 36×36 + columna (título + texto).
+// Paleta: card-green #f0fdf4/#bbf7d0 · card-amber #fffbeb/#fde68a · card-slate #f8fafc/#e2e8f0
+// · card-blue (no definida en el HTML → base blanca #fff/#e2e8f0 con chip azul #bfdbfe).
+function Card({ bg, border, icon, iconBg, title, children }: { bg: string; border: string; icon?: string; iconBg?: string; title?: string; children: ReactNode }) {
   return (
     <View style={[styles.card, { backgroundColor: bg, borderColor: border }]}>
-      {title ? <Text style={styles.cardTitle}>{title}</Text> : null}
-      <Text style={styles.cardText}>{children}</Text>
+      <View style={styles.cardRow}>
+        {icon ? <View style={[styles.cardIcon, { backgroundColor: iconBg }]}><Text style={styles.cardIconText}>{icon}</Text></View> : null}
+        <View style={styles.cardContent}>
+          {title ? <Text style={styles.cardTitle}>{title}</Text> : null}
+          <Text style={styles.cardText}>{children}</Text>
+        </View>
+      </View>
     </View>
   );
 }
+// Fondos de card según su clase HTML.
+const CARD_BLUE = { bg: '#fff', border: '#e2e8f0', iconBg: '#bfdbfe' };
+const CARD_GREEN = { bg: '#f0fdf4', border: '#bbf7d0', iconBg: '#bbf7d0' };
+const CARD_AMBER = { bg: '#fffbeb', border: '#fde68a', iconBg: '#fde68a' };
+const CARD_SLATE = { bg: '#f8fafc', border: '#e2e8f0', iconBg: '#e2e8f0' };
 const HL = { blue: { bd: '#3b82f6', bg: '#eff6ff', fg: '#1e40af' }, red: { bd: '#ef4444', bg: '#fff1f2', fg: '#991b1b' }, amber: { bd: '#f59e0b', bg: '#fffbeb', fg: '#92400e' }, green: { bd: '#10b981', bg: '#f0fdf4', fg: '#166534' } };
 function Hl({ variant, children }: { variant: keyof typeof HL; children: ReactNode }) {
   const v = HL[variant];
@@ -431,11 +447,11 @@ export default function World2Level5() {
     switch (step) {
       case 0: return (
         <View>
-          <Tag bg="#dbeafe" fg="#1e40af" label="Nivel 11 · 18 módulos" />
+          <Tag label="Nivel 11 · 18 módulos" />
           <View style={styles.iconCircle}><Text style={{ fontSize: 34 }}>🔗</Text></View>
           <Text style={styles.title}>Prompts en Cadena</Text>
           <Text style={styles.subtitle}>Un solo prompt resuelve el 60% de los problemas. Una cadena bien diseñada resuelve el 100%.</Text>
-          <Card bg="#eff6ff" border="#bfdbfe" title="🎯 Qué vas a aprender">
+          <Card {...CARD_BLUE} icon="🎯" title="Qué vas a aprender">
             Chain-of-Thought prompting · Dividir tareas complejas · Prompts con checkpoints · Árbol de decisiones · Detectar errores de razonamiento
           </Card>
           <Hl variant="blue"><Bold>La analogía de la receta:</Bold> Un chef no cocina todos los platos mezclados en una sola olla. Divide el proceso en pasos, verifica cada uno, y el resultado es mucho mejor.</Hl>
@@ -443,10 +459,10 @@ export default function World2Level5() {
       );
       case 1: return (
         <View>
-          <Tag bg="#dcfce7" fg="#166534" label="📐 Módulo 1 · Casos reales" />
+          <Tag label="📐 Módulo 1 · Casos reales" />
           <Text style={styles.titleSm}>La magia del "piénsalo paso a paso"</Text>
           <Text style={styles.subtitle}>Un experimento real: el mismo problema, dos prompts.</Text>
-          <Card bg="#f8fafc" border="#e2e8f0" title="🧮 Problema">
+          <Card {...CARD_SLATE} icon="🧮" title="Problema">
             Si Juan tiene 3 veces más manzanas que María, y juntos tienen 48, ¿cuántas tiene cada uno?
           </Card>
           <View style={styles.compareRow}>
@@ -464,7 +480,7 @@ export default function World2Level5() {
       );
       case 2: return (
         <View>
-          <Tag bg="#dbeafe" fg="#1e40af" label="🔗 Módulo 2 · Prompt-compare" />
+          <Tag label="🔗 Módulo 2 · Prompt-compare" />
           <Text style={styles.titleSm}>Antes vs. después del Chain-of-Thought</Text>
           <View style={styles.compareRow}>
             <View style={[styles.comparePanel, { backgroundColor: '#fff7ed', borderColor: '#fed7aa' }]}>
@@ -489,7 +505,7 @@ export default function World2Level5() {
       );
       case 3: return (
         <View>
-          <Tag bg="#eff6ff" fg="#1e40af" label="🛠️ Módulo 3 · Builder" />
+          <Tag label="🛠️ Módulo 3 · Builder" />
           <Text style={styles.titleSm}>Construye un prompt de 3 pasos</Text>
           <Text style={styles.subtitle}>Elige una tarea compleja y divídela en: Análisis → Opciones → Decisión.</Text>
           <Hl variant="blue"><Bold>Estructura base:</Bold>{'\n'}Paso 1: Analiza [situación] y lista los factores clave.{'\n'}Paso 2: Dame 3 opciones con pros y contras de cada una.{'\n'}Paso 3: Recomienda la mejor opción y justifica por qué.</Hl>
@@ -514,10 +530,10 @@ export default function World2Level5() {
       );
       case 4: return (
         <View>
-          <Tag bg="#eff6ff" fg="#1e40af" label="📦 Módulo 4 · Divide y vencerás" />
+          <Tag label="📦 Módulo 4 · Divide y vencerás" />
           <Text style={styles.titleSm}>Divide y vencerás</Text>
           <Text style={styles.subtitle}>Una tarea compleja se convierte en una cadena de 5 sub-prompts manejables.</Text>
-          <Card bg="#f8fafc" border="#e2e8f0" title="🎯 Tarea compleja"><Text style={styles.italic}>{tareaCompleja.tarea}</Text></Card>
+          <Card {...CARD_SLATE} icon="🎯" title="Tarea compleja"><Text style={styles.italic}>{tareaCompleja.tarea}</Text></Card>
           <Hl variant="red"><Bold>Error común:</Bold> {tareaCompleja.errorComun}</Hl>
           <Text style={styles.label}>División en 5 sub-prompts:</Text>
           {tareaCompleja.subtareas.map((s, i) => (
@@ -531,10 +547,10 @@ export default function World2Level5() {
       );
       case 5: return (
         <View>
-          <Tag bg="#eff6ff" fg="#1e40af" label="📍 Módulo 5 · Fill-in-blank" />
+          <Tag label="📍 Módulo 5 · Fill-in-blank" />
           <Text style={styles.titleSm}>Añade checkpoints al prompt</Text>
           <Text style={styles.subtitle}>Toma este prompt básico y añade las instrucciones de checkpoint que le faltan.</Text>
-          <Card bg="#f8fafc" border="#e2e8f0" title="📋 Prompt base"><Text style={styles.italic}>"{fillCotItem.base}"</Text></Card>
+          <Card {...CARD_SLATE} icon="📋" title="Prompt base"><Text style={styles.italic}>"{fillCotItem.base}"</Text></Card>
           {fillCotItem.campos.map((c, i) => (
             <View key={i}>
               <Text style={styles.label}>{c}</Text>
@@ -550,7 +566,7 @@ export default function World2Level5() {
       );
       case 6: return (
         <View>
-          <Tag bg="#ecfdf5" fg="#065f46" label={vfDone ? '✅ Resultado V/F' : `✔ V/F · ${vfIdx + 1}/${vfItems.length}`} />
+          <Tag label={vfDone ? '✅ Resultado V/F' : `✔ V/F · ${vfIdx + 1}/${vfItems.length}`} />
           {!vfDone ? (
             <>
               <Text style={styles.vfStmt}>{vfItems[vfIdx].stmt}</Text>
@@ -576,23 +592,23 @@ export default function World2Level5() {
       );
       case 7: return (
         <View>
-          <Tag bg="#dcfce7" fg="#166534" label="🌍 Módulo 7 · Casos reales" />
+          <Tag label="🌍 Módulo 7 · Casos reales" />
           <Text style={styles.titleSm}>Chain-of-Thought en acción</Text>
           <Text style={styles.subtitle}>3 situaciones cotidianas donde el razonamiento paso a paso marca la diferencia.</Text>
-          <Card bg="#eff6ff" border="#bfdbfe" title="🔬 Caso 1: Análisis de texto literario">
+          <Card {...CARD_BLUE} icon="🔬" title="Caso 1: Análisis de texto literario">
             <Bold>Sin CoT: </Bold>"Analiza el simbolismo en El Principito."{'\n'}<Bold>Con CoT: </Bold>"Identifica 3 símbolos en El Principito. Para cada uno: 1) qué lo representa, 2) qué simboliza, 3) una frase del libro que lo confirme."
           </Card>
-          <Card bg="#eff6ff" border="#bfdbfe" title="📊 Caso 2: Tomar una decisión compleja">
+          <Card {...CARD_BLUE} icon="📊" title="Caso 2: Tomar una decisión compleja">
             <Bold>Sin CoT: </Bold>"¿Debería estudiar ingeniería o diseño?"{'\n'}<Bold>Con CoT: </Bold>"Lista 5 características de cada carrera. Compáralas según salida laboral, habilidades y tiempo de estudio. Recomienda basándote solo en lo que analizaste."
           </Card>
-          <Card bg="#eff6ff" border="#bfdbfe" title="📝 Caso 3: Corregir un texto">
+          <Card {...CARD_BLUE} icon="📝" title="Caso 3: Corregir un texto">
             <Bold>Sin CoT: </Bold>"Corrige este ensayo."{'\n'}<Bold>Con CoT: </Bold>"Analiza este ensayo en 3 pasadas: 1) errores gramaticales, 2) claridad de argumentos, 3) coherencia general. En cada pasada, lista los problemas antes de corregirlos."
           </Card>
         </View>
       );
       case 8: return (
         <View>
-          <Tag bg="#ecfdf5" fg="#065f46" label="🌳 Módulo 8 · Matching" />
+          <Tag label="🌳 Módulo 8 · Matching" />
           <Text style={styles.titleSm}>Árbol de decisiones para tu IA</Text>
           <Text style={styles.subtitle}>Diseña las reglas de comportamiento de un asistente. Para cada condición, elige la acción correcta.</Text>
           {ARBOL_ITEMS.map((item, i) => {
@@ -620,7 +636,7 @@ export default function World2Level5() {
       );
       case 9: return (
         <View>
-          <Tag bg="#eff6ff" fg="#1e40af" label={iterDone ? '✅ Prompt iterativo completado' : `🔄 Módulo 9 · Builder iterativo · Ronda ${iterRound}/3`} />
+          <Tag label={iterDone ? '✅ Prompt iterativo completado' : `🔄 Módulo 9 · Builder iterativo · Ronda ${iterRound}/3`} />
           {iterDone ? (
             <View style={[styles.fbBox, styles.fbOk]}>
               <Text style={styles.resultBig}>3 rondas completadas</Text>
@@ -629,7 +645,7 @@ export default function World2Level5() {
           ) : (
             <>
               <Text style={styles.subtitle}>Proceso iterativo: cada ronda mejora la anterior.</Text>
-              <Card bg="#eff6ff" border="#bfdbfe">
+              <Card {...CARD_BLUE}>
                 {iterRound === 1 ? 'Ronda 1: escribe el prompt inicial para un asistente de estudio de historia.' :
                  iterRound === 2 ? 'Ronda 2: pide un refinamiento específico sobre lo anterior (qué mejorar y cómo).' :
                  'Ronda 3: instrucción de cierre y verificación (resumen o esquema final).'}
@@ -642,18 +658,18 @@ export default function World2Level5() {
       );
       case 10: return (
         <View>
-          <Tag bg="#eff6ff" fg="#1e40af" label="⚖️ Módulo 10 · Escenarios" />
+          <Tag label="⚖️ Módulo 10 · Escenarios" />
           <Text style={styles.titleSm}>Cuándo usar cadenas y cuándo no</Text>
           <Text style={styles.subtitle}>No todo necesita una cadena. Aquí los 4 casos con criterio claro.</Text>
-          <Card bg="#f0fdf4" border="#bbf7d0" title="✅ Útil: tarea de múltiples fases">"Escribir un informe" → investigación + estructuración + redacción + revisión. Cada fase se beneficia de atención completa.</Card>
-          <Card bg="#f0fdf4" border="#bbf7d0" title="✅ Necesario: razonamiento lógico complejo">Cualquier problema donde un error en el paso 2 invalida el paso 3. Matemáticas, lógica, análisis legal.</Card>
-          <Card bg="#fffbeb" border="#fde68a" title="⚠️ Sobreingeniería: pregunta factual simple">"¿Cuándo nació Simón Bolívar?" no necesita cadena. Un prompt directo basta — dividirlo agrega complejidad sin beneficio.</Card>
-          <Card bg="#fffbeb" border="#fde68a" title="⚠️ Innecesario: tarea creativa libre">"Escríbeme un poema sobre el mar" — demasiadas restricciones de proceso pueden limitar la creatividad. A veces el prompt libre produce lo mejor.</Card>
+          <Card {...CARD_GREEN} icon="✅" title="Útil: tarea de múltiples fases">"Escribir un informe" → investigación + estructuración + redacción + revisión. Cada fase se beneficia de atención completa.</Card>
+          <Card {...CARD_GREEN} icon="✅" title="Necesario: razonamiento lógico complejo">Cualquier problema donde un error en el paso 2 invalida el paso 3. Matemáticas, lógica, análisis legal.</Card>
+          <Card {...CARD_AMBER} icon="⚠️" title="Sobreingeniería: pregunta factual simple">"¿Cuándo nació Simón Bolívar?" no necesita cadena. Un prompt directo basta — dividirlo agrega complejidad sin beneficio.</Card>
+          <Card {...CARD_AMBER} icon="⚠️" title="Innecesario: tarea creativa libre">"Escríbeme un poema sobre el mar" — demasiadas restricciones de proceso pueden limitar la creatividad. A veces el prompt libre produce lo mejor.</Card>
         </View>
       );
       case 11: return (
         <View>
-          <Tag bg="#dbeafe" fg="#1e40af" label="⚡ Módulo 11 · Sprint" />
+          <Tag label="⚡ Módulo 11 · Sprint" />
           <Text style={styles.titleSm}>Sprint: diseña la cadena</Text>
           {sprintDone ? (
             <View style={[styles.fbBox, styles.fbOk]}>
@@ -683,7 +699,7 @@ export default function World2Level5() {
       );
       case 12: return (
         <View>
-          <Tag bg="#eff6ff" fg="#1e40af" label="🔍 Módulo 12 · Builder" />
+          <Tag label="🔍 Módulo 12 · Builder" />
           <Text style={styles.titleSm}>El prompt que se verifica a sí mismo</Text>
           <Text style={styles.subtitle}>Añade una capa de auto-verificación a cualquier prompt. Construye uno a partir de una tarea base.</Text>
           <Hl variant="blue"><Bold>Patrón de auto-verificación:</Bold> [Tu instrucción]. Al terminar, revisa tu respuesta: 1) ¿respondí exactamente lo que se pedía? 2) ¿hay contradicciones internas? 3) ¿los datos son precisos? Si encuentras un error, corrígelo antes de terminar.</Hl>
@@ -699,27 +715,27 @@ export default function World2Level5() {
       );
       case 13: return (
         <View>
-          <Tag bg="#dcfce7" fg="#166534" label="🎓 Módulo 13 · Casos reales" />
+          <Tag label="🎓 Módulo 13 · Casos reales" />
           <Text style={styles.titleSm}>La IA como tutor paso a paso</Text>
           <Text style={styles.subtitle}>3 materias escolares — 3 cadenas de prompts que realmente funcionan.</Text>
-          <Card bg="#f0fdf4" border="#bbf7d0" title="🧪 Ciencias: entender un concepto difícil">
+          <Card {...CARD_GREEN} icon="🧪" title="Ciencias: entender un concepto difícil">
             <Bold>P1:</Bold> Explícame [concepto] con una analogía cotidiana. Máx. 3 párrafos.{'\n'}<Bold>P2:</Bold> Dame 2 ejemplos del mundo real donde aplica.{'\n'}<Bold>P3:</Bold> Hazme 3 preguntas para verificar que entendí. No me des las respuestas aún.
           </Card>
-          <Card bg="#f0fdf4" border="#bbf7d0" title="📜 Historia: análisis de evento">
+          <Card {...CARD_GREEN} icon="📜" title="Historia: análisis de evento">
             <Bold>P1:</Bold> Lista las 5 causas de [evento] ordenadas de más a menos importante.{'\n'}<Bold>P2:</Bold> Para la causa #1, dame 3 evidencias históricas que la respalden.{'\n'}<Bold>P3:</Bold> ¿Qué habría cambiado si esa causa no hubiera ocurrido?
           </Card>
-          <Card bg="#f0fdf4" border="#bbf7d0" title="🔢 Matemáticas: resolver paso a paso">
+          <Card {...CARD_GREEN} icon="🔢" title="Matemáticas: resolver paso a paso">
             <Bold>P1:</Bold> Explícame el método para resolver [tipo de problema]. Solo el método.{'\n'}<Bold>P2:</Bold> Aplica ese método a este problema: [problema]. Muestra cada paso.{'\n'}<Bold>P3:</Bold> Diseña un problema similar para que yo lo practique.
           </Card>
         </View>
       );
       case 14: return (
         <View>
-          <Tag bg="#ecfdf5" fg="#065f46" label={razonDone ? '✅ Clasificador completado' : `🔎 Módulo 14 · Clasificador · ${razonIdx + 1}/${RAZON_ITEMS.length}`} />
+          <Tag label={razonDone ? '✅ Clasificador completado' : `🔎 Módulo 14 · Clasificador · ${razonIdx + 1}/${RAZON_ITEMS.length}`} />
           {!razonDone ? (
             <>
               <Text style={styles.subtitle}>Clasifica el error en este razonamiento de la IA.</Text>
-              <Card bg="#f8fafc" border="#e2e8f0"><Text style={styles.italic}>"{RAZON_ITEMS[razonIdx].texto}"</Text></Card>
+              <Card {...CARD_SLATE}><Text style={styles.italic}>"{RAZON_ITEMS[razonIdx].texto}"</Text></Card>
               {['⚠️ Falacia lógica — argumento inválido', '🦘 Salto de conclusión — generalización inválida', '❌ Dato falso — información incorrecta o inventada'].map((label, i) => (
                 <TouchableOpacity key={i} style={[styles.optionBtn, razonSel === i && styles.optSel, razonSel !== null && i === razonMap[RAZON_ITEMS[razonIdx].tipo] && styles.optCorrect, razonSel === i && i !== razonMap[RAZON_ITEMS[razonIdx].tipo] && styles.optWrong]} onPress={() => answerRazon(i)} disabled={razonSel !== null}>
                   <Text style={styles.optText}>{label}</Text>
@@ -741,20 +757,20 @@ export default function World2Level5() {
       );
       case 15: return (
         <View>
-          <Tag bg="#fffbeb" fg="#92400e" label="🧠 Módulo 15 · Reflexión conceptual" />
+          <Tag label="🧠 Módulo 15 · Reflexión conceptual" />
           <Text style={styles.titleSm}>¿Qué tan profundo puede pensar un LLM?</Text>
           <Text style={styles.subtitle}>Límites reales del razonamiento en modelos de lenguaje actuales.</Text>
-          <Card bg="#fffbeb" border="#fde68a" title="⚠️ Lo que el CoT NO resuelve">El CoT mejora la coherencia del texto — no el acceso a información que el modelo no tiene. Si la información no estaba en el entrenamiento, el razonamiento paso a paso no la va a encontrar.</Card>
-          <Card bg="#f8fafc" border="#e2e8f0" title="🔬 Lo que la ciencia dice (2024)">Los LLMs actuales pueden hacer razonamiento lógico simple, aritmética básica y análisis textual con CoT. Fallan en razonamiento espacial complejo, lógica modal y comprensión causal profunda.</Card>
-          <Card bg="#f0fdf4" border="#bbf7d0" title="✅ La regla práctica">Si un problema requiere "sentido común" acumulado por años de experiencia vivida o intuición física del mundo real, el LLM va a fallar incluso con CoT. Para eso, todavía necesitas al humano.</Card>
+          <Card {...CARD_AMBER} icon="⚠️" title="Lo que el CoT NO resuelve">El CoT mejora la coherencia del texto — no el acceso a información que el modelo no tiene. Si la información no estaba en el entrenamiento, el razonamiento paso a paso no la va a encontrar.</Card>
+          <Card {...CARD_SLATE} icon="🔬" title="Lo que la ciencia dice (2024)">Los LLMs actuales pueden hacer razonamiento lógico simple, aritmética básica y análisis textual con CoT. Fallan en razonamiento espacial complejo, lógica modal y comprensión causal profunda.</Card>
+          <Card {...CARD_GREEN} icon="✅" title="La regla práctica">Si un problema requiere "sentido común" acumulado por años de experiencia vivida o intuición física del mundo real, el LLM va a fallar incluso con CoT. Para eso, todavía necesitas al humano.</Card>
         </View>
       );
       case 16: return (
         <View>
-          <Tag bg="#eff6ff" fg="#1e40af" label="🧩 Módulo 16 · Reto" />
+          <Tag label="🧩 Módulo 16 · Reto" />
           <Text style={styles.titleSm}>Resuelve el acertijo con CoT</Text>
           <Text style={styles.subtitle}>Antes de escribir la respuesta, escribe los pasos de tu razonamiento.</Text>
-          <Card bg="#f8fafc" border="#e2e8f0">{ACERTIJO.problema}</Card>
+          <Card {...CARD_SLATE}>{ACERTIJO.problema}</Card>
           <Hl variant="blue"><Bold>Pista: </Bold>{ACERTIJO.hint}</Hl>
           <Text style={styles.label}>Tu razonamiento paso a paso</Text>
           <TextInput style={styles.textArea} multiline placeholder="Paso 1: ... Paso 2: ... Paso 3: ... Respuesta: ..." placeholderTextColor="#b8bcc0" value={acertijoText} onChangeText={setAcertijoText} />
@@ -767,7 +783,7 @@ export default function World2Level5() {
       );
       case 17: return (
         <View>
-          <Tag bg="#fef3c7" fg="#92400e" label={quizDone ? '✅ Quiz completado' : `🧠 Módulo 17 · Quiz · ${quizIdx + 1}/${quizItems.length}`} />
+          <Tag variant="amber" label={quizDone ? '✅ Quiz completado' : `🧠 Módulo 17 · Quiz · ${quizIdx + 1}/${quizItems.length}`} />
           {!quizDone ? (
             <>
               <Text style={styles.qText}>{quizItems[quizIdx].q}</Text>
@@ -788,7 +804,7 @@ export default function World2Level5() {
       );
       case 18: return (
         <View>
-          <Tag bg="#f1f5f9" fg="#475569" label="💬 Módulo 18 · Reflexión" />
+          <Tag variant="slate" label="💬 Módulo 18 · Reflexión" />
           <Text style={styles.titleSm}>¿La diferencia importa?</Text>
           <Text style={styles.subtitle}>IA que piensa vs. IA que responde.</Text>
           <TextInput style={styles.reflectArea} multiline placeholder="Ej: creo que la diferencia sí importa porque cuando le pido que piense paso a paso puedo seguir su lógica y detectar errores. Cuando solo responde, no sé si confiar..." placeholderTextColor="#b8bcc0" value={reflectText} onChangeText={(t) => { setReflectText(t); if (reflectError) setReflectError(null); }} />
@@ -924,7 +940,11 @@ const styles = StyleSheet.create({
   bold: { fontWeight: 'bold', color: colors.textPrimary },
   italic: { fontStyle: 'italic' },
   card: { borderRadius: 14, padding: 13, marginBottom: 9, borderWidth: 1 },
-  cardTitle: { ...typography.bold, fontSize: 13, color: colors.textPrimary, marginBottom: 4 },
+  cardRow: { flexDirection: 'row', gap: 11, alignItems: 'flex-start' },
+  cardIcon: { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+  cardIconText: { fontSize: 19 },
+  cardContent: { flex: 1 },
+  cardTitle: { ...typography.bold, fontSize: 13, color: colors.textPrimary, marginBottom: 3 },
   cardText: { ...typography.regular, fontSize: 12, color: '#334155', lineHeight: 18 },
   hl: { borderLeftWidth: 3, padding: 12, borderRadius: 4, marginTop: 9, marginBottom: 13 },
   hlText: { fontSize: 12, lineHeight: 18, fontWeight: '500' },
