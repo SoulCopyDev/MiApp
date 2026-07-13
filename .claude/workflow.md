@@ -61,6 +61,7 @@ Refactor completo de numeración continua N1–N43. Ver propuesta en `/Descargas
 | N3-01..11 | ⏳ Pendiente | Restauración de contenido — requiere HTML prototipos |
 | AUDIT-N12 | ✅ Resuelto | Level12 reconstruido 1:1 vs nivel-12.html (18 módulos, paleta, D&D, validaciones) |
 | AUDIT-EVAL2 | ✅ Resuelto | Eval2 fiel a evaluacion-mundo-02.html (quiz completo+shuffle, builder 3 min, badge) |
+| AUDIT-N13 | ✅ Resuelto | Level13 fiel a nivel-13.html (tema oscuro M3, 19 módulos/260 XP reales, D&D real, fix XP infinito/duplicado) |
 
 ## Scripts disponibles
 
