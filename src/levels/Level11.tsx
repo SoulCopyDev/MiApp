@@ -41,11 +41,26 @@ const stripAccents = (s: string) => s.normalize('NFD').split('').filter((c) => c
 const normalize = (s: string) => stripAccents(s.toLowerCase());
 const INSTRUCTION_RE = /(escrib|explic|analiz|traduc|resum|genera|crea|haz |hazme|dame|describe|compar|enumer|redact|disen|calcul|responde|elabor|propon|sugier|lista|convierte|corrig|mejora|resuelve|ordena|clasifica|define|identifica|planifica|planea|evalua|pondera|recomien|divide|construye|investiga|pide|verifica)/;
 
+// Dobles de consonante que NO existen en español (ss, dd, fdf...) → señal de tecleo al azar.
+const BAD_DOUBLE = /(ss|dd|ff|gg|jj|kk|pp|qq|vv|ww|yy|zz|hh|bb|mm|tt)/;
+// Una palabra parece basura de teclado (assasasd, casdfd...) si tiene dobles inválidos,
+// racimos de 5+ consonantes, o casi ninguna vocal.
+function wordIsGibberish(w: string): boolean {
+  const nw = normalize(w).replace(/[^a-z]/g, '');
+  if (nw.length < 4) return false;
+  if (!/[aeiou]/.test(nw)) return true;
+  if (BAD_DOUBLE.test(nw)) return true;
+  if (/[bcdfghjklmnpqrstvwxyz]{5,}/.test(nw)) return true;
+  const vowels = (nw.match(/[aeiou]/g) || []).length;
+  return nw.length >= 5 && vowels / nw.length < 0.25;
+}
 function looksRandom(raw: string): boolean {
   const words = raw.trim().split(/\s+/).filter(Boolean);
   if (words.length === 0) return true;
   const unique = new Set(words.map((w) => normalize(w)));
   if (unique.size < Math.min(4, words.length)) return true;
+  const long = words.filter((w) => normalize(w).replace(/[^a-z]/g, '').length >= 4);
+  if (long.length > 0 && long.filter(wordIsGibberish).length / long.length >= 0.5) return true;
   const withVowel = words.filter((w) => /[aeiou]/.test(normalize(w))).length;
   return withVowel / words.length < 0.6;
 }
@@ -309,7 +324,8 @@ export default function World2Level5() {
   const [vfIdx, setVfIdx] = useState(0); const [vfScore, setVfScore] = useState(0);
   const [vfDone, setVfDone] = useState(false); const [vfSel, setVfSel] = useState<boolean | null>(null);
 
-  // Matching árbol (8)
+  // Matching árbol (8) — se baraja de qué lado aparece la acción correcta.
+  const arbolFlip = useRef(ARBOL_ITEMS.map(() => Math.random() < 0.5)).current;
   const [arbolAnswers, setArbolAnswers] = useState<(number | null)[]>([null, null, null, null]);
   const [arbolChecked, setArbolChecked] = useState(false);
   const [arbolCorrect, setArbolCorrect] = useState(0);
@@ -387,7 +403,7 @@ export default function World2Level5() {
   const arbolAllAnswered = arbolAnswers.every((a) => a !== null);
   const checkArbol = () => {
     if (arbolChecked) return;
-    let correct = 0; ARBOL_ITEMS.forEach((_, i) => { if (arbolAnswers[i] === 0) correct++; });
+    let correct = 0; ARBOL_ITEMS.forEach((_, i) => { const cc = arbolFlip[i] ? 1 : 0; if (arbolAnswers[i] === cc) correct++; });
     setArbolCorrect(correct); setArbolChecked(true); if (correct > 0) addXP(correct * 8);
   };
 
@@ -518,8 +534,8 @@ export default function World2Level5() {
           <Text style={styles.label}>Paso 3 — ¿Qué tipo de recomendación final quieres?</Text>
           <TextInput style={styles.input} placeholder="Ej: la más realista para mi situación actual..." placeholderTextColor="#b8bcc0" value={p3} onChangeText={setP3} />
           {chainValid && (
-            <View style={[styles.fbBox, styles.fbOk]}>
-              <Text style={[styles.fbText, styles.fbOkText]}>
+            <View style={styles.builderResult}>
+              <Text style={styles.builderResultText}>
                 <Bold>Prompt 1:</Bold> Analiza mi situación de {tema}. Factores clave: {p1}.{'\n\n'}
                 <Bold>Prompt 2:</Bold> Basándote en ese análisis, dame {p2}.{'\n\n'}
                 <Bold>Prompt 3:</Bold> Con todo lo anterior, recomiéndame {p3}. Justifica paso a paso.
@@ -596,13 +612,13 @@ export default function World2Level5() {
           <Text style={styles.titleSm}>Chain-of-Thought en acción</Text>
           <Text style={styles.subtitle}>3 situaciones cotidianas donde el razonamiento paso a paso marca la diferencia.</Text>
           <Card {...CARD_BLUE} icon="🔬" title="Caso 1: Análisis de texto literario">
-            <Bold>Sin CoT: </Bold>"Analiza el simbolismo en El Principito."{'\n'}<Bold>Con CoT: </Bold>"Identifica 3 símbolos en El Principito. Para cada uno: 1) qué lo representa, 2) qué simboliza, 3) una frase del libro que lo confirme."
+            <Bold>Sin CoT: </Bold>"Analiza el simbolismo en El Principito."{'\n'}<Bold>Con CoT: </Bold>"Identifica 3 símbolos en El Principito. Para cada uno: 1) qué objeto/personaje lo representa, 2) qué simboliza, 3) cita una frase del libro que lo confirme."{'\n'}<Text style={styles.caseArrow}>→ El CoT obliga precisión en cada argumento.</Text>
           </Card>
           <Card {...CARD_BLUE} icon="📊" title="Caso 2: Tomar una decisión compleja">
-            <Bold>Sin CoT: </Bold>"¿Debería estudiar ingeniería o diseño?"{'\n'}<Bold>Con CoT: </Bold>"Lista 5 características de cada carrera. Compáralas según salida laboral, habilidades y tiempo de estudio. Recomienda basándote solo en lo que analizaste."
+            <Bold>Sin CoT: </Bold>"¿Debería estudiar ingeniería o diseño?"{'\n'}<Bold>Con CoT: </Bold>"Primero lista 5 características de cada carrera. Luego compáralas según: salida laboral, habilidades requeridas y tiempo de estudio. Finalmente recomienda basándote solo en lo que analizaste."{'\n'}<Text style={styles.caseArrow}>→ La recomendación está fundamentada, no es una opinión aleatoria.</Text>
           </Card>
           <Card {...CARD_BLUE} icon="📝" title="Caso 3: Corregir un texto">
-            <Bold>Sin CoT: </Bold>"Corrige este ensayo."{'\n'}<Bold>Con CoT: </Bold>"Analiza este ensayo en 3 pasadas: 1) errores gramaticales, 2) claridad de argumentos, 3) coherencia general. En cada pasada, lista los problemas antes de corregirlos."
+            <Bold>Sin CoT: </Bold>"Corrige este ensayo."{'\n'}<Bold>Con CoT: </Bold>"Analiza este ensayo en 3 pasadas: 1) errores gramaticales, 2) claridad de argumentos, 3) coherencia general. En cada pasada, lista los problemas antes de corregirlos."{'\n'}<Text style={styles.caseArrow}>→ Correcciones organizadas y justificadas, no una reescritura aleatoria.</Text>
           </Card>
         </View>
       );
@@ -612,17 +628,20 @@ export default function World2Level5() {
           <Text style={styles.titleSm}>Árbol de decisiones para tu IA</Text>
           <Text style={styles.subtitle}>Diseña las reglas de comportamiento de un asistente. Para cada condición, elige la acción correcta.</Text>
           {ARBOL_ITEMS.map((item, i) => {
+            const flip = arbolFlip[i];
+            const leftText = flip ? item.alternativa : item.accion;
+            const rightText = flip ? item.accion : item.alternativa;
             const chosen = arbolAnswers[i];
-            const right = chosen === 0;
+            const isRight = chosen === (flip ? 1 : 0);
             return (
               <View key={i} style={styles.arbolCard}>
                 <Text style={styles.arbolCond}>Si: <Text style={styles.italic}>{item.condicion}</Text></Text>
                 <View style={styles.row}>
-                  <TouchableOpacity style={[styles.treeOpt, chosen === 0 && styles.treeSel]} onPress={() => selArbol(i, 0)} disabled={arbolChecked}><Text style={styles.treeText}>{item.accion}</Text></TouchableOpacity>
-                  <TouchableOpacity style={[styles.treeOpt, chosen === 1 && styles.treeSel]} onPress={() => selArbol(i, 1)} disabled={arbolChecked}><Text style={styles.treeText}>{item.alternativa}</Text></TouchableOpacity>
+                  <TouchableOpacity style={[styles.treeOpt, chosen === 0 && styles.treeSel]} onPress={() => selArbol(i, 0)} disabled={arbolChecked}><Text style={styles.treeText}>{leftText}</Text></TouchableOpacity>
+                  <TouchableOpacity style={[styles.treeOpt, chosen === 1 && styles.treeSel]} onPress={() => selArbol(i, 1)} disabled={arbolChecked}><Text style={styles.treeText}>{rightText}</Text></TouchableOpacity>
                 </View>
                 {arbolChecked && (
-                  <Text style={[styles.arbolFb, right ? styles.fbOkText : styles.fbBadText]}>{right ? '✅ Correcto' : '❌ La opción correcta es la primera.'}</Text>
+                  <Text style={[styles.arbolFb, isRight ? styles.fbOkText : styles.fbBadText]}>{isRight ? '✅ Correcto' : `❌ La correcta era: "${item.accion}"`}</Text>
                 )}
               </View>
             );
@@ -661,9 +680,9 @@ export default function World2Level5() {
           <Tag label="⚖️ Módulo 10 · Escenarios" />
           <Text style={styles.titleSm}>Cuándo usar cadenas y cuándo no</Text>
           <Text style={styles.subtitle}>No todo necesita una cadena. Aquí los 4 casos con criterio claro.</Text>
-          <Card {...CARD_GREEN} icon="✅" title="Útil: tarea de múltiples fases">"Escribir un informe" → investigación + estructuración + redacción + revisión. Cada fase se beneficia de atención completa.</Card>
+          <Card {...CARD_GREEN} icon="✅" title="Útil: tarea de múltiples fases">"Escribir un informe de investigación" → fase de investigación + estructuración + redacción + revisión. Cada fase se beneficia de atención completa.</Card>
           <Card {...CARD_GREEN} icon="✅" title="Necesario: razonamiento lógico complejo">Cualquier problema donde un error en el paso 2 invalida el paso 3. Matemáticas, lógica, análisis legal.</Card>
-          <Card {...CARD_AMBER} icon="⚠️" title="Sobreingeniería: pregunta factual simple">"¿Cuándo nació Simón Bolívar?" no necesita cadena. Un prompt directo basta — dividirlo agrega complejidad sin beneficio.</Card>
+          <Card {...CARD_AMBER} icon="⚠️" title="Sobreingeniería: pregunta factual simple">"¿Cuándo nació Simón Bolívar?" no necesita cadena. Un prompt directo es suficiente — dividirlo agrega complejidad sin beneficio.</Card>
           <Card {...CARD_AMBER} icon="⚠️" title="Innecesario: tarea creativa libre">"Escríbeme un poema sobre el mar" — demasiadas restricciones de proceso pueden limitar la creatividad. A veces el prompt libre produce lo mejor.</Card>
         </View>
       );
@@ -707,8 +726,8 @@ export default function World2Level5() {
           <TextInput style={styles.textArea} multiline placeholder="Ej: Explícame las 3 leyes de Newton con un ejemplo cotidiano para cada una..." placeholderTextColor="#b8bcc0" value={vpBase} onChangeText={setVpBase} />
           {vpEval && !vpValid && <Text style={styles.hint}>💡 {vpEval.msg}</Text>}
           {vpValid && (
-            <View style={[styles.fbBox, styles.fbOk]}>
-              <Text style={[styles.fbText, styles.fbOkText]}>{vpBase.trim()}. Al terminar, revisa: 1) ¿respondiste exactamente lo que se pidió? 2) ¿hay contradicciones? 3) ¿los datos son precisos? Corrige cualquier error antes de terminar.</Text>
+            <View style={styles.builderResult}>
+              <Text style={styles.builderResultText}>{vpBase.trim()}. Al terminar, revisa: 1) ¿respondiste exactamente lo que se pidió? 2) ¿hay contradicciones? 3) ¿los datos son precisos? Corrige cualquier error antes de terminar.</Text>
             </View>
           )}
         </View>
@@ -719,13 +738,13 @@ export default function World2Level5() {
           <Text style={styles.titleSm}>La IA como tutor paso a paso</Text>
           <Text style={styles.subtitle}>3 materias escolares — 3 cadenas de prompts que realmente funcionan.</Text>
           <Card {...CARD_GREEN} icon="🧪" title="Ciencias: entender un concepto difícil">
-            <Bold>P1:</Bold> Explícame [concepto] con una analogía cotidiana. Máx. 3 párrafos.{'\n'}<Bold>P2:</Bold> Dame 2 ejemplos del mundo real donde aplica.{'\n'}<Bold>P3:</Bold> Hazme 3 preguntas para verificar que entendí. No me des las respuestas aún.
+            <Bold>P1:</Bold> Explícame [concepto] con una analogía cotidiana. Máximo 3 párrafos.{'\n'}<Bold>P2:</Bold> Ahora dame 2 ejemplos del mundo real donde este concepto aplica.{'\n'}<Bold>P3:</Bold> Hazme 3 preguntas para verificar que entendí. No me des las respuestas aún.
           </Card>
           <Card {...CARD_GREEN} icon="📜" title="Historia: análisis de evento">
-            <Bold>P1:</Bold> Lista las 5 causas de [evento] ordenadas de más a menos importante.{'\n'}<Bold>P2:</Bold> Para la causa #1, dame 3 evidencias históricas que la respalden.{'\n'}<Bold>P3:</Bold> ¿Qué habría cambiado si esa causa no hubiera ocurrido?
+            <Bold>P1:</Bold> Lista las 5 causas de [evento histórico] ordenadas de más a menos importante.{'\n'}<Bold>P2:</Bold> Para la causa #1, dame 3 evidencias históricas que la respalden.{'\n'}<Bold>P3:</Bold> ¿Qué habría cambiado si esa causa no hubiera ocurrido?
           </Card>
           <Card {...CARD_GREEN} icon="🔢" title="Matemáticas: resolver paso a paso">
-            <Bold>P1:</Bold> Explícame el método para resolver [tipo de problema]. Solo el método.{'\n'}<Bold>P2:</Bold> Aplica ese método a este problema: [problema]. Muestra cada paso.{'\n'}<Bold>P3:</Bold> Diseña un problema similar para que yo lo practique.
+            <Bold>P1:</Bold> Explícame el método para resolver [tipo de problema]. Solo el método, sin resolverlo.{'\n'}<Bold>P2:</Bold> Ahora aplica ese método a este problema: [problema]. Muestra cada paso.{'\n'}<Bold>P3:</Bold> Diseña un problema similar para que yo lo practique. Dame la solución solo si la pido.
           </Card>
         </View>
       );
@@ -760,8 +779,8 @@ export default function World2Level5() {
           <Tag label="🧠 Módulo 15 · Reflexión conceptual" />
           <Text style={styles.titleSm}>¿Qué tan profundo puede pensar un LLM?</Text>
           <Text style={styles.subtitle}>Límites reales del razonamiento en modelos de lenguaje actuales.</Text>
-          <Card {...CARD_AMBER} icon="⚠️" title="Lo que el CoT NO resuelve">El CoT mejora la coherencia del texto — no el acceso a información que el modelo no tiene. Si la información no estaba en el entrenamiento, el razonamiento paso a paso no la va a encontrar.</Card>
-          <Card {...CARD_SLATE} icon="🔬" title="Lo que la ciencia dice (2024)">Los LLMs actuales pueden hacer razonamiento lógico simple, aritmética básica y análisis textual con CoT. Fallan en razonamiento espacial complejo, lógica modal y comprensión causal profunda.</Card>
+          <Card {...CARD_AMBER} icon="⚠️" title="Lo que el CoT NO resuelve">El CoT mejora la coherencia del texto — no el acceso a información que el modelo no tiene. Si la información no está en el entrenamiento, el razonamiento paso a paso no la va a encontrar.</Card>
+          <Card {...CARD_SLATE} icon="🔬" title="Lo que la ciencia dice (2024)">Los LLMs actuales pueden hacer razonamiento lógico simple, aritmética básica y análisis textual con CoT. Fallan en razonamiento espacial complejo, lógica modal y problemas que requieren comprensión causal profunda.</Card>
           <Card {...CARD_GREEN} icon="✅" title="La regla práctica">Si un problema requiere "sentido común" acumulado por años de experiencia vivida o intuición física del mundo real, el LLM va a fallar incluso con CoT. Para eso, todavía necesitas al humano.</Card>
         </View>
       );
@@ -831,7 +850,7 @@ export default function World2Level5() {
             <Text style={styles.lvlBarLabel}>Nivel 11 de 36 completado · Mundo 2 — Domina el Prompting</Text>
             <View style={styles.lvlBarOuter}><View style={styles.lvlBarInner} /></View>
           </View>
-          <TouchableOpacity style={styles.mainButton} onPress={handleFinish} activeOpacity={0.85}><Text style={styles.mainButtonText}>Siguiente nivel →</Text></TouchableOpacity>
+          <TouchableOpacity style={styles.completeBtn} onPress={handleFinish} activeOpacity={0.85}><Text style={styles.mainButtonText}>Siguiente nivel →</Text></TouchableOpacity>
         </View>
       );
       default: return null;
@@ -946,7 +965,7 @@ const styles = StyleSheet.create({
   cardContent: { flex: 1 },
   cardTitle: { ...typography.bold, fontSize: 13, color: colors.textPrimary, marginBottom: 3 },
   cardText: { ...typography.regular, fontSize: 12, color: '#334155', lineHeight: 18 },
-  hl: { borderLeftWidth: 3, padding: 12, borderRadius: 4, marginTop: 9, marginBottom: 13 },
+  hl: { borderLeftWidth: 3, padding: 12, borderTopRightRadius: 12, borderBottomRightRadius: 12, marginTop: 9, marginBottom: 13 },
   hlText: { fontSize: 12, lineHeight: 18, fontWeight: '500' },
   label: { fontSize: 11, fontWeight: '700', color: '#374151', marginBottom: 4, marginTop: 10 },
   input: { borderWidth: 1.5, borderColor: '#cbd5e1', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 12, backgroundColor: '#f8fafc', marginBottom: 8, color: colors.textPrimary },
@@ -1028,4 +1047,9 @@ const styles = StyleSheet.create({
   mainButton: { flex: 1, backgroundColor: colors.success, paddingVertical: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center', minHeight: 48 },
   mainButtonDisabled: { opacity: 0.4 },
   mainButtonText: { ...typography.bold, color: '#fff', fontSize: 15 },
+  completeBtn: { width: '100%', backgroundColor: colors.success, paddingVertical: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center', minHeight: 48 },
+  // Caja de resultado del builder (HTML .builder-result.filled: fondo #ecfdf5, borde #a7f3d0).
+  builderResult: { backgroundColor: '#ecfdf5', borderWidth: 1.5, borderColor: '#a7f3d0', borderRadius: 12, padding: 12, marginTop: 10 },
+  builderResultText: { fontSize: 12, color: '#065f46', lineHeight: 18 },
+  caseArrow: { fontSize: 11, color: '#1e40af', lineHeight: 16 },
 });
