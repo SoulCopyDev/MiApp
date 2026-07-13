@@ -149,10 +149,10 @@ const CHECKLIST_QUIZ: MCQ[] = [
   {
     q: 'La IA te da una fecha exacta de un evento histórico. ¿Qué deberías hacer?',
     opts: [
-      'Aceptarla — las IAs tienen acceso a todas las fechas históricas con precisión total',
-      'Verificarla en una fuente primaria antes de usarla en un trabajo',
-      'Preguntarle a la IA si está segura — si dice que sí, es confiable',
-      'Copiarla solo si la IA la repite dos veces con consistencia',
+      'Aceptarla tal cual, porque las IAs conocen todas las fechas históricas con total precisión',
+      'Verificarla en una fuente primaria confiable antes de usarla en un trabajo o presentación',
+      'Preguntarle a la misma IA si está segura; si te responde que sí, ya puedes confiar en ella',
+      'Usarla sin dudar siempre que la IA repita la misma fecha dos veces de forma consistente',
     ],
     correct: 1,
     explain: 'Las IAs pueden alucinar fechas específicas. Siempre verifica datos factuales críticos en fuentes primarias (enciclopedias, artículos académicos, sitios oficiales) antes de usarlos.',
@@ -160,10 +160,10 @@ const CHECKLIST_QUIZ: MCQ[] = [
   {
     q: 'La IA te cita un estudio científico con autor y año. ¿Cuándo es seguro usarlo directamente?',
     opts: [
-      'Siempre — si da autor y año, el estudio existe',
-      'Nunca — las IAs nunca citan estudios reales',
-      'Solo cuando puedes verificar que el estudio existe en Google Scholar o bases académicas',
-      'Solo si el autor tiene más de 1000 citas en Google Scholar',
+      'Siempre que incluya el autor y el año, porque esos datos garantizan que el estudio existe',
+      'Nunca, porque los modelos de lenguaje no son capaces de citar estudios científicos reales',
+      'Solo cuando verificas que el estudio existe en Google Scholar o bases académicas reales',
+      'Solo si el autor citado tiene más de mil citas registradas en una universidad reconocida',
     ],
     correct: 2,
     explain: 'Las IAs frecuentemente generan citas bibliográficas que parecen reales pero no existen (autores inventados, estudios falsos). Siempre busca el estudio en fuentes académicas reales antes de citarlo.',
@@ -171,10 +171,10 @@ const CHECKLIST_QUIZ: MCQ[] = [
   {
     q: 'La IA responde con mucha seguridad sobre un evento de la semana pasada. ¿Eso lo hace más confiable?',
     opts: [
-      'Sí — el tono seguro indica que el modelo procesó información reciente verificada',
-      'No — los LLMs tienen fecha de corte y no acceden a internet en tiempo real (salvo herramientas específicas)',
-      'Depende — si menciona el día exacto, entonces sí tiene acceso en tiempo real',
-      'Sí — cuando los modelos no saben algo, siempre lo admiten',
+      'Sí, porque cuando el modelo responde con seguridad es que procesó información reciente y real',
+      'No, porque los LLMs tienen fecha de corte y no acceden a internet en tiempo real por sí solos',
+      'Depende: si menciona el día y la hora exactos del evento, entonces sí tuvo acceso en vivo',
+      'Sí, porque los modelos siempre admiten cuando no saben algo y nunca responden sin datos',
     ],
     correct: 1,
     explain: 'La confianza en el tono no correlaciona con la actualidad de la información. Los LLMs base tienen fecha de corte. Para eventos recientes necesitas herramientas de búsqueda web o verificación externa.',
@@ -278,6 +278,46 @@ function ruleIsWeak(raw: string): boolean {
   const words = t.split(/\s+/).filter(Boolean);
   if (t.length < 12 || words.length < 3) return true;
   return looksRandom(t);
+}
+
+// Términos cortos (≤3 letras, p. ej. "ia") deben coincidir como palabra completa,
+// para no dar falsos positivos dentro de otras palabras ("diarias" contiene "ia").
+const containsTopic = (text: string, terms: string[]) => {
+  const t = normalize(text);
+  const words = new Set(t.split(/[^a-z0-9]+/).filter(Boolean));
+  return terms.some((k) => (k.length <= 3 ? words.has(k) : t.includes(k)));
+};
+
+// Términos que indican que una regla trata sobre prompting / uso de la IA.
+const PROMPTING_TERMS = [
+  'prompt', 'ia', 'inteligencia', 'modelo', 'chatgpt', 'gpt', 'claude', 'gemini', 'contexto',
+  'formato', 'rol', 'instruccion', 'especific', 'concret', 'detalle', 'detallad', 'claro', 'clara',
+  'claridad', 'verific', 'comprob', 'revis', 'dato', 'fuente', 'reformul', 'repet', 'sesg',
+  'objetivo', 'audiencia', 'publico', 'ejemplo', 'tono', 'respuesta', 'respond', 'pregunt',
+  'pedir', 'pido', 'solicit', 'tarea', 'paso', 'lista', 'alucin', 'limite', 'texto', 'escrib',
+  'traduc', 'resum', 'gener', 'preciso', 'ambig',
+];
+
+// Términos que indican que la reflexión responde al tema (cuándo NO usar la IA).
+const REFLECTION_TERMS = [
+  'ia', 'inteligencia', 'modelo', 'chatgpt', 'gpt', 'maquina', 'tecnologia', 'herramienta',
+  'decidir', 'decision', 'elegir', 'eleccion', 'valores', 'valor', 'etica', 'moral', 'aprender',
+  'aprendizaje', 'estudiar', 'practicar', 'equivoc', 'error', 'experiencia', 'sentir', 'emocion',
+  'sentimiento', 'personal', 'humano', 'humana', 'pensar', 'pienso', 'reflexion', 'criterio',
+  'confiar', 'confianza', 'creativ', 'opinion', 'responsabilidad', 'yo mismo', 'mi mismo', 'prompt',
+];
+
+// Valida la reflexión libre del Módulo 18: no puede ser texto al azar ni ajeno al tema.
+function evaluateReflection(text: string): { ok: boolean; message: string } {
+  const t = text.trim();
+  const words = t.split(/\s+/).filter(Boolean);
+  if (words.length < 8 || looksRandom(t)) {
+    return { ok: false, message: 'Parece texto al azar. Escribe una reflexión real, con una o dos frases completas.' };
+  }
+  if (!containsTopic(t, REFLECTION_TERMS)) {
+    return { ok: false, message: 'Responde a la pregunta: piensa en situaciones concretas donde es mejor NO usar la IA (decisiones personales, tus valores, aprender por ti mismo, emociones...).' };
+  }
+  return { ok: true, message: '' };
 }
 
 // ---------- Componentes de presentación (fidelidad 1:1 con el HTML) ----------
@@ -419,6 +459,7 @@ export default function World2Level4() {
   // Reflexión
   const [reflectText, setReflectText] = useState('');
   const [reflectAwarded, setReflectAwarded] = useState(false);
+  const [reflectError, setReflectError] = useState<string | null>(null);
 
   // Modo actividad (bloquea back de hardware durante ejercicios)
   const isActivity = !THEORY_STEPS.has(step) && step !== 0 && step !== TOTAL_STEPS - 1;
@@ -671,7 +712,12 @@ export default function World2Level4() {
     if (rulesDone) return;
     const weak = rules.reduce<number[]>((acc, r, i) => { if (ruleIsWeak(r)) acc.push(i + 1); return acc; }, []);
     if (weak.length > 0) {
-      setRulesError(`Estas reglas necesitan más detalle (${weak.join(', ')}). Escribe reglas concretas sobre cómo harás mejores prompts — por ejemplo: "Siempre indico el formato y para quién es".`);
+      setRulesError(`Las reglas ${weak.join(', ')} están vacías o son muy cortas. Escribe una frase con sustancia en cada una.`);
+      return;
+    }
+    const offTopic = rules.reduce<number[]>((acc, r, i) => { if (!containsTopic(r, PROMPTING_TERMS)) acc.push(i + 1); return acc; }, []);
+    if (offTopic.length > 0) {
+      setRulesError(`Las reglas ${offTopic.join(', ')} no parecen sobre prompting. Deben ser reglas para escribir mejores prompts (formato, contexto, verificar datos, evitar sesgos, límites de la IA...), no hábitos personales.`);
       return;
     }
     setRulesError(null);
@@ -698,10 +744,17 @@ export default function World2Level4() {
     else { setS2Running(false); setS2Done(true); }
   };
 
-  // ----- Reflexión (premia una sola vez al llegar al mínimo) -----
+  // ----- Reflexión (valida tema al pulsar "Completar nivel", premia una sola vez) -----
   const onReflectChange = (t: string) => {
     setReflectText(t);
-    if (!reflectAwarded && t.trim().length >= 50) { setReflectAwarded(true); addXP(15); }
+    if (reflectError) setReflectError(null);
+  };
+  const submitReflect = (): boolean => {
+    const res = evaluateReflection(reflectText);
+    if (!res.ok) { setReflectError(res.message); return false; }
+    setReflectError(null);
+    if (!reflectAwarded) { setReflectAwarded(true); addXP(15); }
+    return true;
   };
 
   // Feedback genérico de MCQ (explica por qué y cuál era la correcta)
@@ -1276,6 +1329,11 @@ export default function World2Level4() {
             multiline
           />
           <Text style={styles.charCount}>{reflectText.trim().length} / mínimo 50 caracteres</Text>
+          {reflectError && (
+            <View style={[styles.fbBox, styles.fbBoxBad]}>
+              <Text style={[styles.fbBoxText, styles.fbBadText]}>❌ {reflectError}</Text>
+            </View>
+          )}
           <Hl variant="amber">✅ Esta reflexión queda en tu portafolio IA Explorer.</Hl>
         </View>
       );
@@ -1365,6 +1423,7 @@ export default function World2Level4() {
       case 13: if (!eticaDone) { nextEtica(); return; } break;
       case 15: if (!checkDone) { nextCheck(); return; } break;
       case 16: if (!rulesDone) { saveRules(); return; } break;
+      case 18: if (!submitReflect()) return; break;
     }
     goToNextStep();
   };
