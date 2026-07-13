@@ -124,10 +124,10 @@ const LIMITES_ITEMS: DragItem[] = [
 
 // Encabezados y etiquetas de las columnas de drag-drop (con "por qué" para el feedback)
 const DD_HEADER: Record<string, { bg: string; fg: string; label: string }> = {
-  rol: { bg: '#ede9fe', fg: '#5b21b6', label: '🎭 Rol' },
-  ctx: { bg: '#dbeafe', fg: '#1e40af', label: '📋 Contexto' },
-  inst: { bg: '#fff7ed', fg: '#c2410c', label: '🎯 Instrucción' },
-  fmt: { bg: '#dcfce7', fg: '#166534', label: '📐 Formato' },
+  rol: { bg: '#ede9fe', fg: '#5b21b6', label: '🎭 Error de Rol' },
+  ctx: { bg: '#dbeafe', fg: '#1e40af', label: '📋 Error de Contexto' },
+  inst: { bg: '#fff7ed', fg: '#c2410c', label: '🎯 Error de Instrucción' },
+  fmt: { bg: '#f0fdf4', fg: '#065f46', label: '📐 Error de Formato' },
 };
 const LIMIT_HEADER: Record<string, { bg: string; fg: string; label: string }> = {
   puede: { bg: '#dcfce7', fg: '#166534', label: '✅ Puede' },
