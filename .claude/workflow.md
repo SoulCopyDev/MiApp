@@ -59,6 +59,8 @@ Refactor completo de numeración continua N1–N43. Ver propuesta en `/Descargas
 | GLOBAL-07 | ✅ Resuelto | DevMode bypass en todas las funciones check de N1–N6 |
 | EVAL-M1-01 | ✅ Resuelto | Eval1.tsx — evaluación final Mundo 1 (ex World1/Level7) |
 | N3-01..11 | ⏳ Pendiente | Restauración de contenido — requiere HTML prototipos |
+| AUDIT-N12 | ✅ Resuelto | Level12 reconstruido 1:1 vs nivel-12.html (18 módulos, paleta, D&D, validaciones) |
+| AUDIT-EVAL2 | ✅ Resuelto | Eval2 fiel a evaluacion-mundo-02.html (quiz completo+shuffle, builder 3 min, badge) |
 
 ## Scripts disponibles
 
