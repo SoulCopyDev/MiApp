@@ -1,4 +1,5 @@
 import { exitLevel } from '../utils/exitLevel';
+import { router } from 'expo-router';
 import { useState, useEffect, useRef, type ReactNode } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
@@ -211,6 +212,74 @@ function shuffleMCQ<T extends { opts: string[]; correct: number }>(q: T): T {
   return { ...q, opts: paired.map((p) => p.opt), correct: paired.findIndex((p) => p.ok) };
 }
 
+// ---------- Validación heurística de prompts (sin IA — la app es 100% offline) ----------
+// Detecta señales de un prompt bien formado para confirmar que el usuario escribió algo
+// con sentido (rol, contexto, instrucción, formato) y no palabras al azar.
+type Ingredient = 'rol' | 'contexto' | 'instruccion' | 'formato';
+
+const stripAccents = (s: string) => s.normalize('NFD').split('').filter((c) => c.charCodeAt(0) < 0x0300 || c.charCodeAt(0) > 0x036f).join('');
+const normalize = (s: string) => stripAccents(s.toLowerCase());
+
+function detectIngredients(raw: string): Record<Ingredient, boolean> {
+  const t = normalize(raw);
+  const has = (keys: string[]) => keys.some((k) => t.includes(k));
+  return {
+    rol: has(['actua como', 'eres un', 'eres una', 'como experto', 'como un ', 'como una ', 'rol de', 'papel de', 'imagina que eres', 'asume el', 'en calidad de']),
+    contexto: has(['para ', 'dirigido a', 'nivel', 'estudiante', 'grado', 'audiencia', 'contexto', 'publico', 'ninos', 'nino ', 'adolescente', 'principiante', 'experto', 'profesional', 'edad', 'anos', 'sobre ', 'acerca de', 'tema']),
+    instruccion: /(escrib|explic|traduc|resum|genera|crea|hazme|haz |dame|analiz|describe|compar|enumer|redact|disen|calcul|responde|elabor|propon|sugier|lista|convierte|corrig|mejora|resuelve|ordena|clasifica|define)/.test(t),
+    formato: has(['formato', 'lista', 'numerad', 'vineta', 'tabla', 'parrafo', 'oracion', 'frase', 'palabra', 'caracter', 'paso', 'maximo', 'minimo', 'punto', 'seccion', 'titulo', 'columna', 'esquema']),
+  };
+}
+
+// Palabras al azar / teclazos: mucha repetición o palabras sin vocales.
+function looksRandom(raw: string): boolean {
+  const words = raw.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return true;
+  const unique = new Set(words.map((w) => normalize(w)));
+  if (unique.size < Math.min(4, words.length)) return true;
+  const withVowel = words.filter((w) => /[aeiou]/.test(normalize(w))).length;
+  return withVowel / words.length < 0.6;
+}
+
+const INGREDIENT_LABEL: Record<Ingredient, string> = { rol: 'rol', contexto: 'contexto', instruccion: 'instrucción', formato: 'formato' };
+const humanList = (arr: Ingredient[]) => arr.map((i) => INGREDIENT_LABEL[i]).join(arr.length > 2 ? ', ' : ' e ');
+
+// Evalúa si el texto es un prompt real. `required` = ingredientes que este ejercicio
+// exige haber corregido. Devuelve ok + mensaje de feedback explicativo.
+function evaluatePrompt(text: string, required: Ingredient[] = []): { ok: boolean; message: string } {
+  const t = text.trim();
+  const words = t.split(/\s+/).filter(Boolean);
+  if (words.length < 6 || looksRandom(t)) {
+    return { ok: false, message: 'Parece incompleto o texto al azar. Escribe una instrucción real y con sentido (mínimo una frase completa).' };
+  }
+  const ing = detectIngredients(t);
+  const hasDigit = /\d/.test(t);
+  if (!ing.instruccion) {
+    return { ok: false, message: 'Falta una instrucción clara: empieza con un verbo de acción (escribe, explica, resume, analiza...).' };
+  }
+  const missing = required.filter((r) => (r === 'formato' ? !(ing.formato || hasDigit) : !ing[r]));
+  if (missing.length > 0) {
+    return { ok: false, message: `Todavía le falta ${humanList(missing)}. Añádelo para que el prompt quede completo.` };
+  }
+  const specificity = [ing.rol, ing.contexto, ing.formato, hasDigit].filter(Boolean).length;
+  if (specificity < 2) {
+    return { ok: false, message: 'Añade más especificidad: define el rol, el contexto (para quién / sobre qué) o el formato (extensión, lista, pasos...).' };
+  }
+  return { ok: true, message: '¡Prompt bien formado!' };
+}
+
+// "formato+instrucción" → ['formato','instruccion']  ·  y su versión legible.
+const tipoToIngredients = (tipo: string): Ingredient[] => tipo.split('+').map((s) => normalize(s.trim()) as Ingredient);
+const tipoLegible = (tipo: string) => tipo.split('+').map((s) => s.trim()).join(' e ');
+
+// Regla de oro válida: contenido con sustancia, no un par de letras al azar.
+function ruleIsWeak(raw: string): boolean {
+  const t = raw.trim();
+  const words = t.split(/\s+/).filter(Boolean);
+  if (t.length < 12 || words.length < 3) return true;
+  return looksRandom(t);
+}
+
 // ---------- Componentes de presentación (fidelidad 1:1 con el HTML) ----------
 function Bold({ children }: { children: ReactNode }) {
   return <Text style={styles.bold}>{children}</Text>;
@@ -309,6 +378,7 @@ export default function World2Level4() {
   const [fixIdx, setFixIdx] = useState(0);
   const [fixText, setFixText] = useState('');
   const [builderDone, setBuilderDone] = useState(false);
+  const [fixError, setFixError] = useState<string | null>(null);
 
   // Límites drag
   const [limitPlaced, setLimitPlaced] = useState<{ [idx: number]: string }>({});
@@ -335,6 +405,7 @@ export default function World2Level4() {
   // Reglas
   const [rules, setRules] = useState<string[]>(['', '', '', '', '']);
   const [rulesDone, setRulesDone] = useState(false);
+  const [rulesError, setRulesError] = useState<string | null>(null);
 
   // Sprint 2
   const [s2Running, setS2Running] = useState(false);
@@ -342,6 +413,8 @@ export default function World2Level4() {
   const [s2Sec, setS2Sec] = useState(90);
   const [s2ShowSol, setS2ShowSol] = useState(false);
   const [s2Done, setS2Done] = useState(false);
+  const [s2Text, setS2Text] = useState('');
+  const [s2Feedback, setS2Feedback] = useState<{ ok: boolean; msg: string } | null>(null);
 
   // Reflexión
   const [reflectText, setReflectText] = useState('');
@@ -446,7 +519,7 @@ export default function World2Level4() {
   // Sprint 2 timer
   useEffect(() => {
     if (!s2Running || s2ShowSol) return;
-    if (s2Sec <= 0) { setS2ShowSol(true); addXP(10); return; }
+    if (s2Sec <= 0) { setS2ShowSol(true); setS2Feedback({ ok: false, msg: '⏱️ Se acabó el tiempo. Revisa la solución modelo:' }); return; }
     const t = setTimeout(() => setS2Sec(s => s - 1), 1000);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -461,7 +534,7 @@ export default function World2Level4() {
   const finish = () => {
     const stars = xp >= 180 ? 3 : xp >= 120 ? 2 : xp >= 50 ? 1 : 0;
     completeLevel(10, stars, xp);
-    exitLevel({ confirm: false });
+    router.replace('/level/11');
   };
 
   // ----- Drag errores -----
@@ -532,9 +605,12 @@ export default function World2Level4() {
     else { setS1Running(false); setS1Done(true); }
   };
 
-  // ----- Builder -----
+  // ----- Builder (valida que el prompt reparado realmente corrija el error, no palabras al azar) -----
   const submitFix = () => {
-    if (fixText.trim().length < 20) return;
+    const required = tipoToIngredients(PROMPTS_ROTOS[fixIdx].tipo);
+    const res = evaluatePrompt(fixText, required);
+    if (!res.ok) { setFixError(res.message); return; }
+    setFixError(null);
     addXP(10);
     if (fixIdx + 1 < PROMPTS_ROTOS.length) { setFixIdx(i => i + 1); setFixText(''); }
     else { setBuilderDone(true); }
@@ -589,18 +665,35 @@ export default function World2Level4() {
     else { setCheckDone(true); addXP(checkScore * 12); }
   };
 
-  // ----- Reglas -----
+  // ----- Reglas (valida que cada regla tenga contenido real orientado al prompting) -----
   const rulesComplete = rules.every(r => r.trim().length >= 5);
   const saveRules = () => {
-    if (rulesDone || !rulesComplete) return;
+    if (rulesDone) return;
+    const weak = rules.reduce<number[]>((acc, r, i) => { if (ruleIsWeak(r)) acc.push(i + 1); return acc; }, []);
+    if (weak.length > 0) {
+      setRulesError(`Estas reglas necesitan más detalle (${weak.join(', ')}). Escribe reglas concretas sobre cómo harás mejores prompts — por ejemplo: "Siempre indico el formato y para quién es".`);
+      return;
+    }
+    setRulesError(null);
     setRulesDone(true);
     addXP(20);
   };
 
-  // ----- Sprint 2 -----
-  const startS2 = () => { setS2Running(true); setS2Sec(90); setS2Idx(0); setS2ShowSol(false); };
-  const revealS2 = () => { if (!s2ShowSol) { setS2ShowSol(true); addXP(10); } };
+  // ----- Sprint 2 (el usuario escribe su prompt reparado; se valida antes de premiar) -----
+  const startS2 = () => { setS2Running(true); setS2Sec(90); setS2Idx(0); setS2ShowSol(false); setS2Text(''); setS2Feedback(null); };
+  const revealS2 = () => {
+    if (s2ShowSol) return;
+    const res = evaluatePrompt(s2Text);
+    if (res.ok) {
+      addXP(10);
+      setS2Feedback({ ok: true, msg: '✅ ¡Buen intento! Tu prompt tiene instrucción y detalles concretos. Compáralo con la solución modelo:' });
+    } else {
+      setS2Feedback({ ok: false, msg: `⚠️ ${res.message} Compara con la solución modelo para aprender:` });
+    }
+    setS2ShowSol(true);
+  };
   const advanceS2 = () => {
+    setS2Text(''); setS2Feedback(null);
     if (s2Idx + 1 < SPRINT2_POOL.length) { setS2Idx(i => i + 1); setS2Sec(90); setS2ShowSol(false); }
     else { setS2Running(false); setS2Done(true); }
   };
@@ -917,7 +1010,7 @@ export default function World2Level4() {
             <>
               <Text style={styles.builderCounter}>Repara el prompt {fixIdx + 1}/5</Text>
               {sub('Lee el prompt roto y reescríbelo usando los 4 ingredientes.')}
-              <InfoCard variant="red" icon="🚫" iconBg="#fecdd3" title={`Prompt roto (${PROMPTS_ROTOS[fixIdx].tipo})`}>
+              <InfoCard variant="red" icon="🚫" iconBg="#fecdd3" title={`Prompt con error de ${tipoLegible(PROMPTS_ROTOS[fixIdx].tipo)}`}>
                 <Text style={styles.italic}>"{PROMPTS_ROTOS[fixIdx].roto}"</Text>
               </InfoCard>
               <Hl variant="amber"><Bold>Pista: </Bold>{PROMPTS_ROTOS[fixIdx].pista}</Hl>
@@ -927,10 +1020,15 @@ export default function World2Level4() {
                 placeholder="Reescribe el prompt con rol, tarea, contexto y formato..."
                 placeholderTextColor="#b8bcc0"
                 value={fixText}
-                onChangeText={setFixText}
+                onChangeText={t => { setFixText(t); if (fixError) setFixError(null); }}
                 multiline
               />
-              <Text style={styles.charCount}>{fixText.trim().length} / mínimo 20 caracteres</Text>
+              <Text style={styles.charCount}>{fixText.trim().length} caracteres</Text>
+              {fixError && (
+                <View style={[styles.fbBox, styles.fbBoxBad]}>
+                  <Text style={[styles.fbBoxText, styles.fbBadText]}>❌ {fixError}</Text>
+                </View>
+              )}
             </>
           )}
         </View>
@@ -1099,10 +1197,15 @@ export default function World2Level4() {
                 placeholderTextColor="#b8bcc0"
                 value={rules[n - 1]}
                 editable={!rulesDone}
-                onChangeText={t => { const r = [...rules]; r[n - 1] = t; setRules(r); }}
+                onChangeText={t => { const r = [...rules]; r[n - 1] = t; setRules(r); if (rulesError) setRulesError(null); }}
               />
             </View>
           ))}
+          {rulesError && !rulesDone && (
+            <View style={[styles.fbBox, styles.fbBoxBad]}>
+              <Text style={[styles.fbBoxText, styles.fbBadText]}>❌ {rulesError}</Text>
+            </View>
+          )}
           {rulesDone && (
             <View style={[styles.fbBox, styles.fbBoxOk]}>
               <Text style={[styles.fbBoxText, styles.fbOkText]}>✅ +20 XP. Tus reglas de oro quedaron guardadas en tu portafolio IA Explorer.</Text>
@@ -1130,12 +1233,28 @@ export default function World2Level4() {
               <View style={styles.sprintBox}><Text style={styles.sprintPrompt}>"{SPRINT2_POOL[s2Idx].roto}"</Text></View>
               {s2ShowSol ? (
                 <>
+                  {s2Feedback && (
+                    <View style={[styles.fbBox, s2Feedback.ok ? styles.fbBoxOk : styles.fbBoxAmber]}>
+                      <Text style={[styles.fbBoxText, s2Feedback.ok ? styles.fbOkText : styles.fbAmberText]}>{s2Feedback.msg}</Text>
+                    </View>
+                  )}
+                  {s2Text.trim().length > 0 && (
+                    <View style={styles.attemptBox}><Text style={styles.attemptText}>✍️ Tu versión: {s2Text.trim()}</Text></View>
+                  )}
                   <View style={styles.solutionBox}><Text style={styles.solutionText}>✅ Solución modelo: {SPRINT2_POOL[s2Idx].correcto}</Text></View>
                   <TouchableOpacity style={styles.sprintGhost} onPress={advanceS2}><Text style={styles.sprintGhostText}>{s2Idx + 1 < SPRINT2_POOL.length ? '→ Siguiente prompt' : '→ Terminar sprint'}</Text></TouchableOpacity>
                 </>
               ) : (
                 <>
-                  <Text style={styles.sprintHint}>Piensa tu versión reparada, luego compárala.</Text>
+                  <Text style={styles.sprintHint}>Escribe tu versión reparada del prompt y compárala con la solución modelo.</Text>
+                  <TextInput
+                    style={styles.textArea}
+                    placeholder="Escribe aquí tu prompt reparado (rol, contexto, instrucción y formato)..."
+                    placeholderTextColor="#b8bcc0"
+                    value={s2Text}
+                    onChangeText={setS2Text}
+                    multiline
+                  />
                   <TouchableOpacity style={styles.sprintGhost} onPress={revealS2}><Text style={styles.sprintGhostText}>Ver solución →</Text></TouchableOpacity>
                 </>
               )}
@@ -1186,7 +1305,10 @@ export default function World2Level4() {
               Ahora que sabes evitar errores, vas a aprender a construir secuencias: chain-of-thought, prompts iterativos, árbol de decisiones. La IA que razona paso a paso.
             </Text>
           </View>
-          <Text style={styles.progressNote}>Nivel 10 de 36 completado · Mundo 2 — Domina el Prompting</Text>
+          <View style={styles.lvlBarWrap}>
+            <Text style={styles.lvlBarLabel}>Nivel 10 de 36 completado · Mundo 2 — Domina el Prompting</Text>
+            <View style={styles.lvlBarOuter}><View style={styles.lvlBarInner} /></View>
+          </View>
           <TouchableOpacity style={styles.mainButton} onPress={finish} activeOpacity={0.85}>
             <Text style={styles.mainButtonText}>Siguiente nivel →</Text>
           </TouchableOpacity>
@@ -1384,6 +1506,8 @@ const styles = StyleSheet.create({
   sprintGhostText: { ...typography.bold, color: '#92400e', fontSize: 13 },
   solutionBox: { backgroundColor: '#f0fdf4', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#a7f3d0', marginBottom: 10 },
   solutionText: { fontSize: 12, color: '#065f46', lineHeight: 18 },
+  attemptBox: { backgroundColor: '#f8fafc', borderRadius: 10, padding: 10, borderWidth: 1, borderColor: '#e2e8f0', marginBottom: 8 },
+  attemptText: { fontSize: 12, color: '#334155', lineHeight: 17 },
   // Compare (columna vertical, como el HTML .compare-wrap de nivel-10)
   compareCol: { flexDirection: 'column', gap: 8, marginTop: 10, marginBottom: 14 },
   comparePanel: { borderRadius: 12, padding: 12, borderWidth: 1.5 },
@@ -1407,7 +1531,10 @@ const styles = StyleSheet.create({
   nextHint: { backgroundColor: '#f8fafc', borderRadius: 10, padding: 12, marginBottom: 14, borderWidth: 1, borderColor: '#e2e8f0', width: '100%' },
   nextHintText: { fontSize: 12, color: '#334155', lineHeight: 20 },
   nextHintBold: { fontWeight: '700' },
-  progressNote: { fontSize: 10, color: '#94a3b8', marginBottom: 12, textAlign: 'center' },
+  lvlBarWrap: { width: '100%', marginBottom: 14 },
+  lvlBarLabel: { fontSize: 10, color: '#94a3b8', marginBottom: 4 },
+  lvlBarOuter: { height: 6, backgroundColor: '#e2e8f0', borderRadius: 3, overflow: 'hidden' },
+  lvlBarInner: { height: '100%', width: '28%', backgroundColor: '#f59e0b', borderRadius: 3 },
   // Footer
   footerRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, gap: 8, borderTopWidth: 1, borderTopColor: colors.borderLight, backgroundColor: colors.background },
   backButton: { backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.border, paddingVertical: 14, paddingHorizontal: 18, borderRadius: 12, alignItems: 'center', justifyContent: 'center', minHeight: 48 },
