@@ -48,6 +48,12 @@ function shuffle<T>(arr: T[]): T[] {
   }
   return a;
 }
+// Baraja las opciones de una pregunta preservando cuál es la correcta
+function shuffleOpts<T extends { opts: string[]; correct: number }>(q: T): T {
+  const paired = q.opts.map((opt, i) => ({ opt, isCorrect: i === q.correct }));
+  const sh = shuffle(paired);
+  return { ...q, opts: sh.map(p => p.opt), correct: sh.findIndex(p => p.isCorrect) };
+}
 
 const MONO = Platform.select({ ios: 'Courier', default: 'monospace' });
 
@@ -63,10 +69,10 @@ const COMPARE_ONESHOT = {
   },
   q: '¿Qué aportó el ejemplo al resultado?',
   opts: [
-    'Hizo el prompt más largo, lo que siempre mejora la calidad de la respuesta',
+    'Hizo el prompt más largo, y los prompts más largos siempre producen respuestas de mejor calidad',
     'Definió el tono, el formato y el estilo concreto — el modelo capturó el patrón y lo replicó',
-    'Activó un modo especial de creatividad que el modelo tiene desactivado por defecto',
-    'Le dio más información sobre el tema del artículo para que la IA entendiera el contexto',
+    'Activó un modo especial de creatividad avanzada que el modelo mantiene desactivado por defecto',
+    'Le dio más información sobre el tema del artículo para que la IA entendiera mejor el contexto',
   ],
   correct: 1,
   explain: 'El ejemplo no explica el estilo — lo muestra. El modelo identifica el patrón: tono directo, promesa específica, elemento de sorpresa, estructura de problema/solución. Eso es imposible de transmitir solo con palabras.',
@@ -94,10 +100,10 @@ const COMPARE_SHOTS = {
   tres: { prompt: "Da feedback sobre: [texto]. Ejemplos de feedback que me gustan: 1) 'Fortaleza: argumento claro. Mejora: el ejemplo del párrafo 2 contradice tu tesis.' 2) 'Fortaleza: introducción que engancha. Mejora: la conclusión repite sin añadir.' 3) 'Fortaleza: uso de datos. Mejora: faltan fuentes.'", resp: 'Fortaleza: tu introducción establece una posición original que se mantiene. Mejora: el párrafo 4 introduce un contraargumento que no resuelves — o desarrolla por qué no te convence, o elimínalo.' },
   q: '¿En qué situación el few-shot (3 ejemplos) justifica el esfuerzo extra de prepararlo?',
   opts: [
-    'Siempre — más ejemplos siempre dan mejores resultados sin importar la tarea',
+    'Siempre conviene — cuantos más ejemplos le des, mejores resultados vas a obtener en cualquier tarea',
     'Cuando el formato y tono específico del output son críticos y difíciles de describir con palabras',
-    'Solo cuando la IA falló dos veces consecutivas con prompts más simples',
-    'Cuando tienes más de 5 minutos disponibles para preparar el prompt',
+    'Solo cuando la IA ya falló dos veces consecutivas después de intentarlo con prompts más simples',
+    'Cuando tienes más de 5 minutos disponibles para preparar y revisar el prompt antes de enviarlo',
   ],
   correct: 1,
   explain: 'Few-shot vale el esfuerzo cuando el criterio de calidad es tan específico que ninguna descripción verbal lo captura. Para tareas estándar, el zero-shot o one-shot dan resultados equivalentes con mucho menos trabajo.',
@@ -161,7 +167,8 @@ export default function Level12() {
   const [xp, setXp] = useState(0);
   const [xpToast, setXpToast] = useState<{ amount: number; id: number } | null>(null);
 
-  // M2 — One-shot compare
+  // M2 — One-shot compare (opciones barajadas — la correcta no debe tener posición fija)
+  const [osQ] = useState(() => shuffleOpts(COMPARE_ONESHOT));
   const [osChoice, setOsChoice] = useState<number | null>(null);
 
   // M3 — Few-shot builder
@@ -185,7 +192,8 @@ export default function Level12() {
   const [sysAwarded, setSysAwarded] = useState(false);
   const sysOk = Object.values(sysFields).every(v => v.trim().length >= 5 && !looksRandom(v));
 
-  // M7 — Compare 0/1/3
+  // M7 — Compare 0/1/3 (opciones barajadas)
+  const [shQ] = useState(() => shuffleOpts(COMPARE_SHOTS));
   const [shChoice, setShChoice] = useState<number | null>(null);
 
   // M11 — Auto-refinamiento
@@ -228,7 +236,8 @@ export default function Level12() {
   const ddIdxRef = useRef<number | null>(null);
   const ddAllPlaced = DD_TECNICAS.every((_, i) => ddPlaced[i] !== undefined);
 
-  // M17 — Quiz
+  // M17 — Quiz (opciones barajadas por pregunta)
+  const [quizItems] = useState(() => QUIZ_TECNICAS.map(shuffleOpts));
   const [quizIdx, setQuizIdx] = useState(0);
   const [quizScore, setQuizScore] = useState(0);
   const [quizAns, setQuizAns] = useState<number | null>(null);
@@ -358,10 +367,10 @@ export default function Level12() {
   const answerQuiz = (i: number) => {
     if (quizAns !== null) return;
     setQuizAns(i);
-    if (i === QUIZ_TECNICAS[quizIdx].correct) setQuizScore(s => s + 1);
+    if (i === quizItems[quizIdx].correct) setQuizScore(s => s + 1);
   };
   const nextQuiz = () => {
-    if (quizIdx + 1 < QUIZ_TECNICAS.length) { setQuizIdx(i => i + 1); setQuizAns(null); }
+    if (quizIdx + 1 < quizItems.length) { setQuizIdx(i => i + 1); setQuizAns(null); }
     else { setQuizFinished(true); addXP(quizScore * 12); }
   };
 
@@ -452,23 +461,23 @@ export default function Level12() {
           <Text style={styles.titleSm}>Un ejemplo lo cambia todo</Text>
           <View style={[styles.comparePanel, styles.comparePanelA]}>
             <Text style={[styles.compareLabel, { color: '#c2410c' }]}>ZERO-SHOT</Text>
-            <Text style={styles.compareResp}>{COMPARE_ONESHOT.sinEj.prompt}</Text>
-            <Text style={styles.compareRespItalic}>→ {COMPARE_ONESHOT.sinEj.resp}</Text>
+            <Text style={styles.compareResp}>{osQ.sinEj.prompt}</Text>
+            <Text style={styles.compareRespItalic}>→ {osQ.sinEj.resp}</Text>
           </View>
           <View style={[styles.comparePanel, styles.comparePanelB]}>
             <Text style={[styles.compareLabel, { color: '#065f46' }]}>ONE-SHOT</Text>
-            <Text style={styles.compareResp}>{COMPARE_ONESHOT.conEj.prompt}</Text>
-            <Text style={styles.compareRespItalic}>→ {COMPARE_ONESHOT.conEj.resp}</Text>
+            <Text style={styles.compareResp}>{osQ.conEj.prompt}</Text>
+            <Text style={styles.compareRespItalic}>→ {osQ.conEj.resp}</Text>
           </View>
-          <Text style={styles.questionText}>{COMPARE_ONESHOT.q}</Text>
-          {COMPARE_ONESHOT.opts.map((o, i) => (
+          <Text style={styles.questionText}>{osQ.q}</Text>
+          {osQ.opts.map((o, i) => (
             <TouchableOpacity key={i} style={[styles.qOpt, osChoice !== null && i !== osChoice && { opacity: 0.45 }]} disabled={osChoice !== null}
-              onPress={() => { setOsChoice(i); if (i === COMPARE_ONESHOT.correct) addXP(12); }}>
+              onPress={() => { setOsChoice(i); if (i === osQ.correct) addXP(12); }}>
               <Text style={styles.qOptText}>{o}</Text>
             </TouchableOpacity>
           ))}
           {osChoice !== null && (
-            <QuizFb ok={osChoice === COMPARE_ONESHOT.correct}>{osChoice === COMPARE_ONESHOT.correct ? '✅ ' : '❌ '}{COMPARE_ONESHOT.explain}</QuizFb>
+            <QuizFb ok={osChoice === osQ.correct}>{osChoice === osQ.correct ? '✅ ' : '❌ '}{osQ.explain}</QuizFb>
           )}
         </View>
       );
@@ -609,14 +618,14 @@ export default function Level12() {
               <View style={[styles.cardIcon, { backgroundColor: '#e2e8f0' }]}><Text style={{ fontSize: 19 }}>📌</Text></View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.cardTitle}>Tarea</Text>
-                <Text style={styles.cardText}>{COMPARE_SHOTS.tarea}</Text>
+                <Text style={styles.cardText}>{shQ.tarea}</Text>
               </View>
             </View>
           </View>
           {([
-            ['🎯 Zero-shot', '#374151', '#f8fafc', '#e2e8f0', COMPARE_SHOTS.cero],
-            ['1️⃣ One-shot', '#92400e', '#fffbeb', '#fde68a', COMPARE_SHOTS.uno],
-            ['📚 Few-shot (3 ej)', '#065f46', '#f0fdf4', '#bbf7d0', COMPARE_SHOTS.tres],
+            ['🎯 Zero-shot', '#374151', '#f8fafc', '#e2e8f0', shQ.cero],
+            ['1️⃣ One-shot', '#92400e', '#fffbeb', '#fde68a', shQ.uno],
+            ['📚 Few-shot (3 ej)', '#065f46', '#f0fdf4', '#bbf7d0', shQ.tres],
           ] as const).map(([label, color, bg, border, data]) => (
             <View key={label} style={[styles.card, { backgroundColor: bg, borderColor: border, marginBottom: 6 }]}>
               <Text style={[styles.cardTitle, { color }]}>{label}</Text>
@@ -624,15 +633,15 @@ export default function Level12() {
               <Text style={styles.respItalic}>→ {data.resp}</Text>
             </View>
           ))}
-          <Text style={styles.questionText}>{COMPARE_SHOTS.q}</Text>
-          {COMPARE_SHOTS.opts.map((o, i) => (
+          <Text style={styles.questionText}>{shQ.q}</Text>
+          {shQ.opts.map((o, i) => (
             <TouchableOpacity key={i} style={[styles.qOpt, shChoice !== null && i !== shChoice && { opacity: 0.45 }]} disabled={shChoice !== null}
-              onPress={() => { setShChoice(i); if (i === COMPARE_SHOTS.correct) addXP(12); }}>
+              onPress={() => { setShChoice(i); if (i === shQ.correct) addXP(12); }}>
               <Text style={styles.qOptText}>{o}</Text>
             </TouchableOpacity>
           ))}
           {shChoice !== null && (
-            <QuizFb ok={shChoice === COMPARE_SHOTS.correct}>{shChoice === COMPARE_SHOTS.correct ? '✅ ' : '❌ '}{COMPARE_SHOTS.explain}</QuizFb>
+            <QuizFb ok={shChoice === shQ.correct}>{shChoice === shQ.correct ? '✅ ' : '❌ '}{shQ.explain}</QuizFb>
           )}
         </View>
       );
@@ -944,17 +953,17 @@ export default function Level12() {
           return (
             <View>
               <Tag text="✅ QUIZ COMPLETADO" bg="#fef3c7" color="#92400e" />
-              <View style={styles.quizResultBox}><Text style={styles.quizResultText}>{quizScore}/{QUIZ_TECNICAS.length} correctas 🎯</Text></View>
+              <View style={styles.quizResultBox}><Text style={styles.quizResultText}>{quizScore}/{quizItems.length} correctas 🎯</Text></View>
               <View style={[styles.hlBox, quizScore >= 4 ? { borderLeftColor: '#10b981', backgroundColor: '#f0fdf4' } : { borderLeftColor: '#f59e0b', backgroundColor: '#fffbeb' }]}>
                 <Text style={[styles.hlText, { color: quizScore >= 4 ? '#065f46' : '#92400e' }]}><Text style={styles.hlBold}>+{quizScore * 12} XP.</Text> {quizScore >= 4 ? 'Lees prompts como un experto — identificas la técnica en segundos.' : 'Practica: mira prompts en internet e identifica qué técnica usan.'}</Text>
               </View>
             </View>
           );
         }
-        const q = QUIZ_TECNICAS[quizIdx];
+        const q = quizItems[quizIdx];
         return (
           <View>
-            <Tag text={`🔍 MÓDULO 17 · QUIZ · ${quizIdx + 1}/${QUIZ_TECNICAS.length}`} bg="#fef3c7" color="#92400e" />
+            <Tag text={`🔍 MÓDULO 17 · QUIZ · ${quizIdx + 1}/${quizItems.length}`} bg="#fef3c7" color="#92400e" />
             <Text style={styles.subtitle}>Lee el prompt. ¿Qué técnica usa?</Text>
             <View style={[styles.card, { backgroundColor: '#f8fafc', borderColor: '#e2e8f0', marginBottom: 10 }]}>
               <Text style={[styles.cardText, { fontFamily: MONO, fontSize: 11, lineHeight: 19 }]}>{q.prompt}</Text>
@@ -1059,7 +1068,7 @@ export default function Level12() {
         return { label: 'Continuar →', enabled: true, onPress: next };
       case 17:
         if (quizFinished) return { label: 'Continuar →', enabled: true, onPress: next };
-        return { label: 'Siguiente →', enabled: quizAns !== null || devMode, note: quizAns === null ? `Pregunta ${quizIdx + 1} de ${QUIZ_TECNICAS.length} · +12 XP por acierto` : undefined, onPress: nextQuiz };
+        return { label: 'Siguiente →', enabled: quizAns !== null || devMode, note: quizAns === null ? `Pregunta ${quizIdx + 1} de ${quizItems.length} · +12 XP por acierto` : undefined, onPress: nextQuiz };
       case 18: return { label: 'Completar nivel →', enabled: reflect.trim().length >= 50 || devMode, green: true, note: 'Escribe al menos 50 caracteres · +15 XP', onPress: submitReflect };
       case 19: return null; // botón dentro de la pantalla de completado
       default: return null;
