@@ -73,6 +73,7 @@ MiApp/
     │   └── downloadConfig.ts # URLs de descarga de la app (APK, Play Store, App Store)
     ├── components/
     │   ├── WebSidebar.tsx   # Sidebar de navegación para desktop (solo web)
+    │   ├── WebPhoneFrame.tsx # Tarjeta centrada tipo teléfono para niveles/evals en web desktop
     │   └── DownloadBanner.tsx # Banner/card de descarga de app móvil (solo web)
     ├── hooks/
     │   ├── useCustomFonts.ts # Carga Plus Jakarta Sans

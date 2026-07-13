@@ -4,6 +4,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { colors } from '../theme';
 import { useBreakpoint } from '../hooks/useBreakpoint';
 import WebSidebar from '../components/WebSidebar';
+import WebPhoneFrame from '../components/WebPhoneFrame';
 
 import Eval1 from './eval/Eval1';
 import Eval2 from './eval/Eval2';
@@ -42,7 +43,7 @@ export default function EvalScreen() {
       <View style={{ flex: 1, flexDirection: 'row', backgroundColor: colors.background }}>
         <WebSidebar />
         <View style={{ flex: 1, overflow: 'hidden' }}>
-          <Component />
+          <WebPhoneFrame><Component /></WebPhoneFrame>
         </View>
       </View>
     );
