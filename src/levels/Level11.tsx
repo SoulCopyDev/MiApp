@@ -76,7 +76,6 @@ const containsTopic = (text: string, terms: string[]) => {
 
 type Eval = { ok: boolean; msg: string };
 const fieldOk = (v: string) => v.trim().length >= 5 && !looksRandom(v);
-const cpOk = (v: string) => v.trim().length >= 10 && !looksRandom(v);
 function evalPrompt(text: string): Eval {
   const t = text.trim();
   if (!notGibberish(t, 8)) return { ok: false, msg: 'Escribe un prompt real y con sentido (al menos una frase completa, no texto al azar).' };
@@ -168,6 +167,24 @@ const FILL_COT: FillCoT[] = [
   },
 ];
 
+// Módulo 5 (rediseñado): elegir el checkpoint correcto para cada punto del prompt.
+const CP_EXERCISE = {
+  base: 'Analiza los pros y contras de estudiar en el extranjero.',
+  steps: [
+    { titulo: 'Checkpoint 1 — al terminar de analizar los pros', opts: ['Al terminar los pros, dime cuántos encontraste antes de seguir', 'Ignora los pros y pasa directo a los contras', 'Hazlo lo más rápido posible, sin detenerte'], correct: 0, explain: 'Un checkpoint hace que la IA confirme un resultado parcial (cuántos pros) antes de avanzar, para no perder el hilo.' },
+    { titulo: 'Checkpoint 2 — antes de pasar a los contras', opts: ['Antes de los contras, resume los pros en una sola frase', 'Antes de los contras, cambia el tema a otro país', 'Escribe los contras con la mayor cantidad de palabras posible'], correct: 0, explain: 'Resumir antes de avanzar obliga a la IA a consolidar lo anterior: es un checkpoint de síntesis.' },
+    { titulo: 'Checkpoint 3 — al final', opts: ['Al final, dame tu conclusión con un veredicto claro: ¿vale la pena o no?', 'Al final, no des ninguna conclusión, solo la lista', 'Al final, inventa datos si no estás seguro'], correct: 0, explain: 'El checkpoint final fuerza una decisión concreta en vez de dejar la respuesta abierta.' },
+  ],
+  modelo: 'Analiza los pros y contras de estudiar en el extranjero. Al terminar los pros, dime cuántos encontraste. Antes de pasar a los contras, resume los pros en una frase. Al terminar, dame tu conclusión con un veredicto claro: ¿vale la pena o no?',
+};
+
+// Módulo 11 (rediseñado): elegir cuál de dos cadenas está mejor diseñada.
+const CHAIN_CHOICE = [
+  { task: 'Planifica una semana de estudio para un examen de química en 7 días', good: 'P1: Lista los 7 temas del examen. P2: Para cada tema, el concepto clave y una fórmula. P3: Diseña 2 ejercicios de práctica por tema con solución.', bad: 'Dame toda la planificación de la semana con los temas, las fórmulas y todos los ejercicios resueltos de una sola vez.', why: 'La cadena divide en pasos (temas → conceptos → ejercicios); cada uno recibe atención completa. El prompt único mezcla todo y la IA responde superficial.' },
+  { task: 'Analiza las ventajas y desventajas de vivir en una ciudad grande vs. un pueblo', good: 'P1: Lista 5 ventajas y 5 desventajas de cada uno. P2: Pondéralas según calidad de vida, trabajo y costo. P3: Dame una recomendación según mi perfil.', bad: 'Dime de una vez si es mejor la ciudad o el pueblo, con todo el análisis y la conclusión en un solo texto.', why: 'Separar análisis → ponderación → recomendación evita que la IA salte a una conclusión sin fundamentar. El prompt único da una opinión sin respaldo.' },
+  { task: 'Diseña un asistente de IA que ayude a estudiantes con tareas de matemáticas', good: 'P1: Define el perfil del estudiante ideal. P2: Diseña el system prompt (rol, tono, límites, ejemplos). P3: Crea 5 preguntas de prueba para verificar que funciona.', bad: 'Créame el asistente de matemáticas completo con todo lo necesario en un solo prompt bien detallado.', why: 'Diseñar por fases (perfil → configuración → prueba) produce un asistente probado. Pedirlo todo junto deja huecos sin verificar.' },
+];
+
 const VF_COT_POOL: VFCoTItem[] = [
   { stmt: "Añadir 'piénsalo paso a paso' a un prompt mejora significativamente la precisión en problemas que requieren razonamiento.", correct: true, explain: 'Esta técnica (Chain-of-Thought) fue demostrada en investigaciones de Google en 2022. Fuerza al modelo a generar pasos intermedios que anclan el razonamiento y reducen errores en cálculos y lógica.' },
   { stmt: 'Si un LLM muestra todos los pasos de su razonamiento, garantiza que el resultado final es correcto.', correct: false, explain: 'El modelo puede cometer errores en los pasos intermedios y llegar a una conclusión incorrecta de forma coherente con esos pasos. El CoT mejora la probabilidad de corrección, no la garantiza.' },
@@ -241,17 +258,6 @@ const QUIZ_COT: MCQ[] = [
   },
 ];
 
-const SPRINT_CADENAS = [
-  'Planifica una semana de estudio para un examen de química en 7 días',
-  'Analiza las ventajas y desventajas de vivir en una ciudad grande vs. un pueblo',
-  'Diseña un asistente de IA que ayude a estudiantes con tareas de matemáticas',
-];
-const SP_MODELOS = [
-  'P1: Lista los 7 temas de química del examen. P2: Para cada tema, dame el concepto clave y una fórmula. P3: Diseña 2 ejercicios de práctica por tema con solución.',
-  'P1: Analiza pros y contras de vivir en ciudad vs. pueblo (5 cada uno). P2: Pondera según: calidad de vida, oportunidades laborales, costo y relaciones sociales. P3: Dame una recomendación personalizada basada en el análisis.',
-  'P1: Define el perfil del estudiante ideal para este asistente. P2: Diseña el system prompt con rol, tono, límites y ejemplos. P3: Crea 5 preguntas de prueba para verificar que el asistente funciona bien.',
-];
-
 const ACERTIJO = {
   problema: 'Tengo hermanos y hermanas. Cada hijo de mis padres tiene el doble de hermanos que de hermanas — y yo soy mujer. ¿Cuántos hermanos y hermanas tengo?',
   hint: 'Usa variables. Sea H = hermanos, M = hermanas (incluyéndome). Para mí (mujer): hermanos = H, hermanas = M-1. La condición es H = 2(M-1).',
@@ -302,7 +308,6 @@ export default function World2Level5() {
   const [xpToast, setXpToast] = useState<{ amount: number; id: number } | null>(null);
 
   // Pools aleatorios (fijados una vez)
-  const fillCotItem = useRef(pickN(FILL_COT, 1)[0]).current;
   const tareaCompleja = useRef(pickN(TAREAS_COMPLEJAS, 1)[0]).current;
   const vfItems = useRef(pickN(VF_COT_POOL, 6)).current;
   const compareItem = useRef(shuffleMCQ(COMPARE_COT)).current;
@@ -316,9 +321,11 @@ export default function World2Level5() {
   const [tema, setTema] = useState(''); const [p1, setP1] = useState(''); const [p2, setP2] = useState(''); const [p3, setP3] = useState('');
   const [chainBuilt, setChainBuilt] = useState(false);
 
-  // Fill checkpoints (5)
-  const [cpValues, setCpValues] = useState<string[]>(['', '', '']);
-  const [cpDone, setCpDone] = useState(false);
+  // Fill checkpoints (5) — elegir el checkpoint correcto (opción múltiple)
+  const cpShuffled = useRef(CP_EXERCISE.steps.map(shuffleMCQ)).current;
+  const [cpSel, setCpSel] = useState<(number | null)[]>([null, null, null]);
+  const [cpChecked, setCpChecked] = useState(false);
+  const [cpCorrect, setCpCorrect] = useState(0);
 
   // V/F (6)
   const [vfIdx, setVfIdx] = useState(0); const [vfScore, setVfScore] = useState(0);
@@ -333,9 +340,10 @@ export default function World2Level5() {
   // Prompt iterativo (9)
   const [iterRound, setIterRound] = useState(1); const [iterText, setIterText] = useState(''); const [iterDone, setIterDone] = useState(false);
 
-  // Sprint (11)
-  const [sprintIdx, setSprintIdx] = useState(0); const [sprintSec, setSprintSec] = useState(90);
-  const [sprintRunning, setSprintRunning] = useState(false); const [sprintModelo, setSprintModelo] = useState(false); const [sprintDone, setSprintDone] = useState(false);
+  // Elegir la mejor cadena (11) — se baraja de qué lado queda la buena.
+  const chainFlip = useRef(CHAIN_CHOICE.map(() => Math.random() < 0.5)).current;
+  const [chIdx, setChIdx] = useState(0); const [chSel, setChSel] = useState<number | null>(null);
+  const [chScore, setChScore] = useState(0); const [chDone, setChDone] = useState(false);
 
   // Builder verificación (12)
   const [vpBase, setVpBase] = useState(''); const [vpBuilt, setVpBuilt] = useState(false);
@@ -371,14 +379,6 @@ export default function World2Level5() {
     return () => h.remove();
   }, [isActivity]);
 
-  // Sprint timer
-  useEffect(() => {
-    if (!sprintRunning || sprintModelo) return;
-    if (sprintSec <= 0) { setSprintModelo(true); return; }
-    const t = setTimeout(() => setSprintSec((s) => s - 1), 1000);
-    return () => clearTimeout(t);
-  }, [sprintRunning, sprintSec, sprintModelo]);
-
   const addXP = (n: number) => { setXp((prev) => prev + n); if (n > 0) setXpToast((prev) => ({ amount: n, id: (prev?.id ?? 0) + 1 })); };
   const goToNextStep = () => { if (step < TOTAL_STEPS - 1) setStep(step + 1); };
   const goToPrevStep = () => setStep((s) => Math.max(0, s - 1));
@@ -393,8 +393,9 @@ export default function World2Level5() {
 
   const chainValid = fieldOk(tema) && fieldOk(p1) && fieldOk(p2) && fieldOk(p3);
 
-  const cpAllValid = cpValues.every(cpOk);
-  const commitCp = () => { if (!cpDone && cpAllValid) { setCpDone(true); addXP(15); } };
+  const cpAllSel = cpSel.every((s) => s !== null);
+  const answerCp = (i: number, opt: number) => { if (cpChecked) return; setCpSel((prev) => { const n = [...prev]; n[i] = opt; return n; }); };
+  const verifyCp = () => { if (cpChecked) return; let c = 0; cpShuffled.forEach((s, i) => { if (cpSel[i] === s.correct) c++; }); setCpCorrect(c); setCpChecked(true); if (c > 0) addXP(c * 5); };
 
   const answerVF = (ans: boolean) => { if (vfSel !== null) return; setVfSel(ans); if (ans === vfItems[vfIdx].correct) setVfScore((s) => s + 1); };
   const nextVf = () => { if (vfSel === null) return; if (vfIdx + 1 < vfItems.length) { setVfIdx((i) => i + 1); setVfSel(null); } else { setVfDone(true); addXP(vfScore * 8); } };
@@ -415,12 +416,8 @@ export default function World2Level5() {
     if (iterRound < 3) { setIterRound((r) => r + 1); setIterText(''); } else { setIterDone(true); }
   };
 
-  const startSprint = () => { setSprintRunning(true); setSprintSec(90); setSprintModelo(false); };
-  const verModelo = () => { if (sprintModelo) return; setSprintModelo(true); setSprintRunning(false); addXP(10); };
-  const nextSprint = () => {
-    if (sprintIdx + 1 < SPRINT_CADENAS.length) { setSprintIdx((i) => i + 1); setSprintSec(90); setSprintModelo(false); setSprintRunning(false); }
-    else { setSprintDone(true); }
-  };
+  const answerChain = (choice: number) => { if (chSel !== null) return; setChSel(choice); const goodSide = chainFlip[chIdx] ? 1 : 0; if (choice === goodSide) setChScore((s) => s + 1); };
+  const nextChain = () => { if (chSel === null) return; if (chIdx + 1 < CHAIN_CHOICE.length) { setChIdx((i) => i + 1); setChSel(null); } else { setChDone(true); addXP(chScore * 10); } };
 
   const vpEval = vpBase.trim() ? evalVp(vpBase) : null;
   const vpValid = vpEval?.ok ?? false;
@@ -565,18 +562,23 @@ export default function World2Level5() {
         <View>
           <Tag label="📍 Módulo 5 · Fill-in-blank" />
           <Text style={styles.titleSm}>Añade checkpoints al prompt</Text>
-          <Text style={styles.subtitle}>Toma este prompt básico y añade las instrucciones de checkpoint que le faltan.</Text>
-          <Card {...CARD_SLATE} icon="📋" title="Prompt base"><Text style={styles.italic}>"{fillCotItem.base}"</Text></Card>
-          {fillCotItem.campos.map((c, i) => (
+          <Text style={styles.subtitle}>Un checkpoint hace que la IA se detenga y confirme un resultado parcial. Elige la instrucción correcta para cada punto.</Text>
+          <Card {...CARD_SLATE} icon="📋" title="Prompt base"><Text style={styles.italic}>"{CP_EXERCISE.base}"</Text></Card>
+          {cpShuffled.map((s, i) => (
             <View key={i}>
-              <Text style={styles.label}>{c}</Text>
-              <TextInput style={styles.input} placeholder="Escribe la instrucción de checkpoint..." placeholderTextColor="#b8bcc0" editable={!cpDone} value={cpValues[i]} onChangeText={(v) => setCpValues((prev) => { const n = [...prev]; n[i] = v; return n; })} />
+              <Text style={styles.label}>{s.titulo}</Text>
+              {s.opts.map((o, j) => (
+                <TouchableOpacity key={j} style={[styles.optionBtn, cpSel[i] === j && styles.optSel, cpChecked && j === s.correct && styles.optCorrect, cpChecked && cpSel[i] === j && j !== s.correct && styles.optWrong]} onPress={() => answerCp(i, j)} disabled={cpChecked}>
+                  <Text style={styles.optText}>{o}</Text>
+                </TouchableOpacity>
+              ))}
+              {cpChecked && (
+                <Text style={[styles.arbolFb, cpSel[i] === s.correct ? styles.fbOkText : styles.fbBadText]}>{cpSel[i] === s.correct ? '✅ ' : '❌ '}{s.explain}</Text>
+              )}
             </View>
           ))}
-          {cpDone && (
-            <View style={[styles.fbBox, styles.fbOk]}>
-              <Text style={[styles.fbText, styles.fbOkText]}>✅ +15 XP. Ejemplo modelo: {fillCotItem.correcto}</Text>
-            </View>
+          {cpChecked && (
+            <View style={styles.builderResult}><Text style={styles.builderResultText}>✅ {cpCorrect}/3 correctas · +{cpCorrect * 5} XP. Prompt con checkpoints: {CP_EXERCISE.modelo}</Text></View>
           )}
         </View>
       );
@@ -689,27 +691,29 @@ export default function World2Level5() {
       case 11: return (
         <View>
           <Tag label="⚡ Módulo 11 · Sprint" />
-          <Text style={styles.titleSm}>Sprint: diseña la cadena</Text>
-          {sprintDone ? (
-            <View style={[styles.fbBox, styles.fbOk]}>
-              <Text style={styles.resultBig}>3 cadenas diseñadas 🏁</Text>
-              <Text style={[styles.fbText, styles.fbOkText]}>Diseñar cadenas rápido es la habilidad que distingue a los usuarios avanzados de IA.</Text>
+          <Text style={styles.titleSm}>¿Cuál cadena está mejor diseñada?</Text>
+          {chDone ? (
+            <View style={[styles.fbBox, chScore >= 2 ? styles.fbOk : styles.fbAmber]}>
+              <Text style={styles.resultBig}>{chScore}/{CHAIN_CHOICE.length} correctas 🏁</Text>
+              <Text style={[styles.fbText, chScore >= 2 ? styles.fbOkText : styles.fbAmberText]}>+{chScore * 10} XP. Reconocer una buena cadena es el primer paso para diseñarla tú.</Text>
             </View>
           ) : (
             <>
-              <Text style={styles.subtitle}>90 segundos. Para cada tarea, diseña mentalmente una cadena de 3 prompts y compárala con el modelo.</Text>
-              <Text style={styles.timer}>{Math.floor(sprintSec / 60)}:{String(sprintSec % 60).padStart(2, '0')}</Text>
-              <View style={styles.timerTrack}><View style={[styles.timerFill, { width: `${(sprintSec / 90) * 100}%` }]} /></View>
-              <Card bg="#eff6ff" border="#bfdbfe">{SPRINT_CADENAS[sprintIdx]}</Card>
-              {sprintModelo ? (
-                <>
-                  <View style={[styles.fbBox, styles.fbOk]}><Text style={[styles.fbText, styles.fbOkText]}>✅ Cadena modelo: {SP_MODELOS[sprintIdx]}</Text></View>
-                  <TouchableOpacity style={styles.ghostBtn} onPress={nextSprint}><Text style={styles.ghostText}>{sprintIdx + 1 < SPRINT_CADENAS.length ? '→ Siguiente tarea' : '→ Terminar sprint'}</Text></TouchableOpacity>
-                </>
-              ) : (
-                <View style={styles.row}>
-                  <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#1e40af' }]} onPress={startSprint} disabled={sprintRunning}><Text style={styles.actionText}>▶ Iniciar</Text></TouchableOpacity>
-                  <TouchableOpacity style={[styles.actionBtn, styles.actionGhost]} onPress={verModelo}><Text style={[styles.actionText, { color: '#1e40af' }]}>→ Ver modelo</Text></TouchableOpacity>
+              <Text style={styles.subtitle}>Para esta tarea, elige la opción con la cadena de prompts mejor dividida ({chIdx + 1}/{CHAIN_CHOICE.length}).</Text>
+              <Card {...CARD_BLUE}>{CHAIN_CHOICE[chIdx].task}</Card>
+              {[0, 1].map((side) => {
+                const goodSide = chainFlip[chIdx] ? 1 : 0;
+                const text = side === goodSide ? CHAIN_CHOICE[chIdx].good : CHAIN_CHOICE[chIdx].bad;
+                return (
+                  <TouchableOpacity key={side} style={[styles.optionBtn, chSel === side && styles.optSel, chSel !== null && side === goodSide && styles.optCorrect, chSel === side && side !== goodSide && styles.optWrong]} onPress={() => answerChain(side)} disabled={chSel !== null}>
+                    <Text style={styles.optLabel}>Opción {side === 0 ? 'A' : 'B'}</Text>
+                    <Text style={styles.optText}>{text}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+              {chSel !== null && (
+                <View style={[styles.fbBox, chSel === (chainFlip[chIdx] ? 1 : 0) ? styles.fbOk : styles.fbBad]}>
+                  <Text style={[styles.fbText, chSel === (chainFlip[chIdx] ? 1 : 0) ? styles.fbOkText : styles.fbBadText]}>{chSel === (chainFlip[chIdx] ? 1 : 0) ? '✅ ' : '❌ '}{CHAIN_CHOICE[chIdx].why}</Text>
                 </View>
               )}
             </>
@@ -862,11 +866,11 @@ export default function World2Level5() {
     switch (step) {
       case 2: return compareAnswered;
       case 3: return chainBuilt || chainValid;
-      case 5: return cpDone || cpAllValid;
+      case 5: return cpChecked || cpAllSel;
       case 6: return vfDone || vfSel !== null;
       case 8: return arbolChecked || arbolAllAnswered;
       case 9: return iterDone || iterValid;
-      case 11: return sprintDone;
+      case 11: return chDone || chSel !== null;
       case 12: return vpBuilt || vpValid;
       case 14: return razonDone || razonSel !== null;
       case 16: return acertijoDone || acValid;
@@ -879,11 +883,11 @@ export default function World2Level5() {
   const getBtnLabel = () => {
     switch (step) {
       case 0: return '¡Empezar! →';
-      case 5: return cpDone ? 'Continuar →' : 'Ver prompt mejorado →';
+      case 5: return cpChecked ? 'Continuar →' : 'Verificar →';
       case 6: return vfDone ? 'Continuar →' : 'Siguiente →';
       case 8: return arbolChecked ? 'Continuar →' : 'Verificar árbol →';
       case 9: return iterDone ? 'Continuar →' : (iterRound < 3 ? 'Siguiente ronda →' : 'Completar →');
-      case 11: return sprintDone ? 'Continuar →' : 'Continuar →';
+      case 11: return chDone ? 'Continuar →' : 'Siguiente →';
       case 14: return razonDone ? 'Continuar →' : 'Siguiente →';
       case 17: return quizDone ? 'Continuar →' : 'Siguiente →';
       case 18: return 'Completar nivel →';
@@ -895,10 +899,11 @@ export default function World2Level5() {
     if (!canProceed) return;
     switch (step) {
       case 3: if (!chainBuilt) { setChainBuilt(true); addXP(10); } break;
-      case 5: if (!cpDone) { commitCp(); return; } break;
+      case 5: if (!cpChecked) { verifyCp(); return; } break;
       case 6: if (!vfDone) { nextVf(); return; } break;
       case 8: if (!arbolChecked) { checkArbol(); return; } break;
       case 9: if (!iterDone) { advanceIter(); return; } break;
+      case 11: if (!chDone) { nextChain(); return; } break;
       case 12: if (!vpBuilt) { commitVp(); } break;
       case 14: if (!razonDone) { nextRazon(); return; } break;
       case 16: if (!acertijoDone) { commitAcertijo(); } break;
@@ -986,6 +991,7 @@ const styles = StyleSheet.create({
   optCorrect: { borderColor: '#10b981', backgroundColor: '#dcfce7' },
   optWrong: { borderColor: '#ef4444', backgroundColor: '#fff1f2' },
   optText: { fontSize: 12, color: '#334155', lineHeight: 17, fontWeight: '500' },
+  optLabel: { fontSize: 10, fontWeight: '700', color: '#64748b', marginBottom: 3, textTransform: 'uppercase' },
   // V/F
   row: { flexDirection: 'row', gap: 10, marginBottom: 8 },
   vfStmt: { fontSize: 13, color: '#0f172a', fontWeight: '600', lineHeight: 19, marginBottom: 12, padding: 13, backgroundColor: '#f8fafc', borderRadius: 12, borderWidth: 1, borderColor: '#e2e8f0' },
