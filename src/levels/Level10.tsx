@@ -729,13 +729,10 @@ export default function World2Level4() {
   const startS2 = () => { setS2Running(true); setS2Sec(90); setS2Idx(0); setS2ShowSol(false); setS2Text(''); setS2Feedback(null); };
   const revealS2 = () => {
     if (s2ShowSol) return;
-    const res = evaluatePrompt(s2Text);
-    if (res.ok) {
-      addXP(10);
-      setS2Feedback({ ok: true, msg: '✅ ¡Buen intento! Tu prompt tiene instrucción y detalles concretos. Compáralo con la solución modelo:' });
-    } else {
-      setS2Feedback({ ok: false, msg: `⚠️ ${res.message} Compara con la solución modelo para aprender:` });
-    }
+    // El botón solo se habilita con un prompt válido; guard defensivo por si acaso.
+    if (!evaluatePrompt(s2Text).ok) return;
+    addXP(10);
+    setS2Feedback({ ok: true, msg: '✅ ¡Buen intento! Tu prompt tiene instrucción y detalles concretos. Compáralo con la solución modelo:' });
     setS2ShowSol(true);
   };
   const advanceS2 = () => {
@@ -771,6 +768,11 @@ export default function World2Level4() {
       </View>
     );
   };
+
+  // Sprint 2: el botón "Ver solución" solo se habilita con un prompt válido (mismo criterio
+  // que el builder). Mientras no lo sea, se muestra una pista de qué le falta.
+  const s2Eval = s2Text.trim().length > 0 ? evaluatePrompt(s2Text) : null;
+  const s2Valid = s2Eval?.ok ?? false;
 
   // Helpers de texto
   const title = (t: string) => <Text style={styles.title}>{t}</Text>;
@@ -1308,7 +1310,16 @@ export default function World2Level4() {
                     onChangeText={setS2Text}
                     multiline
                   />
-                  <TouchableOpacity style={styles.sprintGhost} onPress={revealS2}><Text style={styles.sprintGhostText}>Ver solución →</Text></TouchableOpacity>
+                  {s2Eval && !s2Valid && (
+                    <Text style={styles.s2Hint}>💡 {s2Eval.message}</Text>
+                  )}
+                  <TouchableOpacity
+                    style={[styles.sprintGhost, !s2Valid && styles.sprintGhostDisabled]}
+                    onPress={revealS2}
+                    disabled={!s2Valid}
+                  >
+                    <Text style={styles.sprintGhostText}>Ver solución →</Text>
+                  </TouchableOpacity>
                 </>
               )}
             </>
@@ -1562,7 +1573,9 @@ const styles = StyleSheet.create({
   sprintStart: { backgroundColor: '#10b981', paddingVertical: 13, borderRadius: 12, alignItems: 'center', marginTop: 8 },
   sprintStartText: { ...typography.bold, color: '#fff', fontSize: 14 },
   sprintGhost: { backgroundColor: '#fffbeb', borderWidth: 1.5, borderColor: '#fde68a', paddingVertical: 12, borderRadius: 12, alignItems: 'center' },
+  sprintGhostDisabled: { opacity: 0.4 },
   sprintGhostText: { ...typography.bold, color: '#92400e', fontSize: 13 },
+  s2Hint: { fontSize: 11, color: '#92400e', backgroundColor: '#fffbeb', borderRadius: 8, padding: 9, marginBottom: 8, lineHeight: 15, borderWidth: 1, borderColor: '#fde68a' },
   solutionBox: { backgroundColor: '#f0fdf4', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#a7f3d0', marginBottom: 10 },
   solutionText: { fontSize: 12, color: '#065f46', lineHeight: 18 },
   attemptBox: { backgroundColor: '#f8fafc', borderRadius: 10, padding: 10, borderWidth: 1, borderColor: '#e2e8f0', marginBottom: 8 },
