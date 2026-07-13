@@ -1,76 +1,110 @@
 import { exitLevel } from '../utils/exitLevel';
-import { useState, useEffect, useRef } from 'react';
+import { router } from 'expo-router';
+import { useState, useEffect, useRef, type ReactNode } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
-  Alert,
-  BackHandler,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
+  Alert, BackHandler,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
 import { useGameStore } from '../store/gameStore';
 import { colors, typography } from '../theme';
 import XPToast from '../components/XPToast';
 
 // ---------- Tipos ----------
-type CompareCoT = {
-  problema: string;
-  directo: { prompt: string; resp: string };
-  cot: { prompt: string; resp: string };
-  q: string;
-  opts: string[];
-  correct: number;
-  explain: string;
-};
-type TareaCompleja = {
-  tarea: string;
-  subtareas: string[];
-  errorComun: string;
-};
-type FillCoT = {
-  base: string;
-  campos: string[];
-  correcto: string;
-};
+type MCQ = { q?: string; opts: string[]; correct: number; explain: string };
+type CompareCoT = { directo: { prompt: string; resp: string }; cot: { prompt: string; resp: string }; q: string; opts: string[]; correct: number; explain: string };
+type TareaCompleja = { tarea: string; subtareas: string[]; errorComun: string };
+type FillCoT = { base: string; campos: string[]; correcto: string };
 type VFCoTItem = { stmt: string; correct: boolean; explain: string };
 type ArbolItem = { condicion: string; accion: string; alternativa: string };
 type RazonItem = { texto: string; tipo: string; label: string; explain: string };
-type QuizCoTItem = { q: string; opts: string[]; correct: number; explain: string };
 
-const TOTAL_STEPS = 20; // 0:intro + 18 módulos + 1:complete
+const TOTAL_STEPS = 20; // 0: intro + 18 módulos + 19: completado
+const CONTENT_STEPS = 18;
+// "Volver" solo en módulos puramente informativos (leer + Continuar, sin ejercicio puntuado).
+const THEORY_STEPS = new Set([1, 4, 7, 10, 13, 15]);
 
-const pickN = <T,>(arr: T[], n: number): T[] => {
-  const shuffled = [...arr].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, n);
+const pickN = <T,>(arr: T[], n: number): T[] => [...arr].sort(() => Math.random() - 0.5).slice(0, n);
+
+// Baraja las opciones de un MCQ preservando cuál es la correcta.
+function shuffleMCQ<T extends { opts: string[]; correct: number }>(q: T): T {
+  const paired = q.opts.map((opt, i) => ({ opt, ok: i === q.correct }));
+  for (let j = paired.length - 1; j > 0; j--) {
+    const k = Math.floor(Math.random() * (j + 1));
+    [paired[j], paired[k]] = [paired[k], paired[j]];
+  }
+  return { ...q, opts: paired.map((p) => p.opt), correct: paired.findIndex((p) => p.ok) };
+}
+
+// ---------- Validación heurística de inputs (offline, sin IA) ----------
+const stripAccents = (s: string) => s.normalize('NFD').split('').filter((c) => c.charCodeAt(0) < 0x0300 || c.charCodeAt(0) > 0x036f).join('');
+const normalize = (s: string) => stripAccents(s.toLowerCase());
+const INSTRUCTION_RE = /(escrib|explic|analiz|traduc|resum|genera|crea|haz |hazme|dame|describe|compar|enumer|redact|disen|calcul|responde|elabor|propon|sugier|lista|convierte|corrig|mejora|resuelve|ordena|clasifica|define|identifica|planifica|planea|evalua|pondera|recomien|divide|construye|investiga|pide|verifica)/;
+
+function looksRandom(raw: string): boolean {
+  const words = raw.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return true;
+  const unique = new Set(words.map((w) => normalize(w)));
+  if (unique.size < Math.min(4, words.length)) return true;
+  const withVowel = words.filter((w) => /[aeiou]/.test(normalize(w))).length;
+  return withVowel / words.length < 0.6;
+}
+const notGibberish = (raw: string, minWords: number) => {
+  const words = raw.trim().split(/\s+/).filter(Boolean);
+  return words.length >= minWords && !looksRandom(raw);
+};
+const containsTopic = (text: string, terms: string[]) => {
+  const t = normalize(text);
+  const words = new Set(t.split(/[^a-z0-9]+/).filter(Boolean));
+  return terms.some((k) => (k.length <= 3 ? words.has(k) : t.includes(k)));
 };
 
-// ===================== POOLS =====================
+type Eval = { ok: boolean; msg: string };
+const fieldOk = (v: string) => v.trim().length >= 5 && !looksRandom(v);
+const cpOk = (v: string) => v.trim().length >= 10 && !looksRandom(v);
+function evalPrompt(text: string): Eval {
+  const t = text.trim();
+  if (!notGibberish(t, 8)) return { ok: false, msg: 'Escribe un prompt real y con sentido (al menos una frase completa, no texto al azar).' };
+  if (!INSTRUCTION_RE.test(normalize(t))) return { ok: false, msg: 'Falta una instrucción clara: empieza con un verbo de acción (explica, analiza, escribe...).' };
+  return { ok: true, msg: '' };
+}
+function evalVp(text: string): Eval {
+  const t = text.trim();
+  if (t.length < 15 || looksRandom(t)) return { ok: false, msg: 'Escribe una instrucción principal real (mín. 15 caracteres, no texto al azar).' };
+  if (!INSTRUCTION_RE.test(normalize(t))) return { ok: false, msg: 'Empieza con un verbo de acción (explica, analiza, escribe...).' };
+  return { ok: true, msg: '' };
+}
+function evalReasoning(text: string): Eval {
+  if (!notGibberish(text.trim(), 10)) return { ok: false, msg: 'Escribe tu razonamiento con pasos reales (no texto al azar): explica cómo llegas a la respuesta.' };
+  return { ok: true, msg: '' };
+}
+const REFLECT_TERMS = ['razon', 'paso', 'pensar', 'piensa', 'pienso', 'logic', 'cadena', 'cot', 'chain', 'ia', 'inteligencia', 'modelo', 'error', 'confiar', 'verific', 'trazab', 'proceso', 'conclusion', 'respuesta', 'detect'];
+function evalReflect(text: string): Eval {
+  const t = text.trim();
+  if (!notGibberish(t, 10)) return { ok: false, msg: 'Escribe una reflexión real (una o dos frases con sentido, no texto al azar).' };
+  if (!containsTopic(t, REFLECT_TERMS)) return { ok: false, msg: 'Responde al tema: ¿importa que la IA muestre su razonamiento paso a paso? ¿puedes confiar más si ves su lógica o el proceso?' };
+  return { ok: true, msg: '' };
+}
 
+// ===================== POOLS =====================
 const COMPARE_COT: CompareCoT = {
-  problema: '¿Cuántos segundos hay en una semana?',
   directo: {
     prompt: '¿Cuántos segundos hay en una semana?',
     resp: '604,800 segundos. [Sin mostrar cómo llegó ahí — puede ser incorrecto sin que lo notes]',
   },
   cot: {
-    prompt:
-      'Calcula cuántos segundos hay en una semana. Muéstrame cada paso del razonamiento: primero días, luego horas, luego minutos, luego segundos. Al final, verifica el resultado.',
+    prompt: 'Calcula cuántos segundos hay en una semana. Muéstrame cada paso del razonamiento: primero días, luego horas, luego minutos, luego segundos. Al final, verifica el resultado.',
     resp: 'Paso 1: 1 semana = 7 días. Paso 2: 7 × 24 = 168 horas. Paso 3: 168 × 60 = 10,080 minutos. Paso 4: 10,080 × 60 = 604,800 segundos. ✓ Verificación: 604,800 / 60 = 10,080 ✓',
   },
   q: '¿Por qué el segundo prompt es más valioso aunque el resultado numérico sea el mismo?',
   opts: [
-    'Porque usa más palabras y la IA respeta los prompts más largos',
-    'Porque muestra el razonamiento paso a paso — puedes detectar exactamente dónde hay un error si lo hay',
-    'Porque pedir verificación activa un modo especial de precisión en el modelo',
-    'Porque los prompts con la palabra \'primero, luego\' siempre dan mejores resultados',
+    'Porque usa más palabras y la IA respeta mejor los prompts largos y detallados',
+    'Porque muestra el razonamiento paso a paso y puedes ver en qué punto exacto falla',
+    'Porque pedir una verificación activa un modo especial de precisión en el modelo',
+    'Porque los prompts que dicen "primero, luego" siempre dan mejores resultados',
   ],
   correct: 1,
-  explain:
-    'El valor del CoT no es el resultado — es la trazabilidad. Si hay un error, lo ves en el paso exacto donde ocurrió. Con el prompt directo, si el número fuera incorrecto, no tendrías forma de detectarlo sin recalcular tú mismo.',
+  explain: 'El valor del CoT no es el resultado — es la trazabilidad. Si hay un error, lo ves en el paso exacto donde ocurrió. Con el prompt directo, si el número fuera incorrecto, no tendrías forma de detectarlo sin recalcular tú mismo.',
 };
 
 const TAREAS_COMPLEJAS: TareaCompleja[] = [
@@ -85,6 +119,17 @@ const TAREAS_COMPLEJAS: TareaCompleja[] = [
     ],
     errorComun: 'Pedirlo todo en un solo prompt produce slides superficiales y desconectados.',
   },
+  {
+    tarea: 'Ayúdame a mejorar mi inglés para una entrevista de trabajo',
+    subtareas: [
+      'Evalúa mi nivel actual con 5 preguntas de diagnóstico',
+      'Identifica mis errores más frecuentes en las respuestas anteriores',
+      'Dame un plan de práctica de 2 semanas específico para entrevistas',
+      'Simula una entrevista técnica y dame feedback detallado',
+      'Crea 10 frases modelo para las preguntas más comunes de entrevista',
+    ],
+    errorComun: 'Un solo prompt no puede hacer diagnóstico + plan + práctica a la vez con profundidad.',
+  },
 ];
 
 const FILL_COT: FillCoT[] = [
@@ -95,8 +140,7 @@ const FILL_COT: FillCoT[] = [
       "Añade: 'Antes de los contras, resume los pros en una frase'",
       "Añade: 'Al final, dame tu conclusión más importante con un veredicto claro'",
     ],
-    correcto:
-      'Analiza los pros y contras de estudiar en el extranjero. Al terminar los pros, dime cuántos encontraste. Antes de pasar a los contras, resume los pros en una frase. Al terminar, dame tu conclusión más importante con un veredicto claro: ¿vale la pena o no?',
+    correcto: 'Analiza los pros y contras de estudiar en el extranjero. Al terminar los pros, dime cuántos encontraste. Antes de pasar a los contras, resume los pros en una frase. Al terminar, dame tu conclusión más importante con un veredicto claro: ¿vale la pena o no?',
   },
   {
     base: 'Escribe un ensayo sobre el impacto de las redes sociales.',
@@ -105,20 +149,19 @@ const FILL_COT: FillCoT[] = [
       "Añade: 'Escríbelo párrafo a párrafo, confirmando al inicio de cada uno cuál idea desarrollas'",
       "Añade: 'Al terminar, identifica el argumento más débil y cómo reforzarlo'",
     ],
-    correcto:
-      'Escribe un ensayo sobre el impacto de las redes sociales. Primero crea un esquema con las 3 ideas principales. Luego escríbelo párrafo a párrafo, indicando al inicio de cada uno cuál idea desarrollas. Al terminar, identifica el argumento más débil y cómo reforzarlo.',
+    correcto: 'Escribe un ensayo sobre el impacto de las redes sociales. Primero crea un esquema con las 3 ideas principales. Luego escríbelo párrafo a párrafo, indicando al inicio de cada uno cuál idea desarrollas. Al terminar, identifica el argumento más débil y cómo reforzarlo.',
   },
 ];
 
 const VF_COT_POOL: VFCoTItem[] = [
-  { stmt: "Añadir 'piénsalo paso a paso' a un prompt mejora significativamente la precisión en problemas que requieren razonamiento.", correct: true, explain: 'Verdadero. Esta técnica (Chain-of-Thought prompting) fuerza al modelo a generar pasos intermedios que anclan el razonamiento y reducen errores.' },
-  { stmt: 'Si un LLM muestra todos los pasos de su razonamiento, garantiza que el resultado final es correcto.', correct: false, explain: 'Falso. El modelo puede cometer errores en los pasos intermedios. El CoT mejora la probabilidad de corrección, no la garantiza.' },
-  { stmt: 'Una cadena de prompts de 3 pasos siempre produce mejores resultados que un prompt único largo.', correct: false, explain: 'Falso. Para tareas simples, la cadena es sobreingeniería. El CoT es valioso para razonamiento multistep, no para todas las tareas.' },
-  { stmt: "Pedir a la IA que 'verifique su propia respuesta' puede detectar algunos errores que cometió.", correct: true, explain: 'Verdadero. Agregar "revisa y corrige si hay error" detecta inconsistencias obvias y mejora la confiabilidad.' },
-  { stmt: 'Los LLMs razonan de forma similar a como los humanos resuelven problemas de lógica.', correct: false, explain: 'Falso. Los LLMs generan texto probable dado el contexto — no "razonan" en el sentido cognitivo humano.' },
-  { stmt: 'Dividir una tarea compleja en sub-prompts independientes generalmente produce mejor resultado que un mega-prompt.', correct: true, explain: 'Verdadero. Cada sub-tarea recibe toda la atención del modelo.' },
-  { stmt: "Si le pido a la IA que 'piense en voz alta', siempre obtengo exactamente cómo llegó a su conclusión.", correct: false, explain: 'Falso. El modelo genera texto que parece razonamiento, pero no es necesariamente el proceso real.' },
-  { stmt: 'Un prompt con checkpoints intermedios es especialmente útil para tareas de escritura larga.', correct: true, explain: 'Verdadero. Los checkpoints evitan que el modelo pierda el hilo o desvíe el tema.' },
+  { stmt: "Añadir 'piénsalo paso a paso' a un prompt mejora significativamente la precisión en problemas que requieren razonamiento.", correct: true, explain: 'Esta técnica (Chain-of-Thought) fue demostrada en investigaciones de Google en 2022. Fuerza al modelo a generar pasos intermedios que anclan el razonamiento y reducen errores en cálculos y lógica.' },
+  { stmt: 'Si un LLM muestra todos los pasos de su razonamiento, garantiza que el resultado final es correcto.', correct: false, explain: 'El modelo puede cometer errores en los pasos intermedios y llegar a una conclusión incorrecta de forma coherente con esos pasos. El CoT mejora la probabilidad de corrección, no la garantiza.' },
+  { stmt: 'Una cadena de prompts de 3 pasos siempre produce mejores resultados que un prompt único largo.', correct: false, explain: 'Para tareas simples, la cadena es sobreingeniería — agrega complejidad sin beneficio. El CoT es valioso para razonamiento multistep, no para todas las tareas.' },
+  { stmt: "Pedir a la IA que 'verifique su propia respuesta' puede detectar algunos errores que cometió.", correct: true, explain: 'Aunque no es infalible (puede validar un error con el mismo razonamiento), agregar "revisa y corrige si hay error" sí detecta inconsistencias obvias y mejora la confiabilidad en muchos casos.' },
+  { stmt: 'Los LLMs razonan de forma similar a como los humanos resuelven problemas de lógica.', correct: false, explain: 'Los LLMs generan texto probable dado el contexto — no "razonan" en el sentido cognitivo humano. El CoT funciona porque guía al modelo a generar texto que sigue patrones de razonamiento correcto.' },
+  { stmt: 'Dividir una tarea compleja en sub-prompts independientes generalmente produce mejor resultado que un mega-prompt.', correct: true, explain: 'Cada sub-tarea recibe toda la atención del modelo. En un mega-prompt, el modelo debe balancear múltiples instrucciones simultáneamente, lo que reduce la profundidad de cada respuesta.' },
+  { stmt: "Si le pido a la IA que 'piense en voz alta', siempre obtengo exactamente cómo llegó a su conclusión.", correct: false, explain: 'El modelo genera texto que parece razonamiento, pero no es necesariamente el proceso real que produjo la respuesta. Es una representación post-hoc plausible, no un registro exacto.' },
+  { stmt: 'Un prompt con checkpoints intermedios es especialmente útil para tareas de escritura larga.', correct: true, explain: 'En textos largos, los checkpoints evitan que el modelo pierda el hilo o desvíe el tema. Pedir confirmaciones parciales mantiene la coherencia del resultado final.' },
 ];
 
 const ARBOL_ITEMS: ArbolItem[] = [
@@ -129,18 +172,58 @@ const ARBOL_ITEMS: ArbolItem[] = [
 ];
 
 const RAZON_ITEMS: RazonItem[] = [
-  { texto: "La IA dice: 'Einstein fue el científico más importante del siglo XX, por lo tanto todas sus teorías son correctas.'", tipo: 'falacia', label: '⚠️ Falacia lógica', explain: 'Argumento de autoridad: que alguien sea importante no hace automáticamente correcta cada afirmación.' },
-  { texto: "La IA dice: 'Los estudios muestran que el 60% de personas prefieren X. Por lo tanto, X es mejor para todo el mundo.'", tipo: 'salto', label: '🦘 Salto de conclusión', explain: "Salto de 'mayoría lo prefiere' a 'es mejor para todos'. La preferencia mayoritaria no implica superioridad universal." },
-  { texto: "La IA dice: 'La capital de Australia es Sídney.' (La capital real es Canberra)", tipo: 'dato', label: '❌ Dato falso', explain: 'Alucinación clásica. Sídney es la ciudad más grande y conocida. Siempre verifica capitales, fechas y estadísticas.' },
-  { texto: "La IA dice: 'Si X causa Y en ratas de laboratorio, entonces X causará exactamente lo mismo en humanos.'", tipo: 'falacia', label: '⚠️ Falacia lógica', explain: 'Generalización inválida: los resultados en modelos animales no se transfieren automáticamente a humanos.' },
-  { texto: "La IA dice: 'Este autor publicó un artículo en 2019 argumentando Z.' (El artículo no existe)", tipo: 'dato', label: '❌ Dato falso', explain: 'Alucinación de cita bibliográfica. Nunca uses una cita de IA sin verificarla.' },
+  { texto: "La IA dice: 'Einstein fue el científico más importante del siglo XX, por lo tanto todas sus teorías son correctas.'", tipo: 'falacia', label: '⚠️ Falacia lógica', explain: 'Argumento de autoridad: que alguien sea importante no hace automáticamente correcta cada afirmación. El mérito no se transfiere.' },
+  { texto: "La IA dice: 'Los estudios muestran que el 60% de personas prefieren X. Por lo tanto, X es mejor para todo el mundo.'", tipo: 'salto', label: '🦘 Salto de conclusión', explain: "Salto de 'mayoría lo prefiere' a 'es mejor para todos'. La preferencia mayoritaria no implica superioridad universal — depende del contexto y del individuo." },
+  { texto: "La IA dice: 'La capital de Australia es Sídney.' (La capital real es Canberra)", tipo: 'dato', label: '❌ Dato falso', explain: 'Alucinación clásica. Sídney es la ciudad más grande y conocida, lo que hace al modelo propenso a asumir que es la capital. Siempre verifica capitales, fechas y estadísticas.' },
+  { texto: "La IA dice: 'Si X causa Y en ratas de laboratorio, entonces X causará exactamente lo mismo en humanos.'", tipo: 'falacia', label: '⚠️ Falacia lógica', explain: 'Generalización inválida: los resultados en modelos animales no se transfieren automáticamente a humanos. Es uno de los errores más comunes en divulgación científica.' },
+  { texto: "La IA dice: 'Este autor publicó un artículo en 2019 argumentando Z.' (El artículo no existe)", tipo: 'dato', label: '❌ Dato falso', explain: 'Alucinación de cita bibliográfica. El modelo genera autores, títulos y años que suenan plausibles pero pueden no existir. Nunca uses una cita de IA sin verificarla.' },
 ];
 
-const QUIZ_COT: QuizCoTItem[] = [
-  { q: '¿Qué significa CoT en el contexto del prompting?', opts: ['Copy of Text', 'Chain-of-Thought — técnica de pedir razonamiento paso a paso explícito', 'Context of Terms', 'Correction of Tone'], correct: 1, explain: 'CoT = Chain-of-Thought. Es la técnica de añadir "piénsalo paso a paso" para forzar razonamiento intermedio visible.' },
-  { q: 'Tienes que analizar 50 páginas de un documento. ¿Cuál es la estrategia más efectiva?', opts: ['Pegar todo en un solo prompt', 'Dividir en secciones y hacer un prompt por sección, luego integrar', 'Pedirle a la IA que lo lea en múltiples conversaciones', 'Copiar solo las conclusiones'], correct: 1, explain: 'Dividir en secciones permite profundidad real en cada parte.' },
-  { q: '¿Cuándo un prompt iterativo (ronda 1 → feedback → ronda 2) es más valioso que un único prompt?', opts: ['Siempre', 'Cuando la tarea requiere refinamiento progresivo: escritura, código, análisis complejo', 'Cuando el primer resultado fue completamente inútil', 'Cuando tienes más de 10 minutos'], correct: 1, explain: 'El prompting iterativo brilla en tareas donde la dirección inicial es correcta pero el resultado necesita pulirse.' },
-  { q: "Añades 'verifica tu respuesta al final y corrígela si hay error'. ¿Qué hace el modelo?", opts: ['Accede a internet para verificar', 'Activa un modo de mayor precisión', 'Genera una segunda pasada por su propia respuesta buscando inconsistencias obvias', 'Consulta una base de datos de respuestas correctas'], correct: 2, explain: 'El modelo genera una segunda revisión de su texto buscando contradicciones internas — lo que sí puede detectar.' },
+const QUIZ_COT: MCQ[] = [
+  {
+    q: '¿Qué significa CoT en el contexto del prompting?',
+    opts: [
+      'Copy of Text: duplicar el contexto del prompt varias veces para reforzarlo',
+      'Chain-of-Thought: pedir a la IA su razonamiento paso a paso de forma explícita',
+      'Context of Terms: definir bien los términos técnicos antes de hacer la pregunta',
+      'Correction of Tone: ajustar el tono del modelo antes de darle la tarea principal',
+    ],
+    correct: 1,
+    explain: 'CoT = Chain-of-Thought. Es la técnica de añadir instrucciones como "piénsalo paso a paso" para forzar razonamiento intermedio visible.',
+  },
+  {
+    q: 'Tienes que analizar 50 páginas de un documento. ¿Cuál es la estrategia más efectiva?',
+    opts: [
+      'Pegar todo el texto en un solo prompt y pedirle el análisis completo de una vez',
+      'Dividir en secciones, hacer un prompt por cada una y luego integrar los resultados',
+      'Pedirle que lea el documento completo repartido en varias conversaciones seguidas',
+      'Copiar solo las conclusiones del documento y pedirle que las analice a fondo',
+    ],
+    correct: 1,
+    explain: "Dividir en secciones permite profundidad real en cada parte. Un prompt con 50 páginas sufre de 'pérdida de atención' — el modelo procesa el final peor que el principio.",
+  },
+  {
+    q: '¿Cuándo un prompt iterativo (ronda 1 → feedback → ronda 2) es más valioso que un único prompt?',
+    opts: [
+      'Siempre, porque el resultado mejora automáticamente con cada ronda que agregas',
+      'Cuando la tarea necesita refinamiento progresivo: escritura, código o análisis',
+      'Cuando el primer resultado fue completamente inútil y hay que empezar de cero',
+      'Cuando tienes más de diez minutos disponibles para conversar con el modelo',
+    ],
+    correct: 1,
+    explain: 'El prompting iterativo brilla en tareas donde la dirección inicial es correcta pero el resultado necesita pulirse: escritura creativa, código, argumentación. No es eficiente para preguntas factuales simples.',
+  },
+  {
+    q: "Añades 'verifica tu respuesta al final y corrígela si hay error'. ¿Qué hace el modelo?",
+    opts: [
+      'Accede a internet en tiempo real para verificar que los datos sean correctos',
+      'Activa un modo interno de mayor precisión distinto al que usa normalmente',
+      'Genera una segunda pasada sobre su propia respuesta buscando inconsistencias',
+      'Consulta una base de datos de respuestas ya verificadas por expertos humanos',
+    ],
+    correct: 2,
+    explain: 'El modelo no tiene acceso a internet ni a bases de datos externas. Genera una segunda revisión de su texto buscando contradicciones internas — lo que sí puede detectar.',
+  },
 ];
 
 const SPRINT_CADENAS = [
@@ -148,102 +231,102 @@ const SPRINT_CADENAS = [
   'Analiza las ventajas y desventajas de vivir en una ciudad grande vs. un pueblo',
   'Diseña un asistente de IA que ayude a estudiantes con tareas de matemáticas',
 ];
-
-const ACERTIJOS = [
-  {
-    problema:
-      'Tengo hermanos y hermanas. Mis padres tienen X hijos en total, donde X es el número de hijos que resulta de que cada hijo mío tiene el doble de hermanos que de hermanas — siendo yo mujer. ¿Cuántos hermanos y hermanas tengo?',
-    hint: 'Usa variables. Sea H = hermanos, M = hermanas (incluyéndome). Para mí (mujer): hermanos = H, hermanas = M-1. La condición es H = 2(M-1).',
-    solucion:
-      'Si H = 4 y M = 3: para mí, hermanos = 4, hermanas = 2. ¿Se cumple 4 = 2×2? Sí. Total: 4 hermanos + 3 hermanas = 7 hijos.',
-  },
+const SP_MODELOS = [
+  'P1: Lista los 7 temas de química del examen. P2: Para cada tema, dame el concepto clave y una fórmula. P3: Diseña 2 ejercicios de práctica por tema con solución.',
+  'P1: Analiza pros y contras de vivir en ciudad vs. pueblo (5 cada uno). P2: Pondera según: calidad de vida, oportunidades laborales, costo y relaciones sociales. P3: Dame una recomendación personalizada basada en el análisis.',
+  'P1: Define el perfil del estudiante ideal para este asistente. P2: Diseña el system prompt con rol, tono, límites y ejemplos. P3: Crea 5 preguntas de prueba para verificar que el asistente funciona bien.',
 ];
+
+const ACERTIJO = {
+  problema: 'Tengo hermanos y hermanas. Cada hijo de mis padres tiene el doble de hermanos que de hermanas — y yo soy mujer. ¿Cuántos hermanos y hermanas tengo?',
+  hint: 'Usa variables. Sea H = hermanos, M = hermanas (incluyéndome). Para mí (mujer): hermanos = H, hermanas = M-1. La condición es H = 2(M-1).',
+  solucion: 'Si H = 4 y M = 3: para mí, hermanos = 4, hermanas = 2. ¿Se cumple 4 = 2×2? Sí. Total: 4 hermanos + 3 hermanas.',
+};
+
+// ---------- Presentación ----------
+function Bold({ children }: { children: ReactNode }) { return <Text style={styles.bold}>{children}</Text>; }
+function Tag({ bg, fg, label }: { bg: string; fg: string; label: string }) {
+  return <Text style={[styles.tag, { backgroundColor: bg, color: fg }]}>{label}</Text>;
+}
+function Card({ bg, border, title, children }: { bg: string; border: string; title?: string; children: ReactNode }) {
+  return (
+    <View style={[styles.card, { backgroundColor: bg, borderColor: border }]}>
+      {title ? <Text style={styles.cardTitle}>{title}</Text> : null}
+      <Text style={styles.cardText}>{children}</Text>
+    </View>
+  );
+}
+const HL = { blue: { bd: '#3b82f6', bg: '#eff6ff', fg: '#1e40af' }, red: { bd: '#ef4444', bg: '#fff1f2', fg: '#991b1b' }, amber: { bd: '#f59e0b', bg: '#fffbeb', fg: '#92400e' }, green: { bd: '#10b981', bg: '#f0fdf4', fg: '#166534' } };
+function Hl({ variant, children }: { variant: keyof typeof HL; children: ReactNode }) {
+  const v = HL[variant];
+  return <View style={[styles.hl, { borderLeftColor: v.bd, backgroundColor: v.bg }]}><Text style={[styles.hlText, { color: v.fg }]}>{children}</Text></View>;
+}
 
 // ===================== COMPONENTE =====================
 export default function World2Level5() {
-  const navigation = useNavigation();
   const completeLevel = useGameStore((state) => state.completeLevel);
 
   const [step, setStep] = useState(0);
   const [xp, setXp] = useState(0);
-  const [stepResult, setStepResult] = useState<{ ok: boolean; msg: string } | null>(null);
   const [xpToast, setXpToast] = useState<{ amount: number; id: number } | null>(null);
 
-  // Pools aleatorios
-  const [fillCotItem] = useState(() => pickN(FILL_COT, 1)[0]);
-  const [tareaCompleja] = useState(() => pickN(TAREAS_COMPLEJAS, 1)[0]);
-  const [vfItems] = useState(() => pickN(VF_COT_POOL, 6));
+  // Pools aleatorios (fijados una vez)
+  const fillCotItem = useRef(pickN(FILL_COT, 1)[0]).current;
+  const tareaCompleja = useRef(pickN(TAREAS_COMPLEJAS, 1)[0]).current;
+  const vfItems = useRef(pickN(VF_COT_POOL, 6)).current;
+  const compareItem = useRef(shuffleMCQ(COMPARE_COT)).current;
+  const quizItems = useRef(QUIZ_COT.map(shuffleMCQ)).current;
 
-  // Estados de módulos
+  // Compare (2)
   const [compareAnswered, setCompareAnswered] = useState(false);
   const [compareSel, setCompareSel] = useState<number | null>(null);
 
-  // Builder 3 pasos (módulo 3)
-  const [tema, setTema] = useState('');
-  const [p1, setP1] = useState('');
-  const [p2, setP2] = useState('');
-  const [p3, setP3] = useState('');
+  // Builder 3 pasos (3)
+  const [tema, setTema] = useState(''); const [p1, setP1] = useState(''); const [p2, setP2] = useState(''); const [p3, setP3] = useState('');
   const [chainBuilt, setChainBuilt] = useState(false);
 
-  // Fill checkpoints (módulo 5)
+  // Fill checkpoints (5)
   const [cpValues, setCpValues] = useState<string[]>(['', '', '']);
   const [cpDone, setCpDone] = useState(false);
 
-  // V/F (módulo 6)
-  const [vfIdx, setVfIdx] = useState(0);
-  const [vfScore, setVfScore] = useState(0);
-  const [vfDone, setVfDone] = useState(false);
-  const [vfAnswered, setVfAnswered] = useState(false);
-  const [vfSel, setVfSel] = useState<boolean | null>(null);
+  // V/F (6)
+  const [vfIdx, setVfIdx] = useState(0); const [vfScore, setVfScore] = useState(0);
+  const [vfDone, setVfDone] = useState(false); const [vfSel, setVfSel] = useState<boolean | null>(null);
 
-  // Matching árbol (módulo 8)
+  // Matching árbol (8)
   const [arbolAnswers, setArbolAnswers] = useState<(number | null)[]>([null, null, null, null]);
   const [arbolChecked, setArbolChecked] = useState(false);
+  const [arbolCorrect, setArbolCorrect] = useState(0);
 
-  // Prompt iterativo (módulo 9)
-  const [iterRound, setIterRound] = useState(1);
-  const [iterText, setIterText] = useState('');
-  const [iterDone, setIterDone] = useState(false);
+  // Prompt iterativo (9)
+  const [iterRound, setIterRound] = useState(1); const [iterText, setIterText] = useState(''); const [iterDone, setIterDone] = useState(false);
 
-  // Sprint (módulo 11)
-  const [sprintIdx, setSprintIdx] = useState(0);
-  const [sprintSec, setSprintSec] = useState(90);
-  const [sprintDone, setSprintDone] = useState(false);
-  const [sprintModelo, setSprintModelo] = useState(false);
-  const sprintTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Sprint (11)
+  const [sprintIdx, setSprintIdx] = useState(0); const [sprintSec, setSprintSec] = useState(90);
+  const [sprintRunning, setSprintRunning] = useState(false); const [sprintModelo, setSprintModelo] = useState(false); const [sprintDone, setSprintDone] = useState(false);
 
-  // Builder verificación (módulo 12)
-  const [vpBase, setVpBase] = useState('');
-  const [vpBuilt, setVpBuilt] = useState(false);
+  // Builder verificación (12)
+  const [vpBase, setVpBase] = useState(''); const [vpBuilt, setVpBuilt] = useState(false);
 
-  // Clasificador errores (módulo 14)
-  const [razonIdx, setRazonIdx] = useState(0);
-  const [razonScore, setRazonScore] = useState(0);
-  const [razonDone, setRazonDone] = useState(false);
-  const [razonAnswered, setRazonAnswered] = useState(false);
-  const [razonSel, setRazonSel] = useState<number | null>(null);
+  // Clasificador errores (14)
+  const [razonIdx, setRazonIdx] = useState(0); const [razonScore, setRazonScore] = useState(0);
+  const [razonDone, setRazonDone] = useState(false); const [razonSel, setRazonSel] = useState<number | null>(null);
 
-  // Acertijo (módulo 16)
-  const [acertijoText, setAcertijoText] = useState('');
-  const [acertijoDone, setAcertijoDone] = useState(false);
+  // Acertijo (16)
+  const [acertijoText, setAcertijoText] = useState(''); const [acertijoDone, setAcertijoDone] = useState(false); const [acertijoSol, setAcertijoSol] = useState(false);
 
-  // Quiz (módulo 17)
-  const [quizIdx, setQuizIdx] = useState(0);
-  const [quizScore, setQuizScore] = useState(0);
-  const [quizDone, setQuizDone] = useState(false);
-  const [quizAnswered, setQuizAnswered] = useState(false);
-  const [quizSel, setQuizSel] = useState<number | null>(null);
+  // Quiz (17)
+  const [quizIdx, setQuizIdx] = useState(0); const [quizScore, setQuizScore] = useState(0);
+  const [quizDone, setQuizDone] = useState(false); const [quizSel, setQuizSel] = useState<number | null>(null);
 
-  // Reflexión (módulo 18)
-  const [reflectText, setReflectText] = useState('');
-  const [reflectDone, setReflectDone] = useState(false);
+  // Reflexión (18)
+  const [reflectText, setReflectText] = useState(''); const [reflectAwarded, setReflectAwarded] = useState(false); const [reflectError, setReflectError] = useState<string | null>(null);
 
-  const examSteps = new Set([2, 5, 6, 8, 9, 11, 14, 16, 17]);
-  const isExamMode = examSteps.has(step);
+  const isActivity = !THEORY_STEPS.has(step) && step !== 0 && step !== TOTAL_STEPS - 1;
 
   useEffect(() => {
-    const onBackPress = () => {
-      if (isExamMode) {
+    const onBack = () => {
+      if (isActivity) {
         Alert.alert('Módulo en curso', 'No puedes regresar durante esta actividad.', [
           { text: 'Cancelar', style: 'cancel' },
           { text: 'Salir', style: 'destructive', onPress: () => exitLevel({ confirm: false }) },
@@ -252,723 +335,571 @@ export default function World2Level5() {
       }
       return false;
     };
-    const backHandler = BackHandler.addEventListener('hardwareBackPress', onBackPress);
-    return () => backHandler.remove();
-  }, [isExamMode, navigation]);
+    const h = BackHandler.addEventListener('hardwareBackPress', onBack);
+    return () => h.remove();
+  }, [isActivity]);
 
+  // Sprint timer
   useEffect(() => {
-    if (step === 6) { setVfIdx(0); setVfScore(0); setVfDone(false); setVfAnswered(false); setVfSel(null); }
-    if (step === 11) { setSprintIdx(0); setSprintSec(90); setSprintDone(false); setSprintModelo(false); if (sprintTimer.current) clearInterval(sprintTimer.current); }
-    if (step === 14) { setRazonIdx(0); setRazonScore(0); setRazonDone(false); setRazonAnswered(false); setRazonSel(null); }
-    if (step === 17) { setQuizIdx(0); setQuizScore(0); setQuizDone(false); setQuizAnswered(false); setQuizSel(null); }
-  }, [step]);
+    if (!sprintRunning || sprintModelo) return;
+    if (sprintSec <= 0) { setSprintModelo(true); return; }
+    const t = setTimeout(() => setSprintSec((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [sprintRunning, sprintSec, sprintModelo]);
 
-  const addXP = (n: number) => {
-    setXp((prev) => prev + n);
-    if (n > 0) setXpToast((prev) => ({ amount: n, id: (prev?.id ?? 0) + 1 }));
-  };
-  const goToNextStep = () => { setStepResult(null); if (step < TOTAL_STEPS - 1) setStep(step + 1); };
-  const goToPrevStep = () => { setStepResult(null); setStep(s => s - 1); };
-
-  const showResult = (ok: boolean, msg: string, andAdvance = false) => {
-    setStepResult({ ok, msg });
-    if (andAdvance) setTimeout(() => goToNextStep(), 1800);
-  };
-
-  const handleClose = () => {
-    Alert.alert('Salir', '¿Seguro que quieres salir?', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Salir', onPress: () => exitLevel({ confirm: false }) },
-    ]);
-  };
-
+  const addXP = (n: number) => { setXp((prev) => prev + n); if (n > 0) setXpToast((prev) => ({ amount: n, id: (prev?.id ?? 0) + 1 })); };
+  const goToNextStep = () => { if (step < TOTAL_STEPS - 1) setStep(step + 1); };
+  const goToPrevStep = () => setStep((s) => Math.max(0, s - 1));
   const handleFinish = () => {
-    let stars = 0;
-    if (xp >= 180) stars = 3;
-    else if (xp >= 120) stars = 2;
-    else if (xp >= 60) stars = 1;
+    const stars = xp >= 180 ? 3 : xp >= 120 ? 2 : xp >= 60 ? 1 : 0;
     completeLevel(11, stars, xp);
-    exitLevel({ confirm: false });
+    router.replace('/level/12');
   };
 
-  // ============ MECÁNICAS ============
+  // ---- Mecánicas ----
+  const answerCOT = (i: number) => { if (compareAnswered) return; setCompareAnswered(true); setCompareSel(i); if (i === compareItem.correct) addXP(12); };
 
-  // Compare CoT (2)
-  const answerCOT = (i: number) => {
-    if (compareAnswered) return;
-    setCompareAnswered(true);
-    setCompareSel(i);
-    const correct = i === COMPARE_COT.correct;
-    if (correct) addXP(12);
-    Alert.alert(correct ? '✅ ¡Correcto! +12 XP' : '❌ Incorrecto', COMPARE_COT.explain);
-  };
+  const chainValid = fieldOk(tema) && fieldOk(p1) && fieldOk(p2) && fieldOk(p3);
 
-  // Builder 3 pasos (3)
-  const isChainOk = tema.trim().length >= 5 && p1.trim().length >= 5 && p2.trim().length >= 5 && p3.trim().length >= 5;
-  const checkChain = () => { if (isChainOk && !chainBuilt) { addXP(10); setChainBuilt(true); } };
-  useEffect(() => { checkChain(); }, [tema, p1, p2, p3]);
+  const cpAllValid = cpValues.every(cpOk);
+  const commitCp = () => { if (!cpDone && cpAllValid) { setCpDone(true); addXP(15); } };
 
-  // Fill checkpoints (5)
-  const isCpOk = cpValues.every((v) => v.trim().length >= 10);
-  const commitCp = () => {
-    if (isCpOk && !cpDone) { addXP(15); setCpDone(true); }
-  };
+  const answerVF = (ans: boolean) => { if (vfSel !== null) return; setVfSel(ans); if (ans === vfItems[vfIdx].correct) setVfScore((s) => s + 1); };
+  const nextVf = () => { if (vfSel === null) return; if (vfIdx + 1 < vfItems.length) { setVfIdx((i) => i + 1); setVfSel(null); } else { setVfDone(true); addXP(vfScore * 8); } };
 
-  // V/F (6)
-  const answerVF = (ans: boolean) => {
-    if (vfAnswered || vfDone) return;
-    setVfAnswered(true);
-    setVfSel(ans);
-    const correct = ans === vfItems[vfIdx].correct;
-    if (correct) setVfScore((prev) => prev + 1);
-  };
-  const nextVf = () => {
-    if (vfIdx + 1 >= vfItems.length) {
-      const earned = vfScore * 8;
-      if (earned > 0) addXP(earned);
-      setVfDone(true);
-    } else {
-      setVfIdx((prev) => prev + 1);
-      setVfAnswered(false);
-      setVfSel(null);
-    }
-  };
-
-  // Matching árbol (8)
-  const selArbol = (i: number, choice: number) => {
-    if (arbolChecked) return;
-    setArbolAnswers((prev) => { const n = [...prev]; n[i] = choice; return n; });
-  };
+  const selArbol = (i: number, choice: number) => { if (arbolChecked) return; setArbolAnswers((prev) => { const n = [...prev]; n[i] = choice; return n; }); };
+  const arbolAllAnswered = arbolAnswers.every((a) => a !== null);
   const checkArbol = () => {
-    if (arbolChecked) return true;
-    if (arbolAnswers.some((a) => a === null)) { Alert.alert('Incompleto', 'Elige una opción para cada condición.'); return false; }
-    setArbolChecked(true);
-    let correct = 0;
-    ARBOL_ITEMS.forEach((_, i) => { if (arbolAnswers[i] === 0) correct++; });
-    addXP(correct * 8);
-    showResult(correct >= 3, `${correct >= 3 ? '✅ ¡Bien!' : '⚠️ Revisa'} ${correct}/4 correctas. +${correct * 8} XP`, true);
-    return false;
+    if (arbolChecked) return;
+    let correct = 0; ARBOL_ITEMS.forEach((_, i) => { if (arbolAnswers[i] === 0) correct++; });
+    setArbolCorrect(correct); setArbolChecked(true); if (correct > 0) addXP(correct * 8);
   };
 
-  // Prompt iterativo (9)
+  const iterEval = iterText.trim() ? evalPrompt(iterText) : null;
+  const iterValid = iterEval?.ok ?? false;
   const advanceIter = () => {
-    if (iterText.trim().length < 20) { Alert.alert('Muy corto', 'Escribe al menos 20 caracteres.'); return; }
+    if (!iterValid) return;
     addXP(iterRound === 3 ? 20 : 8);
-    if (iterRound < 3) { setIterRound((prev) => prev + 1); setIterText(''); }
-    else { setIterDone(true); Alert.alert('✅ Proceso iterativo completado', '+36 XP acumulados'); }
+    if (iterRound < 3) { setIterRound((r) => r + 1); setIterText(''); } else { setIterDone(true); }
   };
 
-  // Sprint (11)
-  const SP_MODELOS = [
-    'P1: Lista los 7 temas de química del examen. P2: Para cada tema, dame el concepto clave y una fórmula. P3: Diseña 2 ejercicios de práctica por tema con solución.',
-    'P1: Analiza pros y contras de vivir en ciudad vs. pueblo (5 cada uno). P2: Pondera según: calidad de vida, oportunidades laborales, costo y relaciones sociales. P3: Dame una recomendación personalizada.',
-    'P1: Define el perfil del estudiante ideal para este asistente. P2: Diseña el system prompt con rol, tono, límites y ejemplos. P3: Crea 5 preguntas de prueba para verificar que el asistente funciona bien.',
-  ];
-  const startSprint = () => {
-    setSprintModelo(false);
-    setSprintSec(90);
-    sprintTimer.current = setInterval(() => {
-      setSprintSec((prev) => { if (prev <= 1) { clearInterval(sprintTimer.current!); return 0; } return prev - 1; });
-    }, 1000);
-  };
-  const verModelo = () => {
-    clearInterval(sprintTimer.current!);
-    setSprintModelo(true);
-    addXP(10);
-  };
+  const startSprint = () => { setSprintRunning(true); setSprintSec(90); setSprintModelo(false); };
+  const verModelo = () => { if (sprintModelo) return; setSprintModelo(true); setSprintRunning(false); addXP(10); };
   const nextSprint = () => {
-    if (sprintIdx + 1 >= SPRINT_CADENAS.length) {
-      setSprintDone(true);
-    } else {
-      setSprintIdx((prev) => prev + 1);
-      setSprintModelo(false);
-      setSprintSec(90);
-    }
+    if (sprintIdx + 1 < SPRINT_CADENAS.length) { setSprintIdx((i) => i + 1); setSprintSec(90); setSprintModelo(false); setSprintRunning(false); }
+    else { setSprintDone(true); }
   };
 
-  // Builder verificación (12)
-  const isVpOk = vpBase.trim().length >= 15;
-  const checkVp = () => { if (isVpOk && !vpBuilt) { addXP(10); setVpBuilt(true); } };
-  useEffect(() => { checkVp(); }, [vpBase]);
+  const vpEval = vpBase.trim() ? evalVp(vpBase) : null;
+  const vpValid = vpEval?.ok ?? false;
+  const commitVp = () => { if (!vpBuilt && vpValid) { setVpBuilt(true); addXP(10); } };
 
-  // Clasificador errores (14)
   const razonMap: Record<string, number> = { falacia: 0, salto: 1, dato: 2 };
-  const answerRazon = (i: number) => {
-    if (razonAnswered || razonDone) return;
-    setRazonAnswered(true);
-    setRazonSel(i);
-    const item = RAZON_ITEMS[razonIdx];
-    const correct = i === razonMap[item.tipo];
-    if (correct) setRazonScore((prev) => prev + 1);
-  };
-  const nextRazon = () => {
-    if (razonIdx + 1 >= RAZON_ITEMS.length) {
-      const earned = razonScore * 10;
-      if (earned > 0) addXP(earned);
-      setRazonDone(true);
-    } else {
-      setRazonIdx((prev) => prev + 1);
-      setRazonAnswered(false);
-      setRazonSel(null);
-    }
+  const answerRazon = (i: number) => { if (razonSel !== null) return; setRazonSel(i); if (i === razonMap[RAZON_ITEMS[razonIdx].tipo]) setRazonScore((s) => s + 1); };
+  const nextRazon = () => { if (razonSel === null) return; if (razonIdx + 1 < RAZON_ITEMS.length) { setRazonIdx((i) => i + 1); setRazonSel(null); } else { setRazonDone(true); addXP(razonScore * 10); } };
+
+  const acEval = acertijoText.trim() ? evalReasoning(acertijoText) : null;
+  const acValid = acEval?.ok ?? false;
+  const commitAcertijo = () => { if (!acertijoDone && acValid) { setAcertijoDone(true); addXP(15); } };
+
+  const answerQuiz = (i: number) => { if (quizSel !== null) return; setQuizSel(i); if (i === quizItems[quizIdx].correct) setQuizScore((s) => s + 1); };
+  const nextQuiz = () => { if (quizSel === null) return; if (quizIdx + 1 < quizItems.length) { setQuizIdx((i) => i + 1); setQuizSel(null); } else { setQuizDone(true); addXP(quizScore * 12); } };
+
+  const refEval = reflectText.trim() ? evalReflect(reflectText) : null;
+  const refValid = refEval?.ok ?? false;
+  const submitReflect = (): boolean => {
+    const res = evalReflect(reflectText);
+    if (!res.ok) { setReflectError(res.msg); return false; }
+    setReflectError(null); if (!reflectAwarded) { setReflectAwarded(true); addXP(15); } return true;
   };
 
-  // Acertijo (16)
-  const isAcertijoOk = acertijoText.trim().length >= 30;
-  const checkAcertijo = () => { if (isAcertijoOk && !acertijoDone) { addXP(15); setAcertijoDone(true); } };
-  useEffect(() => { checkAcertijo(); }, [acertijoText]);
-
-  // Quiz (17)
-  const answerQuiz = (i: number) => {
-    if (quizAnswered || quizDone) return;
-    setQuizAnswered(true);
-    setQuizSel(i);
-    const item = QUIZ_COT[quizIdx];
-    const correct = i === item.correct;
-    if (correct) setQuizScore((prev) => prev + 1);
-  };
-  const nextQuiz = () => {
-    if (quizIdx + 1 >= QUIZ_COT.length) {
-      const earned = quizScore * 12;
-      if (earned > 0) addXP(earned);
-      setQuizDone(true);
-    } else {
-      setQuizIdx((prev) => prev + 1);
-      setQuizAnswered(false);
-      setQuizSel(null);
-    }
-  };
-
-  // Reflexión (18)
-  const checkReflect = () => { if (reflectText.trim().length >= 50) { if (!reflectDone) { addXP(15); setReflectDone(true); } return true; } return false; };
-
-  // ============ RENDER ============
-  const renderIntro = () => (
-    <View>
-      <View style={styles.iconCircle}><Text style={{ fontSize: 34 }}>🔗</Text></View>
-      <Text style={styles.title}>Prompts en Cadena</Text>
-      <Text style={styles.subtitle}>Un solo prompt resuelve el 60% de los problemas. Una cadena bien diseñada resuelve el 100%.</Text>
-      <View style={styles.card}><Text style={styles.cardTitle}>🎯 Qué vas a aprender</Text><Text style={styles.cardText}>Chain-of-Thought · Dividir tareas complejas · Prompts con checkpoints · Árbol de decisiones · Detectar errores de razonamiento</Text></View>
-    </View>
-  );
-
-  const renderTheory1 = () => (
-    <View>
-      <View style={[styles.tag, { backgroundColor: '#eef2ff' }]}><Text style={[styles.tagText, { color: '#4338ca' }]}>Nivel 11 · 18 módulos</Text></View>
-      <View style={[styles.tag, { backgroundColor: '#dcfce7' }]}><Text style={[styles.tagText, { color: '#166534' }]}>📐 Módulo 1 · Casos reales</Text></View>
-      <Text style={styles.title}>La magia del "piénsalo paso a paso"</Text>
-      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
-        <View style={{ flex: 1, backgroundColor: '#fff1f2', borderRadius: 10, padding: 10 }}>
-          <Text style={{ fontWeight: 'bold', color: '#991b1b', marginBottom: 4 }}>Sin cadena</Text>
-          <Text style={{ fontSize: 11 }}>"Juan tiene 36 y María 12." [No hay forma de saber si llegó correctamente]</Text>
-        </View>
-        <View style={{ flex: 1, backgroundColor: '#f0fdf4', borderRadius: 10, padding: 10 }}>
-          <Text style={{ fontWeight: 'bold', color: '#166534', marginBottom: 4 }}>Con "paso a paso"</Text>
-          <Text style={{ fontSize: 11 }}>"Paso 1: Sea M = manzanas de María. Paso 2: Juan tiene 3M. Paso 3: M + 3M = 48..."</Text>
-        </View>
-      </View>
-    </View>
-  );
-
-  const renderCompare = () => {
-    const p = COMPARE_COT;
+  // Feedback de MCQ (compare / quiz)
+  const mcqFeedback = (mcq: MCQ, chosen: number | null) => {
+    if (chosen === null) return null;
+    const ok = chosen === mcq.correct;
     return (
-      <View>
-        <View style={[styles.tag, { backgroundColor: '#fff1f2' }]}><Text style={[styles.tagText, { color: '#e11d48' }]}>🔗 Módulo 2 · Prompt-compare</Text></View>
-        <Text style={styles.title}>Antes vs. después del Chain-of-Thought</Text>
-        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
-          <View style={{ flex: 1, backgroundColor: '#fff7ed', borderRadius: 10, padding: 10 }}>
-            <Text style={{ fontWeight: 'bold', color: '#c2410c', marginBottom: 4 }}>Prompt directo</Text>
-            <Text style={{ fontFamily: 'monospace', fontSize: 11 }}>{p.directo.prompt}</Text>
-            <Text style={{ fontSize: 10, marginTop: 4 }}>{p.directo.resp}</Text>
-          </View>
-          <View style={{ flex: 1, backgroundColor: '#f0fdf4', borderRadius: 10, padding: 10 }}>
-            <Text style={{ fontWeight: 'bold', color: '#065f46', marginBottom: 4 }}>Prompt CoT</Text>
-            <Text style={{ fontFamily: 'monospace', fontSize: 11 }}>{p.cot.prompt}</Text>
-            <Text style={{ fontSize: 10, marginTop: 4 }}>{p.cot.resp}</Text>
-          </View>
-        </View>
-        <Text style={{ fontWeight: 'bold', fontSize: 13, marginBottom: 8 }}>{p.q}</Text>
-        {p.opts.map((opt, i) => (
-          <TouchableOpacity key={i} style={[styles.optionBtn, compareSel === i && { borderColor: p.correct === i ? '#10b981' : '#ef4444' }]} onPress={() => answerCOT(i)} disabled={compareAnswered}>
-            <Text style={{ fontSize: 12 }}>{opt}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-    );
-  };
-
-  const renderBuilder = () => (
-    <View>
-      <View style={[styles.tag, { backgroundColor: '#eff6ff' }]}><Text style={[styles.tagText, { color: '#1e40af' }]}>🛠️ Módulo 3 · Builder</Text></View>
-      <Text style={styles.title}>Construye un prompt de 3 pasos</Text>
-      <TextInput style={styles.input} placeholder="Tu tema o situación a resolver" value={tema} onChangeText={setTema} />
-      <TextInput style={styles.input} placeholder="Paso 1 — ¿Qué debe analizar primero?" value={p1} onChangeText={setP1} />
-      <TextInput style={styles.input} placeholder="Paso 2 — ¿Cuántas opciones y qué criterios?" value={p2} onChangeText={setP2} />
-      <TextInput style={styles.input} placeholder="Paso 3 — ¿Qué tipo de recomendación final?" value={p3} onChangeText={setP3} />
-      {isChainOk && (
-        <View style={[styles.card, { backgroundColor: '#f0fdf4', marginTop: 10 }]}>
-          <Text style={{ fontSize: 12, color: '#065f46', lineHeight: 20 }}>
-            Prompt 1: Analiza mi situación de {tema}. Factores: {p1}.{'\n\n'}
-            Prompt 2: Basándote en ese análisis, dame {p2}.{'\n\n'}
-            Prompt 3: Con todo lo anterior, recomiéndame {p3}.
-          </Text>
-        </View>
-      )}
-    </View>
-  );
-
-  const renderDivide = () => {
-    const t = tareaCompleja;
-    return (
-      <View>
-        <View style={[styles.tag, { backgroundColor: '#dcfce7' }]}><Text style={[styles.tagText, { color: '#166534' }]}>📦 Módulo 4 · Divide y vencerás</Text></View>
-        <Text style={styles.title}>Divide y vencerás</Text>
-        <View style={[styles.card, { backgroundColor: '#f8fafc' }]}>
-          <Text style={{ fontWeight: 'bold', fontSize: 12 }}>🎯 Tarea compleja</Text>
-          <Text style={{ fontStyle: 'italic', fontSize: 12 }}>{t.tarea}</Text>
-        </View>
-        <View style={[styles.card, { backgroundColor: '#fff1f2' }]}>
-          <Text style={{ fontWeight: 'bold', color: '#991b1b', fontSize: 11 }}>❌ Error común: {t.errorComun}</Text>
-        </View>
-        {t.subtareas.map((s, i) => (
-          <View key={i} style={[styles.card, { backgroundColor: '#eff6ff' }]}>
-            <Text style={{ fontWeight: 'bold', color: '#1e40af' }}>{i + 1}.</Text>
-            <Text style={{ fontSize: 12 }}>{s}</Text>
-          </View>
-        ))}
-      </View>
-    );
-  };
-
-  const renderFillCp = () => (
-    <View>
-      <View style={[styles.tag, { backgroundColor: '#fff1f2' }]}><Text style={[styles.tagText, { color: '#9f1239' }]}>📍 Módulo 5 · Fill-in-blank</Text></View>
-      <Text style={styles.title}>Añade checkpoints al prompt</Text>
-      <View style={[styles.card, { backgroundColor: '#f8fafc' }]}>
-        <Text style={{ fontStyle: 'italic', fontSize: 12 }}>"{fillCotItem.base}"</Text>
-      </View>
-      {fillCotItem.campos.map((c, i) => (
-        <View key={i}>
-          <Text style={{ fontWeight: 'bold', fontSize: 11, marginBottom: 4 }}>{c}</Text>
-          <TextInput style={styles.input} placeholder="Escribe la instrucción de checkpoint..." value={cpValues[i]} onChangeText={(v) => setCpValues((prev) => { const n = [...prev]; n[i] = v; return n; })} />
-        </View>
-      ))}
-      {isCpOk && (
-        <TouchableOpacity style={styles.nextButton} onPress={commitCp}>
-          <Text style={styles.nextButtonText}>Ver prompt mejorado →</Text>
-        </TouchableOpacity>
-      )}
-      {cpDone && (
-        <View style={[styles.card, { backgroundColor: '#f0fdf4', marginTop: 10 }]}>
-          <Text style={{ fontSize: 12, color: '#065f46', fontStyle: 'italic' }}>Modelo: {fillCotItem.correcto}</Text>
-        </View>
-      )}
-    </View>
-  );
-
-  const renderVF = () => {
-    if (vfDone) {
-      return (
-        <View>
-          <Text style={styles.title}>✅ V/F completado</Text>
-          <Text style={{ textAlign: 'center', fontSize: 16, marginVertical: 8 }}>{vfScore}/{vfItems.length} correctas</Text>
-        </View>
-      );
-    }
-    const item = vfItems[vfIdx];
-    return (
-      <View>
-        <View style={[styles.tag, { backgroundColor: '#ecfdf5' }]}><Text style={[styles.tagText, { color: '#065f46' }]}>✔ V/F · {vfIdx + 1}/{vfItems.length}</Text></View>
-        <View style={[styles.card, { backgroundColor: '#f8fafc' }]}>
-          <Text style={{ fontSize: 13, fontWeight: '600', lineHeight: 20 }}>{item.stmt}</Text>
-        </View>
-        <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
-          <TouchableOpacity style={[styles.vfBtn, { borderColor: '#bbf7d0', backgroundColor: vfSel === true ? '#f0fdf4' : '#f8fafc' }]} onPress={() => answerVF(true)} disabled={vfAnswered}>
-            <Text style={{ fontWeight: 'bold', color: '#065f46' }}>✅ Verdadero</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.vfBtn, { borderColor: '#fecdd3', backgroundColor: vfSel === false ? '#fff1f2' : '#f8fafc' }]} onPress={() => answerVF(false)} disabled={vfAnswered}>
-            <Text style={{ fontWeight: 'bold', color: '#991b1b' }}>❌ Falso</Text>
-          </TouchableOpacity>
-        </View>
-        {vfAnswered && (
-          <View style={{ padding: 10, backgroundColor: vfSel === item.correct ? '#dcfce7' : '#fff1f2', borderRadius: 10 }}>
-            <Text style={{ fontSize: 12, color: vfSel === item.correct ? '#166534' : '#991b1b' }}>{item.explain}</Text>
-          </View>
-        )}
-      </View>
-    );
-  };
-
-  const renderTheory3 = () => (
-    <View>
-      <View style={[styles.tag, { backgroundColor: '#dcfce7' }]}><Text style={[styles.tagText, { color: '#166534' }]}>🌍 Módulo 7 · Casos reales</Text></View>
-      <Text style={styles.title}>Chain-of-Thought en acción</Text>
-      {[
-        { title: 'Análisis de texto literario', text: 'Sin CoT: "Analiza el simbolismo en El Principito."\nCon CoT: "Identifica 3 símbolos. Para cada uno: objeto, significado y cita del libro."' },
-        { title: 'Tomar una decisión compleja', text: 'Sin CoT: "¿Debería estudiar ingeniería o diseño?"\nCon CoT: "Lista 5 características. Compara por salida laboral, habilidades y tiempo. Recomienda."' },
-      ].map((c, i) => (
-        <View key={i} style={[styles.card, { backgroundColor: '#eff6ff' }]}><Text style={styles.cardTitle}>{c.title}</Text><Text style={styles.cardText}>{c.text}</Text></View>
-      ))}
-    </View>
-  );
-
-  const renderArbol = () => (
-    <View>
-      <View style={[styles.tag, { backgroundColor: '#ecfdf5' }]}><Text style={[styles.tagText, { color: '#065f46' }]}>🌳 Módulo 8 · Matching</Text></View>
-      <Text style={styles.title}>Árbol de decisiones para tu IA</Text>
-      {ARBOL_ITEMS.map((item, i) => (
-        <View key={i} style={[styles.card, { backgroundColor: '#eff6ff' }]}>
-          <Text style={{ fontWeight: 'bold', color: '#1e40af', marginBottom: 6 }}>Si: {item.condicion}</Text>
-          <View style={{ flexDirection: 'row', gap: 6 }}>
-            <TouchableOpacity style={[styles.treeOpt, arbolAnswers[i] === 0 && { borderColor: '#3b82f6', backgroundColor: '#dbeafe' }]} onPress={() => selArbol(i, 0)} disabled={arbolChecked}>
-              <Text style={{ fontSize: 11, fontWeight: '600' }}>{item.accion}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.treeOpt, arbolAnswers[i] === 1 && { borderColor: '#ef4444', backgroundColor: '#fff1f2' }]} onPress={() => selArbol(i, 1)} disabled={arbolChecked}>
-              <Text style={{ fontSize: 11, fontWeight: '600' }}>{item.alternativa}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      ))}
-    </View>
-  );
-
-  const renderIter = () => (
-    <View>
-      <View style={[styles.tag, { backgroundColor: '#fff1f2' }]}><Text style={[styles.tagText, { color: '#9f1239' }]}>🔄 Módulo 9 · Builder iterativo · Ronda {iterRound}/3</Text></View>
-      {iterDone ? (
-        <View>
-          <Text style={styles.title}>✅ Prompt iterativo completado</Text>
-          <Text style={{ textAlign: 'center', fontWeight: 'bold' }}>3 rondas completadas · +36 XP</Text>
-        </View>
-      ) : (
-        <View>
-          <Text style={{ fontSize: 13, marginBottom: 8 }}>
-            {iterRound === 1 ? 'Ronda 1: Escribe el prompt inicial para un asistente de estudio de historia.' :
-             iterRound === 2 ? 'Ronda 2: Pide refinamiento específico sobre el prompt anterior.' :
-             'Ronda 3: Instrucción de cierre y verificación.'}
-          </Text>
-          <TextInput style={styles.textArea} multiline placeholder="Escribe tu prompt..." value={iterText} onChangeText={setIterText} />
-          <Text style={{ fontSize: 11, color: '#94a3b8', textAlign: 'right' }}>{iterText.length} / 20 mín.</Text>
-        </View>
-      )}
-    </View>
-  );
-
-  const renderTheory4 = () => (
-    <View>
-      <View style={[styles.tag, { backgroundColor: '#dcfce7' }]}><Text style={[styles.tagText, { color: '#166534' }]}>⚖️ Módulo 10 · Escenarios</Text></View>
-      <Text style={styles.title}>Cuándo usar cadenas y cuándo no</Text>
-      {['✅ Útil: tarea de múltiples fases', '✅ Necesario: razonamiento lógico complejo', '⚠️ Sobreingeniería: pregunta factual simple', '⚠️ Innecesario: tarea creativa libre'].map((t, i) => (
-        <View key={i} style={styles.card}><Text style={styles.cardText}>{t}</Text></View>
-      ))}
-    </View>
-  );
-
-  const renderSprint = () => (
-    <View>
-      <View style={[styles.tag, { backgroundColor: '#ecfdf5' }]}><Text style={[styles.tagText, { color: '#065f46' }]}>⚡ Módulo 11 · Sprint</Text></View>
-      <Text style={styles.title}>Sprint: diseña la cadena</Text>
-      <Text style={{ fontSize: 26, fontWeight: 'bold', textAlign: 'center', color: '#1e40af' }}>
-        {Math.floor(sprintSec / 60)}:{String(sprintSec % 60).padStart(2, '0')}
-      </Text>
-      <View style={{ height: 6, backgroundColor: '#e2e8f0', borderRadius: 3, overflow: 'hidden', marginBottom: 10 }}>
-        <View style={{ height: '100%', width: `${(sprintSec / 90) * 100}%`, backgroundColor: '#3b82f6', borderRadius: 3 }} />
-      </View>
-      {sprintDone ? (
-        <View style={{ padding: 14, backgroundColor: '#dcfce7', borderRadius: 10 }}>
-          <Text style={{ fontWeight: 'bold', color: '#166534', textAlign: 'center' }}>🏁 3 cadenas diseñadas. +30 XP</Text>
-        </View>
-      ) : (
-        <View>
-          <View style={[styles.card, { backgroundColor: '#eff6ff', borderColor: '#bfdbfe' }]}>
-            <Text style={{ fontSize: 13, fontWeight: 'bold', textAlign: 'center' }}>{SPRINT_CADENAS[sprintIdx]}</Text>
-          </View>
-          {sprintModelo ? (
-            <View style={[styles.card, { backgroundColor: '#f0fdf4', marginTop: 8 }]}>
-              <Text style={{ fontSize: 12, color: '#065f46' }}>{SP_MODELOS[sprintIdx]}</Text>
-            </View>
-          ) : (
-            <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
-              <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#1e40af' }]} onPress={startSprint}><Text style={{ color: '#fff', fontWeight: 'bold' }}>▶ Iniciar</Text></TouchableOpacity>
-              <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#eff6ff', borderWidth: 1.5, borderColor: '#bfdbfe' }]} onPress={verModelo}><Text style={{ color: '#1e40af', fontWeight: 'bold' }}>→ Ver modelo</Text></TouchableOpacity>
-            </View>
-          )}
-          {sprintModelo && (
-            <TouchableOpacity style={[styles.nextButton, { marginTop: 8 }]} onPress={nextSprint}><Text style={styles.nextButtonText}>Siguiente →</Text></TouchableOpacity>
-          )}
-        </View>
-      )}
-    </View>
-  );
-
-  const renderVpBuilder = () => (
-    <View>
-      <View style={[styles.tag, { backgroundColor: '#eff6ff' }]}><Text style={[styles.tagText, { color: '#1e40af' }]}>🔍 Módulo 12 · Builder</Text></View>
-      <Text style={styles.title}>El prompt que se verifica a sí mismo</Text>
-      <TextInput style={styles.textArea} multiline placeholder="Escribe tu instrucción principal..." value={vpBase} onChangeText={setVpBase} />
-      {isVpOk && (
-        <View style={[styles.card, { backgroundColor: '#f0fdf4', marginTop: 10 }]}>
-          <Text style={{ fontSize: 12, color: '#065f46' }}>
-            {vpBase.trim()}. Al terminar, revisa: 1) ¿respondiste exactamente lo que se pidió? 2) ¿hay contradicciones? 3) ¿los datos son precisos? Corrige cualquier error antes de terminar.
-          </Text>
-        </View>
-      )}
-    </View>
-  );
-
-  const renderTutor = () => (
-    <View>
-      <View style={[styles.tag, { backgroundColor: '#dcfce7' }]}><Text style={[styles.tagText, { color: '#166534' }]}>🎓 Módulo 13 · Casos reales</Text></View>
-      <Text style={styles.title}>La IA como tutor paso a paso</Text>
-      {['🧪 Ciencias: Entender un concepto difícil', '📜 Historia: Análisis de evento', '🔢 Matemáticas: Resolver paso a paso'].map((t, i) => (
-        <View key={i} style={styles.card}><Text style={styles.cardText}>{t}</Text></View>
-      ))}
-    </View>
-  );
-
-  const renderRazon = () => {
-    if (razonDone) {
-      return (
-        <View>
-          <Text style={styles.title}>✅ Clasificador completado</Text>
-          <Text style={{ textAlign: 'center', fontSize: 16 }}>{razonScore}/{RAZON_ITEMS.length} correctas</Text>
-        </View>
-      );
-    }
-    const item = RAZON_ITEMS[razonIdx];
-    return (
-      <View>
-        <View style={[styles.tag, { backgroundColor: '#ecfdf5' }]}><Text style={[styles.tagText, { color: '#065f46' }]}>🔎 Módulo 14 · Clasificador · {razonIdx + 1}/{RAZON_ITEMS.length}</Text></View>
-        <View style={[styles.card, { backgroundColor: '#f8fafc' }]}>
-          <Text style={{ fontStyle: 'italic', fontSize: 13 }}>"{item.texto}"</Text>
-        </View>
-        <TouchableOpacity style={[styles.optionBtn, { borderColor: '#fde68a' }]} onPress={() => answerRazon(0)} disabled={razonAnswered}>
-          <Text style={{ fontWeight: 'bold', color: '#92400e' }}>⚠️ Falacia lógica</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.optionBtn, { borderColor: '#bfdbfe' }]} onPress={() => answerRazon(1)} disabled={razonAnswered}>
-          <Text style={{ fontWeight: 'bold', color: '#1e40af' }}>🦘 Salto de conclusión</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.optionBtn, { borderColor: '#fecdd3' }]} onPress={() => answerRazon(2)} disabled={razonAnswered}>
-          <Text style={{ fontWeight: 'bold', color: '#991b1b' }}>❌ Dato falso</Text>
-        </TouchableOpacity>
-        {razonAnswered && (
-          <View style={{ padding: 10, backgroundColor: razonSel === razonMap[item.tipo] ? '#dcfce7' : '#fff1f2', borderRadius: 10, marginTop: 6 }}>
-            <Text style={{ fontSize: 12 }}>{item.label}: {item.explain}</Text>
-          </View>
-        )}
-      </View>
-    );
-  };
-
-  const renderTheory5 = () => (
-    <View>
-      <View style={[styles.tag, { backgroundColor: '#dcfce7' }]}><Text style={[styles.tagText, { color: '#166534' }]}>🧠 Módulo 15 · Reflexión conceptual</Text></View>
-      <Text style={styles.title}>¿Qué tan profundo puede pensar un LLM?</Text>
-      {['⚠️ Lo que el CoT NO resuelve: información fuera del entrenamiento.', '🔬 Lo que la ciencia dice: fallan en razonamiento espacial complejo.', '✅ La regla práctica: si requiere sentido común, el humano sigue siendo necesario.'].map((t, i) => (
-        <View key={i} style={styles.card}><Text style={styles.cardText}>{t}</Text></View>
-      ))}
-    </View>
-  );
-
-  const renderAcertijo = () => {
-    const ac = ACERTIJOS[0];
-    return (
-      <View>
-        <View style={[styles.tag, { backgroundColor: '#eff6ff' }]}><Text style={[styles.tagText, { color: '#1e40af' }]}>🧩 Módulo 16 · Reto</Text></View>
-        <Text style={styles.title}>Resuelve el acertijo con CoT</Text>
-        <View style={[styles.card, { backgroundColor: '#f8fafc' }]}>
-          <Text style={{ fontSize: 13, lineHeight: 20 }}>{ac.problema}</Text>
-        </View>
-        <View style={[styles.card, { backgroundColor: '#eff6ff' }]}>
-          <Text style={{ fontWeight: 'bold', color: '#1e40af' }}>Pista: {ac.hint}</Text>
-        </View>
-        <TextInput style={styles.textArea} multiline placeholder="Tu razonamiento paso a paso..." value={acertijoText} onChangeText={setAcertijoText} />
-        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#eff6ff', borderWidth: 1.5, borderColor: '#bfdbfe', marginTop: 8 }]} onPress={() => Alert.alert('Solución', ac.solucion)}>
-          <Text style={{ color: '#1e40af', fontWeight: 'bold' }}>Ver solución modelo</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  };
-
-  const renderQuiz = () => {
-    if (quizDone) {
-      return (
-        <View>
-          <Text style={styles.title}>✅ Quiz completado</Text>
-          <Text style={{ textAlign: 'center', fontSize: 16 }}>{quizScore}/{QUIZ_COT.length} correctas</Text>
-        </View>
-      );
-    }
-    const item = QUIZ_COT[quizIdx];
-    return (
-      <View>
-        <View style={[styles.tag, { backgroundColor: '#ecfdf5' }]}><Text style={[styles.tagText, { color: '#065f46' }]}>🧠 Módulo 17 · Quiz · {quizIdx + 1}/{QUIZ_COT.length}</Text></View>
-        <View style={[styles.card, { backgroundColor: '#f8fafc' }]}>
-          <Text style={{ fontSize: 13, fontWeight: '600' }}>{item.q}</Text>
-        </View>
-        {item.opts.map((opt, i) => (
-          <TouchableOpacity key={i} style={[styles.optionBtn, quizSel === i && { borderColor: item.correct === i ? '#10b981' : '#ef4444' }]} onPress={() => answerQuiz(i)} disabled={quizAnswered}>
-            <Text style={{ fontSize: 12 }}>{opt}</Text>
-          </TouchableOpacity>
-        ))}
-        {quizAnswered && (
-          <View style={{ padding: 10, backgroundColor: quizSel === item.correct ? '#dcfce7' : '#fff1f2', borderRadius: 10, marginTop: 6 }}>
-            <Text style={{ fontSize: 12 }}>{item.explain}</Text>
-          </View>
-        )}
-      </View>
-    );
-  };
-
-  const renderReflect = () => (
-    <View>
-      <View style={[styles.tag, { backgroundColor: '#f1f5f9' }]}><Text style={[styles.tagText, { color: '#475569' }]}>💬 Módulo 18 · Reflexión</Text></View>
-      <Text style={styles.title}>¿La diferencia importa?</Text>
-      <TextInput style={styles.textArea} multiline placeholder="Escribe tu reflexión (mín. 50 caracteres)..." value={reflectText} onChangeText={setReflectText} />
-      <Text style={{ fontSize: 11, color: '#94a3b8', textAlign: 'right' }}>{reflectText.length} / 50 mín.</Text>
-    </View>
-  );
-
-  const renderCompletion = () => (
-    <View style={{ alignItems: 'center', padding: 20 }}>
-      <View style={{ width: 86, height: 86, borderRadius: 24, backgroundColor: '#a7f3d0', justifyContent: 'center', alignItems: 'center', marginBottom: 14 }}>
-        <Text style={{ fontSize: 44 }}>🏅</Text>
-      </View>
-      <Text style={[styles.title, { textAlign: 'center' }]}>¡Nivel 11 completado!</Text>
-      <Text style={[styles.subtitle, { textAlign: 'center', marginBottom: 14 }]}>Badge: 🔗 Chain Master desbloqueado. Ahora construyes secuencias de prompts que la mayoría de adultos no sabe usar.</Text>
-      <View style={{ backgroundColor: '#fef9c3', borderRadius: 12, padding: 11, marginBottom: 14, borderWidth: 1, borderColor: '#fcd34d', width: '100%' }}>
-        <Text style={{ fontSize: 15, fontWeight: '700', color: '#92400e', textAlign: 'center' }}>⭐ {xp} XP ganados</Text>
-      </View>
-      <View style={{ backgroundColor: '#eff6ff', borderRadius: 12, padding: 13, marginBottom: 14, borderWidth: 1, borderColor: '#bfdbfe', width: '100%' }}>
-        {[
-          'Entiendo qué es Chain-of-Thought y cuándo aplicarlo',
-          'Dividí tareas complejas en sub-prompts manejables',
-          'Construí prompts iterativos de 3 rondas',
-          'Detecté falacias, saltos de conclusión y datos falsos',
-          'Conozco los límites reales del razonamiento en LLMs',
-        ].map((skill, i) => (
-          <View key={i} style={{ flexDirection: 'row', gap: 8, marginBottom: i < 4 ? 7 : 0 }}>
-            <Text style={{ color: '#1e40af', fontWeight: '700', fontSize: 14 }}>✓</Text>
-            <Text style={{ fontSize: 12, color: '#334155', lineHeight: 18, flex: 1 }}>{skill}</Text>
-          </View>
-        ))}
-      </View>
-      <View style={{ backgroundColor: '#f8fafc', borderRadius: 10, padding: 11, marginBottom: 14, borderWidth: 1, borderColor: '#e2e8f0', width: '100%' }}>
-        <Text style={{ fontSize: 12, color: '#334155', lineHeight: 20 }}>
-          🔑 <Text style={{ fontWeight: '700' }}>Nivel 12: Trucos Secretos{'\n\n'}</Text>
-          Zero-shot, few-shot, system prompts, temperatura máxima/mínima, ReAct. Los trucos que usan los ingenieros de IA. El nivel final del Mundo 2.
+      <View style={[styles.fbBox, ok ? styles.fbOk : styles.fbBad]}>
+        <Text style={[styles.fbText, ok ? styles.fbOkText : styles.fbBadText]}>
+          {ok ? `✅ ${mcq.explain}` : `❌ No exactamente. La correcta: "${mcq.opts[mcq.correct]}". ${mcq.explain}`}
         </Text>
       </View>
-      <Text style={{ fontSize: 10, color: '#94a3b8', marginBottom: 8 }}>Nivel 11 de 36 completado · Mundo 2 — Domina el Prompting</Text>
-      <TouchableOpacity style={styles.finishButton} onPress={handleFinish}><Text style={{ fontWeight: 'bold', color: '#fff' }}>Siguiente nivel →</Text></TouchableOpacity>
-    </View>
-  );
+    );
+  };
 
-  // ============ RENDER PRINCIPAL ============
-  const renderStepContent = () => {
+  // ============ RENDER DE CADA PASO ============
+  const renderStep = () => {
     switch (step) {
-      case 0: return renderIntro();
-      case 1: return renderTheory1();
-      case 2: return renderCompare();
-      case 3: return renderBuilder();
-      case 4: return renderDivide();
-      case 5: return renderFillCp();
-      case 6: return renderVF();
-      case 7: return renderTheory3();
-      case 8: return renderArbol();
-      case 9: return renderIter();
-      case 10: return renderTheory4();
-      case 11: return renderSprint();
-      case 12: return renderVpBuilder();
-      case 13: return renderTutor();
-      case 14: return renderRazon();
-      case 15: return renderTheory5();
-      case 16: return renderAcertijo();
-      case 17: return renderQuiz();
-      case 18: return renderReflect();
-      case 19: return renderCompletion();
+      case 0: return (
+        <View>
+          <Tag bg="#dbeafe" fg="#1e40af" label="Nivel 11 · 18 módulos" />
+          <View style={styles.iconCircle}><Text style={{ fontSize: 34 }}>🔗</Text></View>
+          <Text style={styles.title}>Prompts en Cadena</Text>
+          <Text style={styles.subtitle}>Un solo prompt resuelve el 60% de los problemas. Una cadena bien diseñada resuelve el 100%.</Text>
+          <Card bg="#eff6ff" border="#bfdbfe" title="🎯 Qué vas a aprender">
+            Chain-of-Thought prompting · Dividir tareas complejas · Prompts con checkpoints · Árbol de decisiones · Detectar errores de razonamiento
+          </Card>
+          <Hl variant="blue"><Bold>La analogía de la receta:</Bold> Un chef no cocina todos los platos mezclados en una sola olla. Divide el proceso en pasos, verifica cada uno, y el resultado es mucho mejor.</Hl>
+        </View>
+      );
+      case 1: return (
+        <View>
+          <Tag bg="#dcfce7" fg="#166534" label="📐 Módulo 1 · Casos reales" />
+          <Text style={styles.titleSm}>La magia del "piénsalo paso a paso"</Text>
+          <Text style={styles.subtitle}>Un experimento real: el mismo problema, dos prompts.</Text>
+          <Card bg="#f8fafc" border="#e2e8f0" title="🧮 Problema">
+            Si Juan tiene 3 veces más manzanas que María, y juntos tienen 48, ¿cuántas tiene cada uno?
+          </Card>
+          <View style={styles.compareRow}>
+            <View style={[styles.comparePanel, { backgroundColor: '#fff7ed', borderColor: '#fed7aa' }]}>
+              <Text style={[styles.compareLabel, { color: '#c2410c' }]}>Sin cadena</Text>
+              <Text style={styles.compareText}>"Juan tiene 36 y María 12." [No hay forma de saber si llegó correctamente]</Text>
+            </View>
+            <View style={[styles.comparePanel, { backgroundColor: '#f0fdf4', borderColor: '#bbf7d0' }]}>
+              <Text style={[styles.compareLabel, { color: '#065f46' }]}>Con "paso a paso"</Text>
+              <Text style={styles.compareText}>"Paso 1: Sea M = manzanas de María. Paso 2: Juan tiene 3M. Paso 3: M + 3M = 48 → 4M = 48 → M = 12. Paso 4: Juan = 36. Verificación: 12 + 36 = 48 ✓"</Text>
+            </View>
+          </View>
+          <Hl variant="blue"><Bold>Por qué importa más allá de las matemáticas:</Bold> El razonamiento visible te permite detectar el error exacto. Sin los pasos, si el resultado es incorrecto, no sabes dónde falló — ni si falló.</Hl>
+        </View>
+      );
+      case 2: return (
+        <View>
+          <Tag bg="#dbeafe" fg="#1e40af" label="🔗 Módulo 2 · Prompt-compare" />
+          <Text style={styles.titleSm}>Antes vs. después del Chain-of-Thought</Text>
+          <View style={styles.compareRow}>
+            <View style={[styles.comparePanel, { backgroundColor: '#fff7ed', borderColor: '#fed7aa' }]}>
+              <Text style={[styles.compareLabel, { color: '#c2410c' }]}>Prompt directo</Text>
+              <Text style={styles.compareMono}>{compareItem.directo.prompt}</Text>
+              <Text style={styles.compareText}>{compareItem.directo.resp}</Text>
+            </View>
+            <View style={[styles.comparePanel, { backgroundColor: '#f0fdf4', borderColor: '#bbf7d0' }]}>
+              <Text style={[styles.compareLabel, { color: '#065f46' }]}>Prompt CoT</Text>
+              <Text style={styles.compareMono}>{compareItem.cot.prompt}</Text>
+              <Text style={styles.compareText}>{compareItem.cot.resp}</Text>
+            </View>
+          </View>
+          <Text style={styles.qText}>{compareItem.q}</Text>
+          {compareItem.opts.map((opt, i) => (
+            <TouchableOpacity key={i} style={[styles.optionBtn, compareSel === i && styles.optSel, compareAnswered && i === compareItem.correct && styles.optCorrect, compareAnswered && compareSel === i && i !== compareItem.correct && styles.optWrong]} onPress={() => answerCOT(i)} disabled={compareAnswered}>
+              <Text style={styles.optText}>{opt}</Text>
+            </TouchableOpacity>
+          ))}
+          {mcqFeedback(compareItem, compareSel)}
+        </View>
+      );
+      case 3: return (
+        <View>
+          <Tag bg="#eff6ff" fg="#1e40af" label="🛠️ Módulo 3 · Builder" />
+          <Text style={styles.titleSm}>Construye un prompt de 3 pasos</Text>
+          <Text style={styles.subtitle}>Elige una tarea compleja y divídela en: Análisis → Opciones → Decisión.</Text>
+          <Hl variant="blue"><Bold>Estructura base:</Bold>{'\n'}Paso 1: Analiza [situación] y lista los factores clave.{'\n'}Paso 2: Dame 3 opciones con pros y contras de cada una.{'\n'}Paso 3: Recomienda la mejor opción y justifica por qué.</Hl>
+          <Text style={styles.label}>Tu tema o situación a resolver</Text>
+          <TextInput style={styles.input} placeholder="Ej: qué carrera estudiar, cómo mejorar mi rutina de estudio..." placeholderTextColor="#b8bcc0" value={tema} onChangeText={setTema} />
+          <Text style={styles.label}>Paso 1 — ¿Qué debe analizar primero?</Text>
+          <TextInput style={styles.input} placeholder="Ej: mis intereses, mi presupuesto, mis fortalezas..." placeholderTextColor="#b8bcc0" value={p1} onChangeText={setP1} />
+          <Text style={styles.label}>Paso 2 — ¿Cuántas opciones y qué criterios comparar?</Text>
+          <TextInput style={styles.input} placeholder="Ej: 3 opciones comparadas en costo, tiempo y dificultad..." placeholderTextColor="#b8bcc0" value={p2} onChangeText={setP2} />
+          <Text style={styles.label}>Paso 3 — ¿Qué tipo de recomendación final quieres?</Text>
+          <TextInput style={styles.input} placeholder="Ej: la más realista para mi situación actual..." placeholderTextColor="#b8bcc0" value={p3} onChangeText={setP3} />
+          {chainValid && (
+            <View style={[styles.fbBox, styles.fbOk]}>
+              <Text style={[styles.fbText, styles.fbOkText]}>
+                <Bold>Prompt 1:</Bold> Analiza mi situación de {tema}. Factores clave: {p1}.{'\n\n'}
+                <Bold>Prompt 2:</Bold> Basándote en ese análisis, dame {p2}.{'\n\n'}
+                <Bold>Prompt 3:</Bold> Con todo lo anterior, recomiéndame {p3}. Justifica paso a paso.
+              </Text>
+            </View>
+          )}
+        </View>
+      );
+      case 4: return (
+        <View>
+          <Tag bg="#eff6ff" fg="#1e40af" label="📦 Módulo 4 · Divide y vencerás" />
+          <Text style={styles.titleSm}>Divide y vencerás</Text>
+          <Text style={styles.subtitle}>Una tarea compleja se convierte en una cadena de 5 sub-prompts manejables.</Text>
+          <Card bg="#f8fafc" border="#e2e8f0" title="🎯 Tarea compleja"><Text style={styles.italic}>{tareaCompleja.tarea}</Text></Card>
+          <Hl variant="red"><Bold>Error común:</Bold> {tareaCompleja.errorComun}</Hl>
+          <Text style={styles.label}>División en 5 sub-prompts:</Text>
+          {tareaCompleja.subtareas.map((s, i) => (
+            <View key={i} style={styles.subRow}>
+              <View style={styles.subNum}><Text style={styles.subNumText}>{i + 1}</Text></View>
+              <Text style={styles.subText}>{s}</Text>
+            </View>
+          ))}
+          <Hl variant="blue"><Bold>La regla:</Bold> Si un prompt requiere más de 3 "y además", divídelo. Cada sub-prompt recibe atención completa del modelo.</Hl>
+        </View>
+      );
+      case 5: return (
+        <View>
+          <Tag bg="#eff6ff" fg="#1e40af" label="📍 Módulo 5 · Fill-in-blank" />
+          <Text style={styles.titleSm}>Añade checkpoints al prompt</Text>
+          <Text style={styles.subtitle}>Toma este prompt básico y añade las instrucciones de checkpoint que le faltan.</Text>
+          <Card bg="#f8fafc" border="#e2e8f0" title="📋 Prompt base"><Text style={styles.italic}>"{fillCotItem.base}"</Text></Card>
+          {fillCotItem.campos.map((c, i) => (
+            <View key={i}>
+              <Text style={styles.label}>{c}</Text>
+              <TextInput style={styles.input} placeholder="Escribe la instrucción de checkpoint..." placeholderTextColor="#b8bcc0" editable={!cpDone} value={cpValues[i]} onChangeText={(v) => setCpValues((prev) => { const n = [...prev]; n[i] = v; return n; })} />
+            </View>
+          ))}
+          {cpDone && (
+            <View style={[styles.fbBox, styles.fbOk]}>
+              <Text style={[styles.fbText, styles.fbOkText]}>✅ +15 XP. Ejemplo modelo: {fillCotItem.correcto}</Text>
+            </View>
+          )}
+        </View>
+      );
+      case 6: return (
+        <View>
+          <Tag bg="#ecfdf5" fg="#065f46" label={vfDone ? '✅ Resultado V/F' : `✔ V/F · ${vfIdx + 1}/${vfItems.length}`} />
+          {!vfDone ? (
+            <>
+              <Text style={styles.vfStmt}>{vfItems[vfIdx].stmt}</Text>
+              <View style={styles.row}>
+                <TouchableOpacity style={[styles.vfBtn, styles.vfTrue, vfSel === true && styles.vfOn]} onPress={() => answerVF(true)} disabled={vfSel !== null}><Text style={styles.vfBtnText}>✅ Verdadero</Text></TouchableOpacity>
+                <TouchableOpacity style={[styles.vfBtn, styles.vfFalse, vfSel === false && styles.vfOnBad]} onPress={() => answerVF(false)} disabled={vfSel !== null}><Text style={styles.vfBtnText}>❌ Falso</Text></TouchableOpacity>
+              </View>
+              {vfSel !== null && (
+                <View style={[styles.fbBox, vfSel === vfItems[vfIdx].correct ? styles.fbOk : styles.fbBad]}>
+                  <Text style={[styles.fbText, vfSel === vfItems[vfIdx].correct ? styles.fbOkText : styles.fbBadText]}>
+                    {vfSel === vfItems[vfIdx].correct ? '✅ ' : `❌ Incorrecto. La respuesta correcta es "${vfItems[vfIdx].correct ? 'Verdadero' : 'Falso'}". `}{vfItems[vfIdx].explain}
+                  </Text>
+                </View>
+              )}
+            </>
+          ) : (
+            <View style={[styles.fbBox, vfScore >= 5 ? styles.fbOk : styles.fbAmber]}>
+              <Text style={styles.resultBig}>{vfScore}/{vfItems.length} correctas 🎯</Text>
+              <Text style={[styles.fbText, vfScore >= 5 ? styles.fbOkText : styles.fbAmberText]}>+{vfScore * 8} XP. {vfScore >= 5 ? 'Entiendes bien las capacidades y límites del razonamiento en LLMs.' : 'Recuerda: el CoT mejora pero no garantiza. El modelo simula razonamiento, no lo realiza como un humano.'}</Text>
+            </View>
+          )}
+        </View>
+      );
+      case 7: return (
+        <View>
+          <Tag bg="#dcfce7" fg="#166534" label="🌍 Módulo 7 · Casos reales" />
+          <Text style={styles.titleSm}>Chain-of-Thought en acción</Text>
+          <Text style={styles.subtitle}>3 situaciones cotidianas donde el razonamiento paso a paso marca la diferencia.</Text>
+          <Card bg="#eff6ff" border="#bfdbfe" title="🔬 Caso 1: Análisis de texto literario">
+            <Bold>Sin CoT: </Bold>"Analiza el simbolismo en El Principito."{'\n'}<Bold>Con CoT: </Bold>"Identifica 3 símbolos en El Principito. Para cada uno: 1) qué lo representa, 2) qué simboliza, 3) una frase del libro que lo confirme."
+          </Card>
+          <Card bg="#eff6ff" border="#bfdbfe" title="📊 Caso 2: Tomar una decisión compleja">
+            <Bold>Sin CoT: </Bold>"¿Debería estudiar ingeniería o diseño?"{'\n'}<Bold>Con CoT: </Bold>"Lista 5 características de cada carrera. Compáralas según salida laboral, habilidades y tiempo de estudio. Recomienda basándote solo en lo que analizaste."
+          </Card>
+          <Card bg="#eff6ff" border="#bfdbfe" title="📝 Caso 3: Corregir un texto">
+            <Bold>Sin CoT: </Bold>"Corrige este ensayo."{'\n'}<Bold>Con CoT: </Bold>"Analiza este ensayo en 3 pasadas: 1) errores gramaticales, 2) claridad de argumentos, 3) coherencia general. En cada pasada, lista los problemas antes de corregirlos."
+          </Card>
+        </View>
+      );
+      case 8: return (
+        <View>
+          <Tag bg="#ecfdf5" fg="#065f46" label="🌳 Módulo 8 · Matching" />
+          <Text style={styles.titleSm}>Árbol de decisiones para tu IA</Text>
+          <Text style={styles.subtitle}>Diseña las reglas de comportamiento de un asistente. Para cada condición, elige la acción correcta.</Text>
+          {ARBOL_ITEMS.map((item, i) => {
+            const chosen = arbolAnswers[i];
+            const right = chosen === 0;
+            return (
+              <View key={i} style={styles.arbolCard}>
+                <Text style={styles.arbolCond}>Si: <Text style={styles.italic}>{item.condicion}</Text></Text>
+                <View style={styles.row}>
+                  <TouchableOpacity style={[styles.treeOpt, chosen === 0 && styles.treeSel]} onPress={() => selArbol(i, 0)} disabled={arbolChecked}><Text style={styles.treeText}>{item.accion}</Text></TouchableOpacity>
+                  <TouchableOpacity style={[styles.treeOpt, chosen === 1 && styles.treeSel]} onPress={() => selArbol(i, 1)} disabled={arbolChecked}><Text style={styles.treeText}>{item.alternativa}</Text></TouchableOpacity>
+                </View>
+                {arbolChecked && (
+                  <Text style={[styles.arbolFb, right ? styles.fbOkText : styles.fbBadText]}>{right ? '✅ Correcto' : '❌ La opción correcta es la primera.'}</Text>
+                )}
+              </View>
+            );
+          })}
+          {arbolChecked && (
+            <View style={[styles.fbBox, arbolCorrect >= 3 ? styles.fbOk : styles.fbAmber]}>
+              <Text style={[styles.fbText, arbolCorrect >= 3 ? styles.fbOkText : styles.fbAmberText]}>{arbolCorrect >= 3 ? '✅ ' : '⚠️ '}{arbolCorrect}/4 correctas · +{arbolCorrect * 8} XP. Un árbol bien diseñado define una IA predecible y útil.</Text>
+            </View>
+          )}
+        </View>
+      );
+      case 9: return (
+        <View>
+          <Tag bg="#eff6ff" fg="#1e40af" label={iterDone ? '✅ Prompt iterativo completado' : `🔄 Módulo 9 · Builder iterativo · Ronda ${iterRound}/3`} />
+          {iterDone ? (
+            <View style={[styles.fbBox, styles.fbOk]}>
+              <Text style={styles.resultBig}>3 rondas completadas</Text>
+              <Text style={[styles.fbText, styles.fbOkText]}>+36 XP acumulados. Este proceso iterativo es exactamente cómo los profesionales usan los LLMs — raramente se quedan con el primer resultado.</Text>
+            </View>
+          ) : (
+            <>
+              <Text style={styles.subtitle}>Proceso iterativo: cada ronda mejora la anterior.</Text>
+              <Card bg="#eff6ff" border="#bfdbfe">
+                {iterRound === 1 ? 'Ronda 1: escribe el prompt inicial para un asistente de estudio de historia.' :
+                 iterRound === 2 ? 'Ronda 2: pide un refinamiento específico sobre lo anterior (qué mejorar y cómo).' :
+                 'Ronda 3: instrucción de cierre y verificación (resumen o esquema final).'}
+              </Card>
+              <TextInput style={styles.textArea} multiline placeholder={iterRound === 1 ? 'Ej: Actúa como tutor de historia para 10°. Explícame las causas de la Primera Guerra Mundial...' : iterRound === 2 ? 'Ej: Eso está bien, pero quiero que cada causa tenga un ejemplo con fecha y su conexión con el inicio de la guerra...' : 'Ej: Ahora resume todo en un esquema de máximo 10 puntos para repasar 30 minutos antes del examen...'} placeholderTextColor="#b8bcc0" value={iterText} onChangeText={setIterText} />
+              {iterEval && !iterValid && <Text style={styles.hint}>💡 {iterEval.msg}</Text>}
+            </>
+          )}
+        </View>
+      );
+      case 10: return (
+        <View>
+          <Tag bg="#eff6ff" fg="#1e40af" label="⚖️ Módulo 10 · Escenarios" />
+          <Text style={styles.titleSm}>Cuándo usar cadenas y cuándo no</Text>
+          <Text style={styles.subtitle}>No todo necesita una cadena. Aquí los 4 casos con criterio claro.</Text>
+          <Card bg="#f0fdf4" border="#bbf7d0" title="✅ Útil: tarea de múltiples fases">"Escribir un informe" → investigación + estructuración + redacción + revisión. Cada fase se beneficia de atención completa.</Card>
+          <Card bg="#f0fdf4" border="#bbf7d0" title="✅ Necesario: razonamiento lógico complejo">Cualquier problema donde un error en el paso 2 invalida el paso 3. Matemáticas, lógica, análisis legal.</Card>
+          <Card bg="#fffbeb" border="#fde68a" title="⚠️ Sobreingeniería: pregunta factual simple">"¿Cuándo nació Simón Bolívar?" no necesita cadena. Un prompt directo basta — dividirlo agrega complejidad sin beneficio.</Card>
+          <Card bg="#fffbeb" border="#fde68a" title="⚠️ Innecesario: tarea creativa libre">"Escríbeme un poema sobre el mar" — demasiadas restricciones de proceso pueden limitar la creatividad. A veces el prompt libre produce lo mejor.</Card>
+        </View>
+      );
+      case 11: return (
+        <View>
+          <Tag bg="#dbeafe" fg="#1e40af" label="⚡ Módulo 11 · Sprint" />
+          <Text style={styles.titleSm}>Sprint: diseña la cadena</Text>
+          {sprintDone ? (
+            <View style={[styles.fbBox, styles.fbOk]}>
+              <Text style={styles.resultBig}>3 cadenas diseñadas 🏁</Text>
+              <Text style={[styles.fbText, styles.fbOkText]}>Diseñar cadenas rápido es la habilidad que distingue a los usuarios avanzados de IA.</Text>
+            </View>
+          ) : (
+            <>
+              <Text style={styles.subtitle}>90 segundos. Para cada tarea, diseña mentalmente una cadena de 3 prompts y compárala con el modelo.</Text>
+              <Text style={styles.timer}>{Math.floor(sprintSec / 60)}:{String(sprintSec % 60).padStart(2, '0')}</Text>
+              <View style={styles.timerTrack}><View style={[styles.timerFill, { width: `${(sprintSec / 90) * 100}%` }]} /></View>
+              <Card bg="#eff6ff" border="#bfdbfe">{SPRINT_CADENAS[sprintIdx]}</Card>
+              {sprintModelo ? (
+                <>
+                  <View style={[styles.fbBox, styles.fbOk]}><Text style={[styles.fbText, styles.fbOkText]}>✅ Cadena modelo: {SP_MODELOS[sprintIdx]}</Text></View>
+                  <TouchableOpacity style={styles.ghostBtn} onPress={nextSprint}><Text style={styles.ghostText}>{sprintIdx + 1 < SPRINT_CADENAS.length ? '→ Siguiente tarea' : '→ Terminar sprint'}</Text></TouchableOpacity>
+                </>
+              ) : (
+                <View style={styles.row}>
+                  <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#1e40af' }]} onPress={startSprint} disabled={sprintRunning}><Text style={styles.actionText}>▶ Iniciar</Text></TouchableOpacity>
+                  <TouchableOpacity style={[styles.actionBtn, styles.actionGhost]} onPress={verModelo}><Text style={[styles.actionText, { color: '#1e40af' }]}>→ Ver modelo</Text></TouchableOpacity>
+                </View>
+              )}
+            </>
+          )}
+        </View>
+      );
+      case 12: return (
+        <View>
+          <Tag bg="#eff6ff" fg="#1e40af" label="🔍 Módulo 12 · Builder" />
+          <Text style={styles.titleSm}>El prompt que se verifica a sí mismo</Text>
+          <Text style={styles.subtitle}>Añade una capa de auto-verificación a cualquier prompt. Construye uno a partir de una tarea base.</Text>
+          <Hl variant="blue"><Bold>Patrón de auto-verificación:</Bold> [Tu instrucción]. Al terminar, revisa tu respuesta: 1) ¿respondí exactamente lo que se pedía? 2) ¿hay contradicciones internas? 3) ¿los datos son precisos? Si encuentras un error, corrígelo antes de terminar.</Hl>
+          <Text style={styles.label}>Escribe tu instrucción principal</Text>
+          <TextInput style={styles.textArea} multiline placeholder="Ej: Explícame las 3 leyes de Newton con un ejemplo cotidiano para cada una..." placeholderTextColor="#b8bcc0" value={vpBase} onChangeText={setVpBase} />
+          {vpEval && !vpValid && <Text style={styles.hint}>💡 {vpEval.msg}</Text>}
+          {vpValid && (
+            <View style={[styles.fbBox, styles.fbOk]}>
+              <Text style={[styles.fbText, styles.fbOkText]}>{vpBase.trim()}. Al terminar, revisa: 1) ¿respondiste exactamente lo que se pidió? 2) ¿hay contradicciones? 3) ¿los datos son precisos? Corrige cualquier error antes de terminar.</Text>
+            </View>
+          )}
+        </View>
+      );
+      case 13: return (
+        <View>
+          <Tag bg="#dcfce7" fg="#166534" label="🎓 Módulo 13 · Casos reales" />
+          <Text style={styles.titleSm}>La IA como tutor paso a paso</Text>
+          <Text style={styles.subtitle}>3 materias escolares — 3 cadenas de prompts que realmente funcionan.</Text>
+          <Card bg="#f0fdf4" border="#bbf7d0" title="🧪 Ciencias: entender un concepto difícil">
+            <Bold>P1:</Bold> Explícame [concepto] con una analogía cotidiana. Máx. 3 párrafos.{'\n'}<Bold>P2:</Bold> Dame 2 ejemplos del mundo real donde aplica.{'\n'}<Bold>P3:</Bold> Hazme 3 preguntas para verificar que entendí. No me des las respuestas aún.
+          </Card>
+          <Card bg="#f0fdf4" border="#bbf7d0" title="📜 Historia: análisis de evento">
+            <Bold>P1:</Bold> Lista las 5 causas de [evento] ordenadas de más a menos importante.{'\n'}<Bold>P2:</Bold> Para la causa #1, dame 3 evidencias históricas que la respalden.{'\n'}<Bold>P3:</Bold> ¿Qué habría cambiado si esa causa no hubiera ocurrido?
+          </Card>
+          <Card bg="#f0fdf4" border="#bbf7d0" title="🔢 Matemáticas: resolver paso a paso">
+            <Bold>P1:</Bold> Explícame el método para resolver [tipo de problema]. Solo el método.{'\n'}<Bold>P2:</Bold> Aplica ese método a este problema: [problema]. Muestra cada paso.{'\n'}<Bold>P3:</Bold> Diseña un problema similar para que yo lo practique.
+          </Card>
+        </View>
+      );
+      case 14: return (
+        <View>
+          <Tag bg="#ecfdf5" fg="#065f46" label={razonDone ? '✅ Clasificador completado' : `🔎 Módulo 14 · Clasificador · ${razonIdx + 1}/${RAZON_ITEMS.length}`} />
+          {!razonDone ? (
+            <>
+              <Text style={styles.subtitle}>Clasifica el error en este razonamiento de la IA.</Text>
+              <Card bg="#f8fafc" border="#e2e8f0"><Text style={styles.italic}>"{RAZON_ITEMS[razonIdx].texto}"</Text></Card>
+              {['⚠️ Falacia lógica — argumento inválido', '🦘 Salto de conclusión — generalización inválida', '❌ Dato falso — información incorrecta o inventada'].map((label, i) => (
+                <TouchableOpacity key={i} style={[styles.optionBtn, razonSel === i && styles.optSel, razonSel !== null && i === razonMap[RAZON_ITEMS[razonIdx].tipo] && styles.optCorrect, razonSel === i && i !== razonMap[RAZON_ITEMS[razonIdx].tipo] && styles.optWrong]} onPress={() => answerRazon(i)} disabled={razonSel !== null}>
+                  <Text style={styles.optText}>{label}</Text>
+                </TouchableOpacity>
+              ))}
+              {razonSel !== null && (
+                <View style={[styles.fbBox, razonSel === razonMap[RAZON_ITEMS[razonIdx].tipo] ? styles.fbOk : styles.fbBad]}>
+                  <Text style={[styles.fbText, razonSel === razonMap[RAZON_ITEMS[razonIdx].tipo] ? styles.fbOkText : styles.fbBadText]}>{razonSel === razonMap[RAZON_ITEMS[razonIdx].tipo] ? '✅ ' : '❌ '}{RAZON_ITEMS[razonIdx].label}: {RAZON_ITEMS[razonIdx].explain}</Text>
+                </View>
+              )}
+            </>
+          ) : (
+            <View style={[styles.fbBox, razonScore >= 4 ? styles.fbOk : styles.fbAmber]}>
+              <Text style={styles.resultBig}>{razonScore}/{RAZON_ITEMS.length} correctas</Text>
+              <Text style={[styles.fbText, razonScore >= 4 ? styles.fbOkText : styles.fbAmberText]}>+{razonScore * 10} XP. {razonScore >= 4 ? 'Detectas errores de razonamiento que la mayoría ignora.' : 'La práctica de clasificar errores agudiza tu criterio crítico.'}</Text>
+            </View>
+          )}
+        </View>
+      );
+      case 15: return (
+        <View>
+          <Tag bg="#fffbeb" fg="#92400e" label="🧠 Módulo 15 · Reflexión conceptual" />
+          <Text style={styles.titleSm}>¿Qué tan profundo puede pensar un LLM?</Text>
+          <Text style={styles.subtitle}>Límites reales del razonamiento en modelos de lenguaje actuales.</Text>
+          <Card bg="#fffbeb" border="#fde68a" title="⚠️ Lo que el CoT NO resuelve">El CoT mejora la coherencia del texto — no el acceso a información que el modelo no tiene. Si la información no estaba en el entrenamiento, el razonamiento paso a paso no la va a encontrar.</Card>
+          <Card bg="#f8fafc" border="#e2e8f0" title="🔬 Lo que la ciencia dice (2024)">Los LLMs actuales pueden hacer razonamiento lógico simple, aritmética básica y análisis textual con CoT. Fallan en razonamiento espacial complejo, lógica modal y comprensión causal profunda.</Card>
+          <Card bg="#f0fdf4" border="#bbf7d0" title="✅ La regla práctica">Si un problema requiere "sentido común" acumulado por años de experiencia vivida o intuición física del mundo real, el LLM va a fallar incluso con CoT. Para eso, todavía necesitas al humano.</Card>
+        </View>
+      );
+      case 16: return (
+        <View>
+          <Tag bg="#eff6ff" fg="#1e40af" label="🧩 Módulo 16 · Reto" />
+          <Text style={styles.titleSm}>Resuelve el acertijo con CoT</Text>
+          <Text style={styles.subtitle}>Antes de escribir la respuesta, escribe los pasos de tu razonamiento.</Text>
+          <Card bg="#f8fafc" border="#e2e8f0">{ACERTIJO.problema}</Card>
+          <Hl variant="blue"><Bold>Pista: </Bold>{ACERTIJO.hint}</Hl>
+          <Text style={styles.label}>Tu razonamiento paso a paso</Text>
+          <TextInput style={styles.textArea} multiline placeholder="Paso 1: ... Paso 2: ... Paso 3: ... Respuesta: ..." placeholderTextColor="#b8bcc0" value={acertijoText} onChangeText={setAcertijoText} />
+          {acEval && !acValid && <Text style={styles.hint}>💡 {acEval.msg}</Text>}
+          <TouchableOpacity style={styles.ghostBtn} onPress={() => setAcertijoSol(true)}><Text style={styles.ghostText}>Ver solución modelo</Text></TouchableOpacity>
+          {acertijoSol && (
+            <View style={[styles.fbBox, styles.fbOk]}><Text style={[styles.fbText, styles.fbOkText]}><Bold>Solución: </Bold>{ACERTIJO.solucion}</Text></View>
+          )}
+        </View>
+      );
+      case 17: return (
+        <View>
+          <Tag bg="#fef3c7" fg="#92400e" label={quizDone ? '✅ Quiz completado' : `🧠 Módulo 17 · Quiz · ${quizIdx + 1}/${quizItems.length}`} />
+          {!quizDone ? (
+            <>
+              <Text style={styles.qText}>{quizItems[quizIdx].q}</Text>
+              {quizItems[quizIdx].opts.map((opt, i) => (
+                <TouchableOpacity key={i} style={[styles.optionBtn, quizSel === i && styles.optSel, quizSel !== null && i === quizItems[quizIdx].correct && styles.optCorrect, quizSel === i && i !== quizItems[quizIdx].correct && styles.optWrong]} onPress={() => answerQuiz(i)} disabled={quizSel !== null}>
+                  <Text style={styles.optText}>{opt}</Text>
+                </TouchableOpacity>
+              ))}
+              {quizSel !== null && mcqFeedback(quizItems[quizIdx], quizSel)}
+            </>
+          ) : (
+            <View style={[styles.fbBox, quizScore >= 3 ? styles.fbOk : styles.fbAmber]}>
+              <Text style={styles.resultBig}>{quizScore}/{quizItems.length} correctas</Text>
+              <Text style={[styles.fbText, quizScore >= 3 ? styles.fbOkText : styles.fbAmberText]}>+{quizScore * 12} XP.</Text>
+            </View>
+          )}
+        </View>
+      );
+      case 18: return (
+        <View>
+          <Tag bg="#f1f5f9" fg="#475569" label="💬 Módulo 18 · Reflexión" />
+          <Text style={styles.titleSm}>¿La diferencia importa?</Text>
+          <Text style={styles.subtitle}>IA que piensa vs. IA que responde.</Text>
+          <TextInput style={styles.reflectArea} multiline placeholder="Ej: creo que la diferencia sí importa porque cuando le pido que piense paso a paso puedo seguir su lógica y detectar errores. Cuando solo responde, no sé si confiar..." placeholderTextColor="#b8bcc0" value={reflectText} onChangeText={(t) => { setReflectText(t); if (reflectError) setReflectError(null); }} />
+          <Text style={styles.charCount}>{reflectText.trim().length} / mínimo 50 caracteres</Text>
+          {reflectError && <View style={[styles.fbBox, styles.fbBad]}><Text style={[styles.fbText, styles.fbBadText]}>❌ {reflectError}</Text></View>}
+          <Hl variant="blue">✅ Esta reflexión queda en tu portafolio IA Explorer.</Hl>
+        </View>
+      );
+      case 19: return (
+        <View style={{ alignItems: 'center', padding: 4 }}>
+          <View style={styles.completeIcon}><Text style={{ fontSize: 44 }}>🏅</Text></View>
+          <Text style={[styles.title, { textAlign: 'center' }]}>¡Nivel 11 completado!</Text>
+          <Text style={[styles.subtitle, { textAlign: 'center' }]}>Badge: 🔗 Chain Master desbloqueado. Ahora construyes secuencias de prompts que la mayoría de adultos no sabe usar.</Text>
+          <View style={styles.xpEarned}><Text style={styles.xpEarnedText}>⭐ {xp} XP ganados</Text></View>
+          <View style={styles.skillsBox}>
+            {['Entiendo qué es Chain-of-Thought y cuándo aplicarlo', 'Dividí tareas complejas en sub-prompts manejables', 'Construí prompts iterativos de 3 rondas', 'Detecté falacias, saltos de conclusión y datos falsos', 'Conozco los límites reales del razonamiento en LLMs'].map((skill, i) => (
+              <View key={i} style={styles.skillRow}><Text style={styles.skillCheck}>✓</Text><Text style={styles.skillText}>{skill}</Text></View>
+            ))}
+          </View>
+          <View style={styles.nextHint}>
+            <Text style={styles.nextHintText}>🔑 <Bold>Nivel 12: Trucos Secretos{'\n\n'}</Bold>Zero-shot, few-shot, system prompts, temperatura máxima/mínima, ReAct. Los trucos que usan los ingenieros de IA. El nivel final del Mundo 2.</Text>
+          </View>
+          <View style={styles.lvlBarWrap}>
+            <Text style={styles.lvlBarLabel}>Nivel 11 de 36 completado · Mundo 2 — Domina el Prompting</Text>
+            <View style={styles.lvlBarOuter}><View style={styles.lvlBarInner} /></View>
+          </View>
+          <TouchableOpacity style={styles.mainButton} onPress={handleFinish} activeOpacity={0.85}><Text style={styles.mainButtonText}>Siguiente nivel →</Text></TouchableOpacity>
+        </View>
+      );
       default: return null;
     }
   };
 
-  const progressPercent = (step / (TOTAL_STEPS - 1)) * 100;
-
-  const handleMainBtn = () => {
-    const handlers: Record<number, (() => boolean) | undefined> = {
-      2: () => compareAnswered,
-      3: () => isChainOk,
-      5: () => { commitCp(); return cpDone; },
-      6: () => { if (vfDone) return true; if (vfAnswered) { nextVf(); return false; } Alert.alert('Responde', 'Selecciona Verdadero o Falso.'); return false; },
-      8: checkArbol,
-      9: () => { advanceIter(); return iterDone; },
-      11: () => sprintDone,
-      12: () => isVpOk,
-      14: () => { if (razonDone) return true; if (razonAnswered) { nextRazon(); return false; } Alert.alert('Elige', 'Clasifica el error.'); return false; },
-      16: () => isAcertijoOk,
-      17: () => { if (quizDone) return true; if (quizAnswered) { nextQuiz(); return false; } Alert.alert('Elige', 'Selecciona una respuesta.'); return false; },
-      18: checkReflect,
-    };
-    const handler = handlers[step];
-    if (handler) { if (!handler()) return; }
-    goToNextStep();
-  };
-
-  const showBackButton = step > 0 && !isExamMode;
-  const showNextBtn = step < TOTAL_STEPS - 1 && ![2, 3, 5, 6, 8, 9, 11, 12, 14, 16, 17, 18].includes(step);
-  const showCheckBtn = [2, 3, 5, 6, 8, 9, 11, 12, 14, 16, 17, 18].includes(step) && step < TOTAL_STEPS - 1;
+  // ============ BOTÓN / HABILITACIÓN ============
+  const canProceed = (() => {
+    switch (step) {
+      case 2: return compareAnswered;
+      case 3: return chainBuilt || chainValid;
+      case 5: return cpDone || cpAllValid;
+      case 6: return vfDone || vfSel !== null;
+      case 8: return arbolChecked || arbolAllAnswered;
+      case 9: return iterDone || iterValid;
+      case 11: return sprintDone;
+      case 12: return vpBuilt || vpValid;
+      case 14: return razonDone || razonSel !== null;
+      case 16: return acertijoDone || acValid;
+      case 17: return quizDone || quizSel !== null;
+      case 18: return reflectText.trim().length >= 50;
+      default: return true;
+    }
+  })();
 
   const getBtnLabel = () => {
     switch (step) {
-      case 2: return compareAnswered ? 'Continuar →' : 'Continuar →';
-      case 3: return 'Continuar →';
+      case 0: return '¡Empezar! →';
       case 5: return cpDone ? 'Continuar →' : 'Ver prompt mejorado →';
       case 6: return vfDone ? 'Continuar →' : 'Siguiente →';
-      case 8: return 'Verificar árbol →';
+      case 8: return arbolChecked ? 'Continuar →' : 'Verificar árbol →';
       case 9: return iterDone ? 'Continuar →' : (iterRound < 3 ? 'Siguiente ronda →' : 'Completar →');
-      case 11: return sprintDone ? 'Continuar →' : 'Siguiente →';
-      case 12: return isVpOk ? 'Continuar →' : 'Continuar →';
+      case 11: return sprintDone ? 'Continuar →' : 'Continuar →';
       case 14: return razonDone ? 'Continuar →' : 'Siguiente →';
-      case 16: return isAcertijoOk ? 'Continuar →' : 'Continuar →';
       case 17: return quizDone ? 'Continuar →' : 'Siguiente →';
       case 18: return 'Completar nivel →';
       default: return 'Continuar →';
     }
   };
 
+  const handleMainBtn = () => {
+    if (!canProceed) return;
+    switch (step) {
+      case 3: if (!chainBuilt) { setChainBuilt(true); addXP(10); } break;
+      case 5: if (!cpDone) { commitCp(); return; } break;
+      case 6: if (!vfDone) { nextVf(); return; } break;
+      case 8: if (!arbolChecked) { checkArbol(); return; } break;
+      case 9: if (!iterDone) { advanceIter(); return; } break;
+      case 12: if (!vpBuilt) { commitVp(); } break;
+      case 14: if (!razonDone) { nextRazon(); return; } break;
+      case 16: if (!acertijoDone) { commitAcertijo(); } break;
+      case 17: if (!quizDone) { nextQuiz(); return; } break;
+      case 18: if (!submitReflect()) return; break;
+    }
+    goToNextStep();
+  };
+
+  const progressPercent = (step / (TOTAL_STEPS - 1)) * 100;
+  const progressLabel = step === 0 ? 'Introducción' : step < TOTAL_STEPS - 1 ? `Módulo ${step} de ${CONTENT_STEPS}` : '¡Nivel completado!';
+  const showFooter = step < TOTAL_STEPS - 1;
+  const showBack = THEORY_STEPS.has(step);
+
   return (
     <View style={styles.screen}>
       <View style={styles.progressBar}>
         <TouchableOpacity onPress={() => exitLevel()} style={styles.closeBtn}><MaterialIcons name="close" size={24} color={colors.textSecondary} /></TouchableOpacity>
-        <View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${progressPercent}%` }]} /></View>
+        <View style={styles.progressCol}>
+          <View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${progressPercent}%` }]} /></View>
+          <Text style={styles.progressLabel}>{progressLabel}</Text>
+        </View>
         <Text style={styles.xpText}>{xp} XP</Text>
       </View>
-            <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        {renderStepContent()}
-        {stepResult && (
-          <View style={[styles.resultBanner, stepResult.ok ? styles.resultBannerOk : styles.resultBannerErr]}>
-            <Text style={styles.resultBannerText}>{stepResult.ok ? '\u2705 ' : '\u274c '}{stepResult.msg}</Text>
-          </View>
-        )}
-      </ScrollView>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">{renderStep()}</ScrollView>
       {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} bgColor="#10b981" textColor="#fff" />}
-      <View style={styles.footerRow}>
-        {showBackButton && (
-          <TouchableOpacity style={styles.backButton} onPress={goToPrevStep}>
-            <Text style={styles.backButtonText}>← Volver</Text>
+      {showFooter && (
+        <View style={styles.footerRow}>
+          {showBack && (
+            <TouchableOpacity style={styles.backButton} onPress={goToPrevStep}><Text style={styles.backButtonText}>← Volver</Text></TouchableOpacity>
+          )}
+          <TouchableOpacity style={[styles.mainButton, !canProceed && styles.mainButtonDisabled]} onPress={handleMainBtn} disabled={!canProceed} activeOpacity={0.85}>
+            <Text style={styles.mainButtonText}>{getBtnLabel()}</Text>
           </TouchableOpacity>
-        )}
-        {showNextBtn && (
-          <TouchableOpacity style={[styles.nextButton, showBackButton && styles.nextButtonFlex]} onPress={goToNextStep}>
-            <Text style={styles.nextButtonText}>Continuar →</Text>
-          </TouchableOpacity>
-        )}
-        {showCheckBtn && (
-          <TouchableOpacity style={[styles.nextButton, showBackButton && styles.nextButtonFlex]} onPress={handleMainBtn}>
-            <Text style={styles.nextButtonText}>{getBtnLabel()}</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -978,34 +909,103 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   progressBar: { flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
   closeBtn: { padding: 4 },
-  progressTrack: { flex: 1, height: 8, backgroundColor: colors.borderLight, borderRadius: 4, marginHorizontal: 12 },
+  progressCol: { flex: 1, marginHorizontal: 12 },
+  progressTrack: { height: 8, backgroundColor: colors.borderLight, borderRadius: 4 },
   progressFill: { height: '100%', backgroundColor: '#10b981', borderRadius: 4 },
+  progressLabel: { fontSize: 10, color: '#94a3b8', marginTop: 3, fontWeight: '500' },
   xpText: { ...typography.bold, fontSize: 14, color: '#92400e' },
   scrollView: { flex: 1 },
   scrollContent: { padding: 16, paddingBottom: 40 },
-  tag: { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, marginBottom: 12 },
-  tagText: { fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1 },
-  iconCircle: { width: 60, height: 60, borderRadius: 18, backgroundColor: '#d1fae5', justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
-  title: { ...typography.extraBold, fontSize: 19, color: colors.textPrimary, marginBottom: 6 },
-  subtitle: { ...typography.regular, fontSize: 13, color: colors.textSecondary, marginBottom: 14, lineHeight: 18 },
-  card: { backgroundColor: colors.surface, borderRadius: 14, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: colors.border },
-  cardTitle: { ...typography.bold, fontSize: 13, color: colors.textPrimary, marginBottom: 6 },
-  cardText: { ...typography.regular, fontSize: 13, color: colors.textSecondary, lineHeight: 20 },
-  input: { borderWidth: 1.5, borderColor: '#a7f3d0', borderRadius: 10, padding: 10, fontSize: 13, backgroundColor: '#f0fdf4', color: '#334155', marginBottom: 8 },
-  textArea: { borderWidth: 1.5, borderColor: '#e2e8f0', borderRadius: 10, padding: 12, fontSize: 13, color: '#334155', textAlignVertical: 'top', minHeight: 80, backgroundColor: '#fafafa', marginBottom: 8 },
-  optionBtn: { width: '100%', padding: 11, borderRadius: 11, borderWidth: 2, borderColor: '#e2e8f0', backgroundColor: '#f8fafc', marginBottom: 7 },
-  vfBtn: { flex: 1, padding: 14, borderRadius: 12, borderWidth: 2, alignItems: 'center' },
-  treeOpt: { flex: 1, padding: 8, borderRadius: 9, borderWidth: 2, borderColor: '#e2e8f0', backgroundColor: '#f8fafc' },
-  actionBtn: { flex: 1, padding: 11, borderRadius: 11, alignItems: 'center' },
-  nextButton: { backgroundColor: '#10b981', padding: 14, margin: 16, borderRadius: 11, alignItems: 'center' },
-  nextButtonText: { ...typography.bold, color: '#fff', fontSize: 15 },
-  footerRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 16, gap: 8 },
-  backButton: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, padding: 14, borderRadius: 11, alignItems: 'center', paddingHorizontal: 20 },
-  backButtonText: { ...typography.bold, color: colors.textSecondary, fontSize: 15 },
-  nextButtonFlex: { flex: 1, margin: 0 },
-  finishButton: { backgroundColor: '#10b981', padding: 14, borderRadius: 11, width: '100%', alignItems: 'center', marginTop: 14 },
-  resultBanner: { margin: 16, padding: 14, borderRadius: 14, borderWidth: 1 },
-  resultBannerOk: { backgroundColor: '#dcfce7', borderColor: colors.success },
-  resultBannerErr: { backgroundColor: '#fee2e2', borderColor: colors.error },
-  resultBannerText: { ...typography.bold, fontSize: 13, color: colors.textPrimary, lineHeight: 20 },
+  tag: { alignSelf: 'flex-start', fontSize: 11, fontWeight: '700', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, marginBottom: 12, letterSpacing: 0.4, overflow: 'hidden' },
+  iconCircle: { width: 64, height: 64, borderRadius: 20, backgroundColor: '#dbeafe', justifyContent: 'center', alignItems: 'center', marginBottom: 14 },
+  title: { ...typography.extraBold, fontSize: 19, color: colors.textPrimary, marginBottom: 8, lineHeight: 25 },
+  titleSm: { ...typography.extraBold, fontSize: 16, color: colors.textPrimary, marginBottom: 8, lineHeight: 22 },
+  subtitle: { ...typography.regular, fontSize: 13, color: colors.textSecondary, marginBottom: 14, lineHeight: 20 },
+  bold: { fontWeight: 'bold', color: colors.textPrimary },
+  italic: { fontStyle: 'italic' },
+  card: { borderRadius: 14, padding: 13, marginBottom: 9, borderWidth: 1 },
+  cardTitle: { ...typography.bold, fontSize: 13, color: colors.textPrimary, marginBottom: 4 },
+  cardText: { ...typography.regular, fontSize: 12, color: '#334155', lineHeight: 18 },
+  hl: { borderLeftWidth: 3, padding: 12, borderRadius: 4, marginTop: 9, marginBottom: 13 },
+  hlText: { fontSize: 12, lineHeight: 18, fontWeight: '500' },
+  label: { fontSize: 11, fontWeight: '700', color: '#374151', marginBottom: 4, marginTop: 10 },
+  input: { borderWidth: 1.5, borderColor: '#cbd5e1', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 12, backgroundColor: '#f8fafc', marginBottom: 8, color: colors.textPrimary },
+  textArea: { borderWidth: 1.5, borderColor: '#cbd5e1', borderRadius: 10, padding: 12, minHeight: 90, fontSize: 12, backgroundColor: '#f8fafc', marginBottom: 4, color: colors.textPrimary, textAlignVertical: 'top' },
+  reflectArea: { borderWidth: 1.5, borderColor: '#e2e8f0', borderRadius: 10, padding: 11, minHeight: 110, fontSize: 13, backgroundColor: '#fafafa', marginBottom: 4, color: colors.textPrimary, textAlignVertical: 'top', lineHeight: 20 },
+  charCount: { fontSize: 11, color: '#94a3b8', textAlign: 'right', marginTop: 2, marginBottom: 6 },
+  hint: { fontSize: 11, color: '#1e40af', backgroundColor: '#eff6ff', borderRadius: 8, padding: 9, marginTop: 4, marginBottom: 4, lineHeight: 15, borderWidth: 1, borderColor: '#bfdbfe' },
+  qText: { ...typography.bold, fontSize: 13, color: colors.textPrimary, padding: 11, backgroundColor: '#f8fafc', borderRadius: 10, marginBottom: 9, borderWidth: 1, borderColor: '#e2e8f0', lineHeight: 18 },
+  // Compare panels
+  compareRow: { flexDirection: 'row', gap: 8, marginBottom: 10 },
+  comparePanel: { flex: 1, borderRadius: 12, padding: 11, borderWidth: 1.5 },
+  compareLabel: { ...typography.bold, fontSize: 10, textTransform: 'uppercase', marginBottom: 6, letterSpacing: 0.4 },
+  compareText: { fontSize: 11, color: '#334155', lineHeight: 16, marginTop: 4 },
+  compareMono: { fontSize: 11, color: '#334155', lineHeight: 16, fontFamily: 'monospace' },
+  // Options (MCQ)
+  optionBtn: { padding: 11, borderRadius: 11, borderWidth: 1.5, borderColor: '#e2e8f0', backgroundColor: '#fff', marginBottom: 7 },
+  optSel: { borderColor: '#3b82f6', backgroundColor: '#eff6ff' },
+  optCorrect: { borderColor: '#10b981', backgroundColor: '#dcfce7' },
+  optWrong: { borderColor: '#ef4444', backgroundColor: '#fff1f2' },
+  optText: { fontSize: 12, color: '#334155', lineHeight: 17, fontWeight: '500' },
+  // V/F
+  row: { flexDirection: 'row', gap: 10, marginBottom: 8 },
+  vfStmt: { fontSize: 13, color: '#0f172a', fontWeight: '600', lineHeight: 19, marginBottom: 12, padding: 13, backgroundColor: '#f8fafc', borderRadius: 12, borderWidth: 1, borderColor: '#e2e8f0' },
+  vfBtn: { flex: 1, padding: 14, borderRadius: 12, borderWidth: 2, alignItems: 'center', minHeight: 52, justifyContent: 'center' },
+  vfTrue: { borderColor: '#bbf7d0', backgroundColor: '#f0fdf4' },
+  vfFalse: { borderColor: '#fecdd3', backgroundColor: '#fff1f2' },
+  vfOn: { borderColor: '#10b981', backgroundColor: '#dcfce7' },
+  vfOnBad: { borderColor: '#ef4444', backgroundColor: '#fee2e2' },
+  vfBtnText: { fontSize: 13, fontWeight: '700', color: '#334155' },
+  // Sub-prompts (divide)
+  subRow: { flexDirection: 'row', gap: 10, alignItems: 'center', backgroundColor: '#eff6ff', borderColor: '#bfdbfe', borderWidth: 1, borderRadius: 12, padding: 11, marginBottom: 6 },
+  subNum: { width: 26, height: 26, borderRadius: 13, backgroundColor: '#bfdbfe', justifyContent: 'center', alignItems: 'center' },
+  subNumText: { fontSize: 12, fontWeight: '700', color: '#1e40af' },
+  subText: { flex: 1, fontSize: 12, color: '#334155', lineHeight: 17 },
+  // Árbol
+  arbolCard: { borderWidth: 1.5, borderColor: '#bfdbfe', borderRadius: 12, padding: 11, marginBottom: 8, backgroundColor: '#eff6ff' },
+  arbolCond: { fontSize: 11, fontWeight: '700', color: '#1e40af', marginBottom: 6 },
+  treeOpt: { flex: 1, padding: 9, borderRadius: 9, borderWidth: 2, borderColor: '#e2e8f0', backgroundColor: '#fff' },
+  treeSel: { borderColor: '#3b82f6', backgroundColor: '#dbeafe' },
+  treeText: { fontSize: 11, fontWeight: '600', color: '#334155' },
+  arbolFb: { fontSize: 11, fontWeight: '600', marginTop: 7 },
+  // Sprint
+  timer: { fontSize: 30, fontWeight: '800', textAlign: 'center', color: '#1e40af', marginBottom: 6 },
+  timerTrack: { height: 8, backgroundColor: '#e2e8f0', borderRadius: 4, overflow: 'hidden', marginBottom: 10 },
+  timerFill: { height: '100%', backgroundColor: '#3b82f6', borderRadius: 4 },
+  actionBtn: { flex: 1, padding: 12, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  actionGhost: { backgroundColor: '#eff6ff', borderWidth: 1.5, borderColor: '#bfdbfe' },
+  actionText: { color: '#fff', fontWeight: '700', fontSize: 13 },
+  ghostBtn: { backgroundColor: '#eff6ff', borderWidth: 1.5, borderColor: '#bfdbfe', paddingVertical: 12, borderRadius: 12, alignItems: 'center', marginTop: 8 },
+  ghostText: { ...typography.bold, color: '#1e40af', fontSize: 13 },
+  // Feedback boxes
+  fbBox: { borderRadius: 10, padding: 12, marginTop: 8, marginBottom: 4 },
+  fbOk: { backgroundColor: '#dcfce7' },
+  fbBad: { backgroundColor: '#fff1f2' },
+  fbAmber: { backgroundColor: '#fffbeb' },
+  fbText: { fontSize: 12, lineHeight: 18, fontWeight: '500' },
+  fbOkText: { color: '#166534' },
+  fbBadText: { color: '#991b1b' },
+  fbAmberText: { color: '#92400e' },
+  resultBig: { fontSize: 15, fontWeight: '800', color: '#0f172a', textAlign: 'center', marginBottom: 6 },
+  // Complete
+  completeIcon: { width: 86, height: 86, borderRadius: 24, backgroundColor: '#93c5fd', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
+  xpEarned: { backgroundColor: '#fef9c3', borderRadius: 12, padding: 11, marginBottom: 14, borderWidth: 1, borderColor: '#fcd34d', width: '100%' },
+  xpEarnedText: { fontSize: 15, fontWeight: '700', color: '#92400e', textAlign: 'center' },
+  skillsBox: { backgroundColor: '#eff6ff', borderRadius: 12, padding: 13, marginBottom: 14, borderWidth: 1, borderColor: '#bfdbfe', width: '100%' },
+  skillRow: { flexDirection: 'row', gap: 8, marginBottom: 7 },
+  skillCheck: { color: '#1e40af', fontWeight: '700', fontSize: 14 },
+  skillText: { fontSize: 12, color: '#334155', lineHeight: 18, flex: 1 },
+  nextHint: { backgroundColor: '#f8fafc', borderRadius: 10, padding: 12, marginBottom: 14, borderWidth: 1, borderColor: '#e2e8f0', width: '100%' },
+  nextHintText: { fontSize: 12, color: '#334155', lineHeight: 20 },
+  lvlBarWrap: { width: '100%', marginBottom: 14 },
+  lvlBarLabel: { fontSize: 10, color: '#94a3b8', marginBottom: 4 },
+  lvlBarOuter: { height: 6, backgroundColor: '#e2e8f0', borderRadius: 3, overflow: 'hidden' },
+  lvlBarInner: { height: '100%', width: '31%', backgroundColor: '#3b82f6', borderRadius: 3 },
+  // Footer
+  footerRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, gap: 8, borderTopWidth: 1, borderTopColor: colors.borderLight, backgroundColor: colors.background },
+  backButton: { backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.border, paddingVertical: 14, paddingHorizontal: 18, borderRadius: 12, alignItems: 'center', justifyContent: 'center', minHeight: 48 },
+  backButtonText: { ...typography.bold, color: colors.textSecondary, fontSize: 14 },
+  mainButton: { flex: 1, backgroundColor: colors.success, paddingVertical: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center', minHeight: 48 },
+  mainButtonDisabled: { opacity: 0.4 },
+  mainButtonText: { ...typography.bold, color: '#fff', fontSize: 15 },
 });
