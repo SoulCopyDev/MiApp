@@ -61,10 +61,10 @@ const MATCH_PAIR: MatchPair = {
 };
 const MATCH_MCQ: MCQ = {
   opts: [
-    'Tiene demasiados sinónimos y palabras complicadas que confunden a la IA',
-    'Mezcla múltiples solicitudes distintas en un solo prompt — la IA responde todo superficialmente',
-    'La IA tiene un límite de tokens y lo rechazará automáticamente sin procesar nada',
-    'El prompt largo siempre da mejores resultados que el corto — no hay ningún problema real',
+    'Usa demasiados sinónimos y palabras complicadas que terminan confundiendo mucho a la IA',
+    'Mezcla varias solicitudes distintas en un prompt y la IA responde todo superficialmente',
+    'La IA tiene un límite de tokens y por eso lo rechaza de forma automática sin procesarlo',
+    'El prompt largo siempre da mejor resultado que el corto, así que no hay ningún problema',
   ],
   correct: 1,
   explain: 'Un prompt sobrecargado obliga a la IA a repartir su atención entre muchas tareas y ninguna queda bien. La solución es separarlo en varios prompts enfocados.',
@@ -80,10 +80,10 @@ const COMPARE_REPITE = {
   q: '¿Qué cambio específico hizo que el segundo prompt funcionara?',
   mcq: {
     opts: [
-      'Usar palabras más largas y formales para que la IA lo tome en serio',
-      'Definir una métrica exacta (5 oraciones) y el formato de cada una — eliminando la ambigüedad',
-      'Repetir la petición dos veces seguidas para que el modelo la priorice',
-      'Cambiar el tema del texto a uno que la IA conozca mejor',
+      'Usó palabras más largas y formales para que la IA se tomara la petición mucho más en serio',
+      'Definió una métrica exacta (5 oraciones) y el formato de cada una, eliminando la ambigüedad',
+      'Repitió la misma petición dos veces seguidas para que el modelo le diera mayor prioridad',
+      'Cambió el tema del texto por uno que la IA conociera mejor y pudiera resumir sin errores',
     ],
     correct: 1,
     explain: 'El número exacto (5 oraciones) y la instrucción de formato (cada una = una idea) eliminaron la ambigüedad. La IA no sabe qué es "breve" para ti — sí sabe qué es "5 oraciones".',
