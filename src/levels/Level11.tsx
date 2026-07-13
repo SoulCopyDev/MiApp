@@ -953,7 +953,8 @@ const styles = StyleSheet.create({
   progressTrack: { height: 8, backgroundColor: colors.borderLight, borderRadius: 4 },
   progressFill: { height: '100%', backgroundColor: '#10b981', borderRadius: 4 },
   progressLabel: { fontSize: 10, color: '#94a3b8', marginTop: 3, fontWeight: '500' },
-  xpText: { ...typography.bold, fontSize: 14, color: '#92400e' },
+  // Pastilla de XP como el HTML (.xp-chip: fondo ámbar #fef3c7→#fde68a, borde #fcd34d).
+  xpText: { ...typography.bold, fontSize: 12, color: '#92400e', backgroundColor: '#fde68a', borderWidth: 1, borderColor: '#fcd34d', paddingHorizontal: 11, paddingVertical: 4, borderRadius: 12, overflow: 'hidden' },
   scrollView: { flex: 1 },
   scrollContent: { padding: 16, paddingBottom: 40 },
   tag: { alignSelf: 'flex-start', fontSize: 11, fontWeight: '700', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, marginBottom: 12, letterSpacing: 0.4, overflow: 'hidden' },
