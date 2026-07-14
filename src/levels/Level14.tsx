@@ -208,7 +208,7 @@ const MODULE_XP: number[] = [0, 10, 15, 10, 15, 15, 15, 10, 20, 10, 15, 10, 15, 
 const MAX_XP = MODULE_XP.reduce((a, b) => a + b, 0); // 265
 const TOTAL_STEPS = 21;   // 0=intro … 20=completado
 const CONTENT_STEPS = 19; // módulos de contenido (1..19)
-const SPRINT_DURATION = 60;
+const SPRINT_DURATION = 120;
 
 export default function Level14() {
   const completeLevel = useGameStore(s => s.completeLevel);
@@ -701,7 +701,7 @@ export default function Level14() {
             <ModuleType icon="⚡" label="Sprint" />
             <Title>Sprint: tu personaje de audio</Title>
             <View style={styles.sprintBox}>
-              <Text style={styles.sprintInstruction}>⚡ ¡60 segundos! Diseña 3 personajes de voz para un videojuego. Cada uno con: nombre + personalidad + tipo de voz.</Text>
+              <Text style={styles.sprintInstruction}>⚡ ¡2 minutos! Diseña 3 personajes de voz para un videojuego. Cada uno con: nombre + personalidad + tipo de voz.</Text>
               <Text style={[styles.timerText, sprintPhase === 'running' && sprintSec <= 15 ? styles.timerDanger : sprintPhase === 'running' && sprintSec <= 30 ? styles.timerWarning : null]}>
                 {sprintPhase === 'done' ? '0:00' : `${minutes}:${seconds}`}
               </Text>
