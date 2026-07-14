@@ -1,3 +1,4 @@
+import { exitLevel } from '../utils/exitLevel';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
@@ -296,7 +297,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
           'No puedes regresar mientras realizas el examen. Si sales, perderás el progreso no guardado.',
           [
             { text: 'Cancelar', style: 'cancel' },
-            { text: 'Salir', style: 'destructive', onPress: () => navigation.goBack() }
+            { text: 'Salir', style: 'destructive', onPress: () => exitLevel({ confirm: false }) }
           ]
         );
         return true;
@@ -438,18 +439,18 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
       const msg = isExamMode
         ? 'Estás en medio del examen. Si sales, perderás el progreso. ¿Seguro?'
         : '¿Seguro que quieres salir del nivel? Perderás el progreso no guardado.';
-      if (window.confirm(msg)) router.back();
+      if (window.confirm(msg)) exitLevel({ confirm: false });
       return;
     }
     if (isExamMode) {
       Alert.alert('Examen en curso', 'Estás en medio del examen. Si sales, perderás todo el progreso de este nivel. ¿Seguro que quieres salir?', [
         { text: 'Cancelar', style: 'cancel' },
-        { text: 'Salir', style: 'destructive', onPress: () => navigation.goBack() },
+        { text: 'Salir', style: 'destructive', onPress: () => exitLevel({ confirm: false }) },
       ]);
     } else {
       Alert.alert('Salir', '¿Seguro que quieres salir del juego? Perderás el progreso no guardado.', [
         { text: 'Cancelar', style: 'cancel' },
-        { text: 'Salir', onPress: () => navigation.goBack() },
+        { text: 'Salir', onPress: () => exitLevel({ confirm: false }) },
       ]);
     }
   };
@@ -896,7 +897,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
         {drag3Items.map((item, idx) => {
           if (drag3Placed[idx] !== undefined) return null;
           return (
-            <TouchableOpacity key={idx} nativeID={`drag3-chip-${idx}`} style={[styles.chip, drag3Sel === idx && styles.chipSelected]} onPress={() => handleChipPress3(idx)}>
+            <TouchableOpacity key={idx} id={`drag3-chip-${idx}`} style={[styles.chip, drag3Sel === idx && styles.chipSelected]} onPress={() => handleChipPress3(idx)}>
               <Text style={styles.chipText}>{item.text}</Text>
             </TouchableOpacity>
           );
@@ -907,7 +908,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
           <View style={[styles.llmDropHeaderBox, { backgroundColor: '#dcfce7' }]}>
             <Text style={[styles.llmDropHeaderText, { color: '#166534' }]}>🟢 Recomendación</Text>
           </View>
-          <TouchableOpacity nativeID="drop3-zone-rec" style={[styles.dropCol, { backgroundColor: dragOver3Zone === 'rec' ? '#e0f2fe' : '#fafafa', borderColor: dragOver3Zone === 'rec' ? '#0ea5e9' : colors.borderLight }]} onPress={() => handleDropZone3('rec')}>
+          <TouchableOpacity id="drop3-zone-rec" style={[styles.dropCol, { backgroundColor: dragOver3Zone === 'rec' ? '#e0f2fe' : '#fafafa', borderColor: dragOver3Zone === 'rec' ? '#0ea5e9' : colors.borderLight }]} onPress={() => handleDropZone3('rec')}>
             <View style={styles.dropChips}>
               {Object.entries(drag3Placed).map(([idx, zone]) => zone === 'rec' ? (
                 <TouchableOpacity key={idx} style={[styles.dropChip, { backgroundColor: '#dcfce7' }]} onPress={() => handleRemoveChip3(parseInt(idx))}>
@@ -921,7 +922,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
           <View style={[styles.llmDropHeaderBox, { backgroundColor: '#ede9fe' }]}>
             <Text style={[styles.llmDropHeaderText, { color: '#5b21b6' }]}>🟣 Visión</Text>
           </View>
-          <TouchableOpacity nativeID="drop3-zone-vis" style={[styles.dropCol, { backgroundColor: dragOver3Zone === 'vis' ? '#f5f3ff' : '#fafafa', borderColor: dragOver3Zone === 'vis' ? '#8b5cf6' : colors.borderLight }]} onPress={() => handleDropZone3('vis')}>
+          <TouchableOpacity id="drop3-zone-vis" style={[styles.dropCol, { backgroundColor: dragOver3Zone === 'vis' ? '#f5f3ff' : '#fafafa', borderColor: dragOver3Zone === 'vis' ? '#8b5cf6' : colors.borderLight }]} onPress={() => handleDropZone3('vis')}>
             <View style={styles.dropChips}>
               {Object.entries(drag3Placed).map(([idx, zone]) => zone === 'vis' ? (
                 <TouchableOpacity key={idx} style={[styles.dropChip, { backgroundColor: '#ede9fe' }]} onPress={() => handleRemoveChip3(parseInt(idx))}>
@@ -935,7 +936,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
           <View style={[styles.llmDropHeaderBox, { backgroundColor: '#dbeafe' }]}>
             <Text style={[styles.llmDropHeaderText, { color: '#1e40af' }]}>🔵 Lenguaje</Text>
           </View>
-          <TouchableOpacity nativeID="drop3-zone-nlp" style={[styles.dropCol, { backgroundColor: dragOver3Zone === 'nlp' ? '#eff6ff' : '#fafafa', borderColor: dragOver3Zone === 'nlp' ? '#3b82f6' : colors.borderLight }]} onPress={() => handleDropZone3('nlp')}>
+          <TouchableOpacity id="drop3-zone-nlp" style={[styles.dropCol, { backgroundColor: dragOver3Zone === 'nlp' ? '#eff6ff' : '#fafafa', borderColor: dragOver3Zone === 'nlp' ? '#3b82f6' : colors.borderLight }]} onPress={() => handleDropZone3('nlp')}>
             <View style={styles.dropChips}>
               {Object.entries(drag3Placed).map(([idx, zone]) => zone === 'nlp' ? (
                 <TouchableOpacity key={idx} style={[styles.dropChip, { backgroundColor: '#dbeafe' }]} onPress={() => handleRemoveChip3(parseInt(idx))}>
@@ -949,7 +950,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
           <View style={[styles.llmDropHeaderBox, { backgroundColor: '#fef3c7' }]}>
             <Text style={[styles.llmDropHeaderText, { color: '#92400e' }]}>🟡 Generativa</Text>
           </View>
-          <TouchableOpacity nativeID="drop3-zone-gen" style={[styles.dropCol, { backgroundColor: dragOver3Zone === 'gen' ? '#fffbeb' : '#fafafa', borderColor: dragOver3Zone === 'gen' ? '#f59e0b' : colors.borderLight }]} onPress={() => handleDropZone3('gen')}>
+          <TouchableOpacity id="drop3-zone-gen" style={[styles.dropCol, { backgroundColor: dragOver3Zone === 'gen' ? '#fffbeb' : '#fafafa', borderColor: dragOver3Zone === 'gen' ? '#f59e0b' : colors.borderLight }]} onPress={() => handleDropZone3('gen')}>
             <View style={styles.dropChips}>
               {Object.entries(drag3Placed).map(([idx, zone]) => zone === 'gen' ? (
                 <TouchableOpacity key={idx} style={[styles.dropChip, { backgroundColor: '#fef3c7' }]} onPress={() => handleRemoveChip3(parseInt(idx))}>
@@ -1380,7 +1381,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
         {llmItems.map((item, idx) => {
           if (llmPlaced[idx] !== undefined) return null;
           return (
-            <TouchableOpacity key={idx} nativeID={`llm-chip-${idx}`} style={[styles.chip, llmSel === idx && styles.chipSelected]} onPress={() => handleChipPressLLM(idx)}>
+            <TouchableOpacity key={idx} id={`llm-chip-${idx}`} style={[styles.chip, llmSel === idx && styles.chipSelected]} onPress={() => handleChipPressLLM(idx)}>
               <Text style={styles.chipText}>{item.text}</Text>
             </TouchableOpacity>
           );
@@ -1392,7 +1393,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
           <View style={[styles.llmDropHeaderBox, { backgroundColor: '#fef3c7' }]}>
             <Text style={[styles.llmDropHeaderText, { color: '#92400e' }]}>🟡 Claude</Text>
           </View>
-          <TouchableOpacity nativeID="llm-zone-claude" style={[styles.dropCol, { borderColor: dragOverLLMZone === 'claude' ? '#0ea5e9' : '#fde68a', backgroundColor: dragOverLLMZone === 'claude' ? '#e0f2fe' : '#fffbeb', flex: 0 }]} onPress={() => handleDropZoneLLM('claude')}>
+          <TouchableOpacity id="llm-zone-claude" style={[styles.dropCol, { borderColor: dragOverLLMZone === 'claude' ? '#0ea5e9' : '#fde68a', backgroundColor: dragOverLLMZone === 'claude' ? '#e0f2fe' : '#fffbeb', flex: 0 }]} onPress={() => handleDropZoneLLM('claude')}>
             <View style={styles.dropChips}>
               {Object.entries(llmPlaced).map(([idx, zone]) => zone === 'claude' ? (
                 <TouchableOpacity key={idx} style={[styles.dropChip, { backgroundColor: '#fde68a40' }]} onPress={() => handleRemoveChipLLM(parseInt(idx))}>
@@ -1406,7 +1407,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
           <View style={[styles.llmDropHeaderBox, { backgroundColor: '#d1fae5' }]}>
             <Text style={[styles.llmDropHeaderText, { color: '#065f46' }]}>🟢 ChatGPT</Text>
           </View>
-          <TouchableOpacity nativeID="llm-zone-chatgpt" style={[styles.dropCol, { borderColor: dragOverLLMZone === 'chatgpt' ? '#0ea5e9' : '#6ee7b7', backgroundColor: dragOverLLMZone === 'chatgpt' ? '#e0f2fe' : '#f0fdf4', flex: 0 }]} onPress={() => handleDropZoneLLM('chatgpt')}>
+          <TouchableOpacity id="llm-zone-chatgpt" style={[styles.dropCol, { borderColor: dragOverLLMZone === 'chatgpt' ? '#0ea5e9' : '#6ee7b7', backgroundColor: dragOverLLMZone === 'chatgpt' ? '#e0f2fe' : '#f0fdf4', flex: 0 }]} onPress={() => handleDropZoneLLM('chatgpt')}>
             <View style={styles.dropChips}>
               {Object.entries(llmPlaced).map(([idx, zone]) => zone === 'chatgpt' ? (
                 <TouchableOpacity key={idx} style={[styles.dropChip, { backgroundColor: '#d1fae560' }]} onPress={() => handleRemoveChipLLM(parseInt(idx))}>
@@ -1421,7 +1422,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
       <View style={[styles.llmDropHeaderBox, { backgroundColor: '#dbeafe' }]}>
         <Text style={[styles.llmDropHeaderText, { color: '#1e40af' }]}>🔵 Gemini</Text>
       </View>
-      <TouchableOpacity nativeID="llm-zone-gemini" style={[styles.dropCol, { borderColor: dragOverLLMZone === 'gemini' ? '#0ea5e9' : '#93c5fd', backgroundColor: dragOverLLMZone === 'gemini' ? '#e0f2fe' : '#eff6ff' }]} onPress={() => handleDropZoneLLM('gemini')}>
+      <TouchableOpacity id="llm-zone-gemini" style={[styles.dropCol, { borderColor: dragOverLLMZone === 'gemini' ? '#0ea5e9' : '#93c5fd', backgroundColor: dragOverLLMZone === 'gemini' ? '#e0f2fe' : '#eff6ff' }]} onPress={() => handleDropZoneLLM('gemini')}>
         <View style={styles.dropChips}>
           {Object.entries(llmPlaced).map(([idx, zone]) => zone === 'gemini' ? (
             <TouchableOpacity key={idx} style={[styles.dropChip, { backgroundColor: '#dbeafe60' }]} onPress={() => handleRemoveChipLLM(parseInt(idx))}>

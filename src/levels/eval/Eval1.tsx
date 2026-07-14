@@ -1,3 +1,4 @@
+import { exitLevel } from '../../utils/exitLevel';
 import { router } from 'expo-router';
 import { useState, useEffect, useRef } from 'react';
 import {
@@ -310,10 +311,10 @@ export default function World1Eval() {
 
   const handleClose = () => {
     const msg = isExamMode ? 'Estás en la evaluación. Si sales perderás el progreso. ¿Seguro?' : '¿Seguro que quieres salir?';
-    if (Platform.OS === 'web') { if (window.confirm(msg)) router.back(); return; }
+    if (Platform.OS === 'web') { if (window.confirm(msg)) exitLevel({ confirm: false }); return; }
     Alert.alert('Salir', msg, [
       { text: 'Cancelar', style: 'cancel' },
-      { text: 'Salir', style: 'destructive', onPress: () => router.back() },
+      { text: 'Salir', style: 'destructive', onPress: () => exitLevel({ confirm: false }) },
     ]);
   };
 

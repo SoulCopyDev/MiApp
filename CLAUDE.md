@@ -11,6 +11,7 @@ Referencia técnica completa del proyecto. Actualizar cuando cambien arquitectur
 | `.claude/workflow.md` | Deploy, ramas, estado de auditoría, onboarding de colaboradores |
 | `.claude/commands/new-level.md` | Generador autónomo de niveles (`/project:new-level ruta/spec.md`) |
 | `.claude/commands/_nivel-template.md` | Template del spec file — copiar y rellenar para crear un nivel |
+| `../Prompt de Auditoría UI v2.txt` (carpeta padre, fuera del repo) | **Al auditar un nivel** (usuario dice "audit/auditoría LevelN") — leerlo SIEMPRE antes de tocar código. Checklist v2 + proceso obligatorio; el HTML prototipo es la fuente de verdad |
 
 > Estos archivos son parte de la documentación viva. Actualizarlos proactivamente igual que este CLAUDE.md.
 
@@ -72,6 +73,7 @@ MiApp/
     │   └── downloadConfig.ts # URLs de descarga de la app (APK, Play Store, App Store)
     ├── components/
     │   ├── WebSidebar.tsx   # Sidebar de navegación para desktop (solo web)
+    │   ├── WebPhoneFrame.tsx # Tarjeta centrada tipo teléfono para niveles/evals en web desktop
     │   └── DownloadBanner.tsx # Banner/card de descarga de app móvil (solo web)
     ├── hooks/
     │   ├── useCustomFonts.ts # Carga Plus Jakarta Sans
@@ -98,6 +100,7 @@ MiApp/
     │   └── index.ts         # Re-exporta colors + typography
     └── utils/
         ├── dailyMission.ts  # Generación/detección de misiones diarias (sin dependencia circular)
+        ├── exitLevel.ts     # Salida robusta de niveles: web-safe (window.confirm) + fallback a /map si no hay historial
         ├── rankSystem.ts    # Sistema de rangos por estrellas (8 tiers)
         └── trophies.ts      # Construcción de grupos de trofeos por mundo
 ```
@@ -417,6 +420,7 @@ export const DOWNLOAD_CONFIG = {
 - **Niveles nuevos:** siempre incrementar `version` en `gameStore.ts` para disparar migración.
 - **dailyMission.ts:** no importar nada de `gameStore.ts` (evita dependencia circular — usa tipos estructurales propios).
 - **Fechas de racha:** usar `getLocalDate()` del store (hora local, no UTC).
+- **Salir de un nivel:** usar `exitLevel()` de `src/utils/exitLevel.ts` (nunca `navigation.goBack()` ni `router.back()` directo). En web `Alert.alert` no dispara sus botones y `router.back()` no hace nada sin historial → `exitLevel()` usa `window.confirm` en web y cae a `/map` si no hay pantalla previa. Pasar `{ confirm: false }` al completar el nivel.
 
 ### Sin tests
 

@@ -59,6 +59,14 @@ Refactor completo de numeración continua N1–N43. Ver propuesta en `/Descargas
 | GLOBAL-07 | ✅ Resuelto | DevMode bypass en todas las funciones check de N1–N6 |
 | EVAL-M1-01 | ✅ Resuelto | Eval1.tsx — evaluación final Mundo 1 (ex World1/Level7) |
 | N3-01..11 | ⏳ Pendiente | Restauración de contenido — requiere HTML prototipos |
+| AUDIT-N12 | ✅ Resuelto | Level12 reconstruido 1:1 vs nivel-12.html (18 módulos, paleta, D&D, validaciones) |
+| AUDIT-EVAL2 | ✅ Resuelto | Eval2 fiel a evaluacion-mundo-02.html (quiz completo+shuffle, builder 3 min, badge) |
+| AUDIT-N13 | ✅ Resuelto | Level13 fiel a nivel-13.html (tema oscuro M3, 19 módulos/260 XP reales, D&D real, fix XP infinito/duplicado) |
+| AUDIT-N14 | ✅ Resuelto | Level14 reconstruido vs nivel-14.html (tema oscuro TEAL propio, 19 módulos/265 XP reales, quiz shuffle+longitud, fix reset de quiz entre pasos y sprint bloqueado, validación de builders, sort con flash rojo) |
+| AUDIT-N15 | ✅ Resuelto | Level15 reconstruido vs nivel-15.html (tema oscuro DORADO propio, 19 módulos/265 XP reales, fix nav que saltaba actividades, quiz shuffle+longitud, D&D con flash rojo + porqué, sprint con entrega anticipada, validación de builders/reflexiones) |
+| AUDIT-N16 | ✅ Resuelto | Level16 reconstruido vs nivel-16.html (tema oscuro LIMA propio, 19 módulos/255 XP reales, fix XP duplicado (addXP al store durante el nivel), fix D&D que premiaba aunque fallaras y sort atascado sin reintento, ✕ de salida, quiz shuffle+longitud, sprint con entrega anticipada, validación de builders) |
+| AUDIT-N17 | ✅ Resuelto | Level17 reconstruido vs nivel-17.html (tema oscuro ÍNDIGO propio, 19 módulos/270 XP reales; módulo de gráfica de barras + tabla de datos + D&D de 3 zonas con flash/porqué/reintento; quiz shuffle+longitud, feedback inline (matching/D&D ya no usan Alert), sprint con entrega anticipada, validación de builders, ✕ de salida, final a /level/18) |
+| AUDIT-N18 | ✅ Resuelto | Level18 reconstruido vs nivel-18.html (tema oscuro FUCSIA propio, 19 módulos/265 XP reales; cierre del Mundo 3 con diagrama de flujo multimodal + insignia de mundo; fix XP duplicado (addXP al store), sort con reintento, D&D con porqué/reintento, ✕ de salida, quiz shuffle+longitud, sprint con entrega anticipada, validación de builders; final a /level/19). **Mundo 3 (N13–N18) completo.** |
 
 ## Scripts disponibles
 

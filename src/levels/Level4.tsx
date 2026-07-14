@@ -1,3 +1,4 @@
+import { exitLevel } from '../utils/exitLevel';
 import { router } from 'expo-router';
 import React, { useState, useEffect } from 'react';
 import {
@@ -277,7 +278,7 @@ export default function World1Level4({ navigation: propsNavigation, setAllowBack
           'No puedes regresar mientras realizas esta actividad. Si sales, perderás el progreso.',
           [
             { text: 'Cancelar', style: 'cancel' },
-            { text: 'Salir', style: 'destructive', onPress: () => router.back() }
+            { text: 'Salir', style: 'destructive', onPress: () => exitLevel({ confirm: false }) }
           ]
         );
         return true;
@@ -338,7 +339,7 @@ export default function World1Level4({ navigation: propsNavigation, setAllowBack
       const msg = isExamMode
         ? 'Estás en medio de una actividad. Si sales, perderás el progreso. ¿Seguro?'
         : '¿Seguro que quieres salir del nivel?';
-      if (window.confirm(msg)) router.back();
+      if (window.confirm(msg)) exitLevel({ confirm: false });
       return;
     }
     if (isExamMode) {
@@ -347,13 +348,13 @@ export default function World1Level4({ navigation: propsNavigation, setAllowBack
         'Estás en medio de una actividad. Si sales, perderás el progreso. ¿Seguro?',
         [
           { text: 'Cancelar', style: 'cancel' },
-          { text: 'Salir', style: 'destructive', onPress: () => router.back() },
+          { text: 'Salir', style: 'destructive', onPress: () => exitLevel({ confirm: false }) },
         ]
       );
     } else {
       Alert.alert('Salir', '¿Seguro que quieres salir del nivel?', [
         { text: 'Cancelar', style: 'cancel' },
-        { text: 'Salir', onPress: () => router.back() },
+        { text: 'Salir', onPress: () => exitLevel({ confirm: false }) },
       ]);
     }
   };

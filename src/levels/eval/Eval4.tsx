@@ -1,3 +1,4 @@
+import { exitLevel } from '../../utils/exitLevel';
 import { router } from 'expo-router';
 import { useState, useRef, useEffect } from 'react';
 import {
@@ -144,7 +145,7 @@ export default function World4Level7() {
 
   useEffect(() => {
     const h = BackHandler.addEventListener('hardwareBackPress', () => {
-      Alert.alert('Salir', '¿Abandonar la evaluación?', [{ text: 'Cancelar', style: 'cancel' }, { text: 'Salir', onPress: () => router.back() }]);
+      Alert.alert('Salir', '¿Abandonar la evaluación?', [{ text: 'Cancelar', style: 'cancel' }, { text: 'Salir', onPress: () => exitLevel({ confirm: false }) }]);
       return true;
     });
     return () => h.remove();
@@ -227,7 +228,7 @@ export default function World4Level7() {
     const pct = Math.round((totalCorrect / total) * 100);
     let stars = pct >= 85 ? 3 : pct >= 70 ? 2 : 1;
     completeLevel(40, stars, xp);
-    router.back();
+    exitLevel({ confirm: false });
   };
 
   const canAdvance = currentPart === 1 ? quizChecked : currentPart === 2 ? tourChecked : currentPart === 3 ? pcChecked : currentPart === 4 ? toolkitDone : currentPart === 5 ? reflectionDone : false;
@@ -400,7 +401,7 @@ export default function World4Level7() {
   return (
     <View style={styles.screen}>
       <View style={styles.bar}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => exitLevel({ confirm: false })}>
           <MaterialIcons name="close" size={24} color={colors.textSecondary} />
         </TouchableOpacity>
         <View style={styles.track}><View style={[styles.fill, { width: `${(currentPart/5)*100}%` }]} /></View>

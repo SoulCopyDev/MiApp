@@ -28,6 +28,8 @@ Al agregar nuevos campos a `GameState`: siempre agregar inicialización defensiv
 | `Vibration.vibrate()` | Guard `if (Platform.OS === 'android')` |
 | Navegación entre niveles | `router.replace(...)` (evita history stack) |
 
+**Layout de niveles en web desktop:** `LevelScreen.tsx` y `EvalScreen.tsx` envuelven cada nivel/eval en `WebPhoneFrame` (`src/components/WebPhoneFrame.tsx`): tarjeta centrada tipo teléfono (max-width 680/720, alto ≤ min(860, 100vh−56), radio 20, sombra) que replica el layout desktop de los HTML prototipo. Así el botón principal queda al fondo de la tarjeta, no del viewport. Los niveles NO deben implementar su propio marco — lo hereda todo nivel registrado en los dispatchers.
+
 ## DevMode
 
 Todos los niveles deben tener bypass en cada función de validación:

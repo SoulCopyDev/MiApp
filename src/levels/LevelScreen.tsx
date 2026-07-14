@@ -4,6 +4,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { colors } from '../theme';
 import { useBreakpoint } from '../hooks/useBreakpoint';
 import WebSidebar from '../components/WebSidebar';
+import WebPhoneFrame from '../components/WebPhoneFrame';
 
 import Level1 from './Level1';
 import Level2 from './Level2';
@@ -71,7 +72,7 @@ export default function LevelScreen() {
       <View style={{ flex: 1, flexDirection: 'row', backgroundColor: colors.background }}>
         <WebSidebar />
         <View style={{ flex: 1, overflow: 'hidden' }}>
-          <Component />
+          <WebPhoneFrame><Component /></WebPhoneFrame>
         </View>
       </View>
     );

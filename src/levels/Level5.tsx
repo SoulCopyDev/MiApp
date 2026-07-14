@@ -1,3 +1,4 @@
+import { exitLevel } from '../utils/exitLevel';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
@@ -286,7 +287,7 @@ export default function World1Level5() {
       if (isExamMode) {
         Alert.alert('Módulo en curso', 'No puedes regresar durante esta actividad.', [
           { text: 'Cancelar', style: 'cancel' },
-          { text: 'Salir', style: 'destructive', onPress: () => navigation.goBack() },
+          { text: 'Salir', style: 'destructive', onPress: () => exitLevel({ confirm: false }) },
         ]);
         return true;
       }
@@ -329,18 +330,18 @@ export default function World1Level5() {
   const handleClose = () => {
     if (Platform.OS === 'web') {
       const msg = isExamMode ? 'Si sales perderás el progreso. ¿Seguro?' : '¿Seguro que quieres salir?';
-      if (window.confirm(msg)) router.back();
+      if (window.confirm(msg)) exitLevel({ confirm: false });
       return;
     }
     if (isExamMode) {
       Alert.alert('Actividad en curso', 'Si sales perderás el progreso. ¿Seguro?', [
         { text: 'Cancelar', style: 'cancel' },
-        { text: 'Salir', style: 'destructive', onPress: () => navigation.goBack() },
+        { text: 'Salir', style: 'destructive', onPress: () => exitLevel({ confirm: false }) },
       ]);
     } else {
       Alert.alert('Salir', '¿Seguro que quieres salir?', [
         { text: 'Cancelar', style: 'cancel' },
-        { text: 'Salir', onPress: () => navigation.goBack() },
+        { text: 'Salir', onPress: () => exitLevel({ confirm: false }) },
       ]);
     }
   };

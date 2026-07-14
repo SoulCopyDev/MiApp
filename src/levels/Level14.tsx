@@ -1,711 +1,1051 @@
-import { router } from 'expo-router';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type ReactNode } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
-  Alert,
+  View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet,
+  Alert, BackHandler, Vibration, Platform,
 } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { useGameStore } from '../store/gameStore';
-import { colors, typography } from '../theme';
+import { typography } from '../theme';
+import { exitLevel } from '../utils/exitLevel';
 import XPToast from '../components/XPToast';
 
-// ---------- Tipos ----------
-type QuizItem = { q: string; opts: string[]; correct: number; fb: string };
-type MatchPair = { a: string; b: string };
-type VFItem = { s: string; correct: boolean; fb: string };
-type ClassifyItem = { text: string; correct: string; fb: string };
-
-// ---------- Datos ----------
-const MODULE_COUNT = 21; // 0..20
-
-// Módulo 2: Matching
-const MATCH_PAIRS: MatchPair[] = [
-  { a: '🎙️ Locutor de radio profesional', b: 'Voz humana entrenada, imperfecciones naturales' },
-  { a: '🤖 ElevenLabs Clone', b: 'Voz sintética, aprende de grabaciones de una persona' },
-  { a: '📱 Siri / Google Assistant', b: 'IA de voz simple, diseñada para comandos cortos' },
-  { a: '🎧 AudioBook narrado por IA', b: 'Narración larga generada sin actor humano' },
-];
-
-// Módulo 4: Quiz Whisper
-const QUIZ_WHISPER: QuizItem = {
-  q: 'Lena, una estudiante de Alemania, quiere transcribir automáticamente las entrevistas de su proyecto de periodismo escolar. Whisper es perfecto para esto. ¿Qué hace exactamente Whisper?',
-  opts: [
-    'Genera música de fondo para el video de la entrevista',
-    'Convierte el audio hablado en texto escrito automáticamente',
-    'Traduce idiomas en tiempo real durante una llamada',
-    'Mejora la calidad del audio eliminando el ruido de fondo',
-  ],
-  correct: 1,
-  fb: '¡Correcto! Whisper es un modelo de transcripción: convierte lo que dices en texto. Es tan preciso que funciona bien con acentos variados, incluyendo el español latinoamericano.',
+// ===================== PALETA (hex exactos del HTML nivel-14, tema oscuro teal M3) =====================
+const C = {
+  bg: '#020f12', surface: '#041a1f', card: '#062028', card2: '#092b34',
+  text: '#e0f7fa', muted: '#80cbc4', border: '#0d3d4a',
+  teal: '#00bcd4', tealLight: '#4dd0e1', cyan: '#00e5ff', emerald: '#00897b',
+  green: '#22c55e', okBg: '#052e16', okBorder: '#16a34a', okText: '#86efac',
+  red: '#ef4444', failBg: '#2d0707', failBorder: '#dc2626', failText: '#fca5a5',
+  yellow: '#f59e0b',
+  placeholder: '#4d7a80',
 };
 
-// Módulo 6: Classify usos buenos/malos
-const CLASSIFY_ITEMS: ClassifyItem[] = [
-  { text: 'Un escritor crea un audiolibro de su novela con su propia voz clonada', correct: 'ok', fb: '✅ Totalmente válido. El creador usa su propia voz con su propio permiso.' },
-  { text: 'Alguien clona la voz de su abuela para que pueda "hablar" después de su muerte', correct: 'ok', fb: '✅ Con consentimiento previo, esto puede ser un bello proyecto de legado digital.' },
-  { text: 'Una persona crea audio falso de un político diciendo cosas que nunca dijo', correct: 'bad', fb: '⚠️ Esto es desinformación y puede ser ilegal en muchos países.' },
-  { text: 'Una empresa usa voz de IA para crear llamadas falsas de "tu banco" y robarte datos', correct: 'bad', fb: '🚨 Esto es una estafa. ¡Nunca des datos por teléfono sin verificar!' },
-  { text: 'Un estudiante con parálisis usa IA para generar su voz y poder comunicarse', correct: 'ok', fb: '✅ Uso extraordinario. La IA de voz está transformando la vida de personas con discapacidades.' },
-];
+// ===================== HELPERS =====================
+const normalize = (s: string) =>
+  s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 
-// Módulo 9: Quiz estafa de voz
-const QUIZ_ESTAFA: QuizItem = {
-  q: 'Sebastián en Chile recibe una llamada de alguien que suena exactamente como su papá, diciendo que está en un accidente y necesita dinero urgente. ¿Cuál es la respuesta más inteligente?',
-  opts: [
-    'Enviar el dinero inmediatamente porque suena igual a su papá',
-    'Colgar y llamar directamente a su papá al número que él ya conoce para verificar',
-    'Pedir que le manden una foto del accidente',
-    'Preguntar el número de cuenta para hacer la transferencia',
-  ],
-  correct: 1,
-  fb: '¡Exacto! Las estafas con voz clonada ya existen. La regla de oro: NUNCA actúes sobre información urgente sin verificar directamente con la persona.',
+function looksRandom(text: string): boolean {
+  const words = normalize(text).split(/\s+/).filter(w => w.length > 0);
+  if (words.length === 0) return true;
+  const noVowels = words.filter(w => w.length >= 4 && !/[aeiou]/.test(w));
+  if (noVowels.length >= Math.max(1, Math.floor(words.length / 2))) return true;
+  if (words.length >= 4) {
+    const unique = new Set(words);
+    if (unique.size / words.length < 0.5) return true;
+  }
+  return false;
+}
+
+function containsTopic(text: string, terms: string[]): boolean {
+  const t = normalize(text);
+  return terms.some(term =>
+    term.length <= 3 ? new RegExp(`\\b${term}\\b`).test(t) : t.includes(term)
+  );
+}
+
+// Diccionarios de tema para validar los builders
+const VOICE_TERMS = ['voz', 'voces', 'tono', 'acento', 'ritmo', 'velocidad', 'emocion', 'emociones', 'personalidad', 'asistente', 'nombre', 'grave', 'agudo', 'calmado', 'animad', 'habla', 'sonido', 'suena'];
+const SONG_TERMS = ['cancion', 'canta', 'musica', 'genero', 'rock', 'pop', 'cumbia', 'reggaeton', 'rap', 'jazz', 'balada', 'letra', 'estrofa', 'verso', 'coro', 'mood', 'ritmo', 'melodia', 'alegr', 'triste', 'romantic', 'energic'];
+const REFLECT_TERMS = ['ia', 'audio', 'voz', 'voces', 'musica', 'cancion', 'futuro', 'riesgo', 'peligro', 'ley', 'leyes', 'regla', 'reglas', 'fraude', 'estafa', 'clonar', 'clon', 'emociona', 'preocupa', 'permiso', 'consentimiento', 'deepfake'];
+
+function shuffle<T>(arr: T[]): T[] {
+  const a = arr.slice();
+  for (let j = a.length - 1; j > 0; j--) {
+    const k = Math.floor(Math.random() * (j + 1));
+    [a[j], a[k]] = [a[k], a[j]];
+  }
+  return a;
+}
+function shuffleOpts<T extends { options: string[]; correct: number }>(q: T): T {
+  const paired = q.options.map((opt, i) => ({ opt, isCorrect: i === q.correct }));
+  const sh = shuffle(paired);
+  return { ...q, options: sh.map(p => p.opt), correct: sh.findIndex(p => p.isCorrect) };
+}
+
+// ===================== DATOS (fieles al HTML nivel-14) =====================
+type QuizMod = { title: string; question: string; options: string[]; correct: number; feedback: string };
+
+// Quizzes (opciones balanceadas en longitud — la correcta no debe ser siempre la más larga)
+const QUIZZES: Record<number, QuizMod> = {
+  4: {
+    title: 'Whisper en acción',
+    question: 'Lena, una estudiante de Alemania, quiere transcribir automáticamente las entrevistas de su proyecto de periodismo escolar. La IA de OpenAI llamada "Whisper" es perfecta para esto. ¿Qué hace exactamente Whisper?',
+    options: [
+      'Genera música de fondo para acompañar el video final de la entrevista',
+      'Convierte el audio hablado en texto escrito de forma automática',
+      'Traduce idiomas en tiempo real durante una llamada telefónica',
+      'Mejora la calidad del audio eliminando todo el ruido de fondo',
+    ],
+    correct: 1,
+    feedback: 'Whisper es un modelo de transcripción: convierte lo que dices en texto. Es tan preciso que funciona bien con acentos variados, incluyendo el español latinoamericano.',
+  },
+  9: {
+    title: 'La voz falsa peligrosa',
+    question: 'Sebastián en Chile recibe una llamada de alguien que suena exactamente como su papá, diciendo que está en un accidente y necesita dinero urgente. ¿Cuál es la respuesta más inteligente?',
+    options: [
+      'Enviar el dinero de inmediato porque la voz suena idéntica a la de su papá',
+      'Colgar y llamar directamente a su papá al número que él ya conoce para verificar',
+      'Pedir que le manden una foto del accidente y después enviar el dinero solicitado',
+      'Preguntar el número de cuenta y transferir el dinero para resolverlo rápido',
+    ],
+    correct: 1,
+    feedback: 'Las estafas con voz clonada ya existen y son muy convincentes. La regla de oro: NUNCA actúes sobre información urgente sin verificar directamente con la persona por un canal que tú controles.',
+  },
+  10: {
+    title: 'Detecta la voz artificial',
+    question: '¿Cuál de estas señales es una pista real de que podrías estar escuchando una voz de IA?',
+    options: [
+      'La persona habla sin ningún acento regional, porque las IA todavía no logran imitar acentos',
+      'El ritmo suena demasiado uniforme y perfecto, sin las pequeñas vacilaciones del habla humana',
+      'La persona usa palabras muy difíciles y técnicas, porque las IA dominan el vocabulario avanzado',
+      'El audio tiene demasiado ruido de fondo, porque las IA siempre generan un sonido muy limpio',
+    ],
+    correct: 1,
+    feedback: 'Las voces de IA a veces se delatan por el ritmo demasiado uniforme, sin las pequeñas vacilaciones, "eehh" y variaciones naturales del habla humana. ¡Los humanos somos imperfectos, y eso es una ventaja!',
+  },
+  16: {
+    title: 'IA de audio y accesibilidad',
+    question: 'Aisha tiene esclerosis lateral amiotrófica (ELA), una enfermedad que le quitó la capacidad de hablar pero conserva todos sus recuerdos y pensamientos. ¿Cómo podría ayudarle la IA de audio?',
+    options: [
+      'No puede ayudarle de ninguna forma, porque la IA no entiende de enfermedades ni medicina',
+      'Clonar la voz que tenía antes, para que un lector hable con SU voz real',
+      'Solo serviría para traducir sus pensamientos escritos al inglés y a varios idiomas extranjeros',
+      'La IA no puede comunicarse con personas que tienen discapacidades motoras o del habla grave',
+    ],
+    correct: 1,
+    feedback: 'Esto es real: el astrofísico Stephen Hawking usó durante años un sintetizador de voz. Hoy, con IA, Aisha podría conservar SU voz original — su identidad vocal — para comunicarse. ElevenLabs tiene un programa especial para esto.',
+  },
+  18: {
+    title: 'Quiz de cierre',
+    question: 'Tu profesor de Arte quiere crear un audiolibro de los cuentos que escriben los estudiantes, con las voces de los propios estudiantes pero sin tener que grabar durante horas. ¿Cuál es la solución más inteligente con IA?',
+    options: [
+      'Contratar actores de doblaje profesionales para que graben en un estudio todos los cuentos escritos',
+      'Grabar unos minutos de la voz de cada estudiante y clonarla con ElevenLabs para narrar',
+      'Usar la misma voz genérica de robot para todos los cuentos del audiolibro de la clase',
+      'Escribir los cuentos en papel y pedir a un voluntario que los lea en voz alta',
+    ],
+    correct: 1,
+    feedback: 'Con los clones de voz de cada estudiante, el audiolibro final sonaría como si cada uno hubiera narrado su propio cuento. Esto se puede hacer hoy con herramientas gratuitas o de bajo costo.',
+  },
 };
 
-// Módulo 10: Quiz detectar voz IA
-const QUIZ_DETECTAR: QuizItem = {
-  q: '¿Cuál de estas señales es una pista real de que podrías estar escuchando una voz de IA?',
-  opts: [
-    'La persona habla sin acento (las IA no pueden imitar acentos)',
-    'Hay una pequeña pausa o "clic" artificial al comenzar a hablar, y el ritmo es perfectamente uniforme sin las pequeñas imperfecciones humanas',
-    'La persona dice palabras difíciles (las IA no saben vocabulario avanzado)',
-    'El audio tiene demasiado ruido de fondo (las IA generan audio muy limpio)',
-  ],
-  correct: 1,
-  fb: '¡Correcto! Las voces de IA a veces se delatan por el ritmo demasiado uniforme, sin las pequeñas vacilaciones y variaciones naturales del habla humana.',
-};
-
-// Módulo 12: VF 1
-const VF_ITEMS_1: VFItem[] = [
-  { s: 'Con ElevenLabs puedes clonar tu propia voz y está completamente prohibido.', correct: false, fb: 'FALSO. Clonar tu propia voz para uso personal es totalmente legal. Lo problemático es clonar la voz de OTRAS personas sin su permiso.' },
-  { s: 'La IA puede crear música en géneros que ella misma "inventa", mezclando estilos que nunca existieron.', correct: true, fb: 'VERDADERO. Las IAs pueden generar estilos musicales híbridos completamente nuevos.' },
-  { s: 'Una llamada telefónica con voz de IA siempre puede detectarse fácilmente.', correct: false, fb: 'FALSO. Las mejores IAs de voz son extremadamente difíciles de detectar, especialmente con conexiones telefónicas de baja calidad.' },
+// Módulo 2 · Matching
+const MATCH_PAIRS = [
+  { left: '🎙️ Locutor de radio profesional', right: 'Voz humana entrenada, con imperfecciones naturales' },
+  { left: '🤖 ElevenLabs Clone', right: 'Voz sintética que aprende de grabaciones de una persona' },
+  { left: '📱 Siri / Google Assistant', right: 'IA de voz simple, diseñada para comandos cortos' },
+  { left: '🎧 Audiolibro narrado por IA', right: 'Narración larga generada sin actor humano' },
 ];
 
-// Módulo 14: VF 2
-const VF_ITEMS_2: VFItem[] = [
-  { s: 'Usar la voz clonada de un cantante famoso para hacer que "cante" tu canción y venderla sin permiso.', correct: false, fb: 'FALSO que sea legal. Esto viola los derechos de imagen y voz del artista. Necesitas permiso explícito.' },
-  { s: 'Crear un podcast donde usas tu propia voz clonada para que "lea" artículos mientras tú descansas.', correct: true, fb: 'VERDADERO que es legal. Tu voz, tu contenido, tu decisión.' },
-  { s: 'Una empresa puede usar fragmentos de tu voz de una llamada de servicio al cliente para entrenar su IA.', correct: false, fb: 'FALSO. En muchos países esto requiere consentimiento explícito.' },
+// Módulo 6 · Clasificador (uso válido / problemático)
+const CLASSIFY_ITEMS = [
+  { text: 'Un escritor crea un audiolibro de su novela con su propia voz clonada', correct: 'ok', feedback: '✅ Totalmente válido. El creador usa su propia voz con su propio permiso.' },
+  { text: 'Alguien clona la voz de su abuela para que pueda "hablar" después de su muerte', correct: 'ok', feedback: '✅ Con consentimiento previo, esto puede ser un bello proyecto de legado digital.' },
+  { text: 'Una persona crea audio falso de un político diciendo cosas que nunca dijo', correct: 'bad', feedback: '⚠️ Esto es desinformación y puede ser ilegal. Crear deepfakes de voz sin consentimiento está prohibido en muchos países.' },
+  { text: 'Una empresa usa voz de IA para hacer llamadas falsas de "tu banco" y robarte datos', correct: 'bad', feedback: '🚨 Esto es una estafa. Las IA de voz ya se usan en fraudes telefónicos reales. ¡Nunca des datos por teléfono sin verificar!' },
+  { text: 'Un estudiante con parálisis usa IA para generar su voz y poder comunicarse', correct: 'ok', feedback: '✅ Uso extraordinario. La IA de voz está transformando la vida de personas con discapacidades del habla.' },
 ];
 
-// Módulo 16: Quiz accesibilidad
-const QUIZ_ACCESIBILIDAD: QuizItem = {
-  q: 'Aisha tiene esclerosis lateral amiotrófica (ELA), una enfermedad que le quitó la capacidad de hablar. ¿Cómo podría ayudarle la IA de audio?',
-  opts: [
-    'No puede ayudarle porque la IA no entiende enfermedades',
-    'Podría clonar su voz (cuando aún podía hablar) para que un lector de pantalla hable con SU voz real, no una voz genérica',
-    'Solo podría traducir sus pensamientos al inglés',
-    'La IA no puede comunicarse con personas con discapacidades motoras',
-  ],
-  correct: 1,
-  fb: '¡Exacto! Esto es real: con IA, Aisha podría conservar SU voz original — su identidad vocal — para comunicarse. ElevenLabs tiene un programa especial para esto.',
-};
-
-// Módulo 17: Sort
-const SORT_ITEMS = [
-  'Primer sintetizador de voz mecánico (1939)',
-  'IBM crea el primer sistema TTS básico para computadoras (1961)',
-  'Nuance crea Dragon Dictation para reconocimiento de voz (1990)',
-  'Siri se lanza como asistente de voz en iPhone (2011)',
-  'ElevenLabs lanza clonación de voz de alta calidad (2022)',
-  'Suno permite crear canciones completas con texto (2023)',
+// Módulo 12 · Verdadero/Falso
+const VF_ITEMS_1 = [
+  { text: 'Con ElevenLabs puedes clonar tu propia voz y está completamente prohibido.', correct: false, feedback: 'FALSO. Clonar tu propia voz para uso personal es totalmente legal. Lo problemático es clonar la voz de OTRAS personas sin su permiso.' },
+  { text: 'La IA puede crear música en géneros que ella misma "inventa", mezclando estilos que nunca existieron.', correct: true, feedback: 'VERDADERO. Las IA pueden generar estilos musicales híbridos completamente nuevos que no tienen nombre. ¡Su creatividad puede ir más allá de los géneros conocidos!' },
+  { text: 'Una llamada telefónica con voz de IA siempre puede detectarse fácilmente.', correct: false, feedback: 'FALSO. Las mejores IA de voz son extremadamente difíciles de detectar, especialmente con conexiones telefónicas de baja calidad que reducen la nitidez de las señales.' },
 ];
 
-// Módulo 18: Quiz final
-const QUIZ_FINAL: QuizItem = {
-  q: 'Tu profesor de Arte quiere crear un audiolibro de los cuentos que escriben los estudiantes, con las voces de los propios estudiantes pero sin tener que grabar durante horas. ¿Cuál es la solución más inteligente con IA?',
-  opts: [
-    'Contratar actores de doblaje profesionales para cada cuento',
-    'Grabar 2-3 minutos de la voz de cada estudiante, crear sus clones de voz con ElevenLabs, y usar esa voz para narrar automáticamente sus propios cuentos',
-    'Usar solo voces genéricas de robot para todos los audiolibros',
-    'Escribir los cuentos en texto y que alguien los lea en voz alta manualmente',
-  ],
-  correct: 1,
-  fb: '¡Solución perfecta! Con los clones de voz de cada estudiante, el audiolibro final sonaría como si cada uno hubiera narrado su propio cuento.',
+// Módulo 14 · ¿Legal o ilegal?
+const VF_ITEMS_2 = [
+  { text: 'Usar la voz clonada de un cantante famoso para hacer que "cante" tu canción y venderla sin permiso.', correct: false, feedback: 'FALSO que sea legal. Esto viola los derechos de imagen y voz del artista. Necesitas permiso explícito. Ya hay demandas legales reales por esto.' },
+  { text: 'Crear un podcast donde usas tu propia voz clonada para que "lea" artículos mientras tú descansas.', correct: true, feedback: 'VERDADERO que es legal. Tu voz, tu contenido, tu decisión. Es perfectamente válido automatizar tu propio trabajo creativo.' },
+  { text: 'Una empresa puede usar fragmentos de tu voz de una llamada de servicio al cliente para entrenar su IA.', correct: false, feedback: 'FALSO. En muchos países esto requiere consentimiento explícito. El GDPR en Europa y otras leyes de privacidad lo regulan. ¡Lee los términos de servicio!' },
+];
+
+// Módulo 17 · Ordena por sofisticación (de la más básica a la más avanzada).
+// El índice del array = posición correcta. Los años NO se muestran durante el ejercicio
+// (para no poder adivinar el orden); se revelan como dato curioso solo al acertar.
+const SORT_ITEMS: { text: string; reveal: string }[] = [
+  { text: 'Una máquina imita sonidos de voz, muy robóticos', reveal: '1939 · Primer sintetizador de voz mecánico' },
+  { text: 'La computadora lee un texto en voz alta y plana', reveal: '1961 · IBM crea el primer sistema de texto a voz' },
+  { text: 'El teléfono empieza a escribir lo que le dictas', reveal: '1990 · Dragon: reconocimiento de voz' },
+  { text: 'Un asistente entiende y responde tus preguntas', reveal: '2011 · Siri llega al iPhone' },
+  { text: 'La IA copia la voz exacta de una persona', reveal: '2022 · ElevenLabs: clonación de voz de alta calidad' },
+  { text: 'Escribes una idea y la IA crea una canción entera', reveal: '2023 · Suno compone canciones completas' },
+];
+
+// Builders (intro + caja + ejemplo + placeholder + feedback)
+const BUILDERS: Record<number, { icon: string; label: string; title: string; intro: string; box: string; example?: string; outro?: string; placeholder: string; fb: string; terms: string[]; topicMsg: string }> = {
+  5: {
+    icon: '✏️', label: 'Constructor', title: 'Crea la voz perfecta para tu asistente',
+    intro: 'Si pudieras diseñar la voz de tu asistente de IA personal, ¿cómo sería? Define estas características:',
+    box: '🎚️ Tono: ¿Grave y serio? ¿Agudo y jovial?\n⚡ Velocidad: ¿Rápido y energético? ¿Pausado y tranquilizador?\n🌍 Acento: ¿Colombia? ¿España? ¿México? ¿Sin acento regional?\n😊 Emoción: ¿Entusiasta? ¿Calmado? ¿Profesional? ¿Divertido?\n📛 Nombre y personalidad: ¿Cómo se llama? ¿Quién es?',
+    example: '"Mi asistente se llama ARIA, habla con tono medio-agudo, ritmo moderado, acento neutro latinoamericano, siempre suena optimista y animada. Es como una amiga mayor que sabe de todo."',
+    placeholder: 'Describe la voz y personalidad de tu asistente de IA ideal...',
+    fb: '🎤 ¡Diseño increíble! Eso es exactamente lo que hacen los ingenieros de producto en empresas como Apple o Amazon cuando crean asistentes de voz.',
+    terms: VOICE_TERMS, topicMsg: 'Describe la voz: tono, velocidad, acento, emoción o personalidad de tu asistente.',
+  },
+  8: {
+    icon: '🎵', label: 'Constructor', title: 'Tu primera canción con IA',
+    intro: 'Escribe el prompt para tu canción. Incluye:',
+    box: '🎸 Género musical: rock, pop, cumbia, reggaeton, rap, jazz...\n📖 Tema de la letra: ¿de qué habla la canción?\n😊 Mood / emoción: alegre, melancólico, energético, romántico\n🎤 Primera estrofa (opcional): escribe al menos 2 versos',
+    example: '"Cumbia colombiana tropical, sobre un estudiante de Medellín que sueña con ser astronauta, mood alegre y esperanzador. Primera estrofa: \'Mirando las estrellas desde el barrio / soñando que algún día podré volar...\'"',
+    placeholder: 'Describe tu canción: género + tema + mood + versos iniciales...',
+    fb: '🎵 ¡Ese prompt generaría una canción increíble! Con Suno o Udio podrías escucharla en menos de un minuto.',
+    terms: SONG_TERMS, topicMsg: 'Incluye elementos de una canción: género, tema de la letra, mood o una estrofa.',
+  },
+  19: {
+    icon: '💭', label: 'Reflexión', title: 'El futuro del audio',
+    intro: 'En 10 años probablemente tendrás canciones personalizadas en segundos, podrás hablar con cualquiera en cualquier idioma y los libros tendrán la voz de su propio autor... pero también habrá más fraudes y desinformación.',
+    box: 'Para reflexionar:\n🎧 ¿Cuál es el uso de la IA de audio que más te emociona?\n⚠️ ¿Y cuál te preocupa más?\n⚖️ ¿Qué reglas pondrías tú si fueras quien decide las leyes?',
+    outro: 'No hay respuestas correctas o incorrectas aquí. Escribe lo que piensas tú:',
+    placeholder: '¿El futuro del audio con IA te parece más emocionante o más preocupante? ¿Por qué? ¿Qué reglas pondrías?',
+    fb: '💭 ¡Excelente reflexión! Las preguntas que haces son exactamente las que los legisladores y empresas tecnológicas están debatiendo ahora mismo.',
+    terms: REFLECT_TERMS, topicMsg: 'Tu reflexión debe hablar del tema: IA, audio, voz, música, riesgos o reglas.',
+  },
 };
 
-export default function World3Level2() {
+// XP por módulo (campo xp real del HTML). Suma real = 265 (el header del HTML decía 240 — el conteo real manda)
+const MODULE_XP: number[] = [0, 10, 15, 10, 15, 15, 15, 10, 20, 10, 15, 10, 15, 15, 15, 10, 15, 15, 20, 15, 0];
+const MAX_XP = MODULE_XP.reduce((a, b) => a + b, 0); // 265
+const TOTAL_STEPS = 21;   // 0=intro … 20=completado
+const CONTENT_STEPS = 19; // módulos de contenido (1..19)
+const SPRINT_DURATION = 120;
+
+export default function Level14() {
   const completeLevel = useGameStore(s => s.completeLevel);
+  const devMode = useGameStore(s => s.devMode);
 
   const [step, setStep] = useState(0);
   const [xp, setXp] = useState(0);
   const [xpToast, setXpToast] = useState<{ amount: number; id: number } | null>(null);
+  const [correctCount, setCorrectCount] = useState(0);
+  const awardedSteps = useRef<Set<number>>(new Set());
 
-  // Quiz states
-  const [quizAnswered, setQuizAnswered] = useState(false);
-  const [quizChoice, setQuizChoice] = useState<number | null>(null);
+  // Quizzes con opciones barajadas (la correcta no debe tener posición fija)
+  const [quizzes] = useState<Record<number, QuizMod>>(() => {
+    const out: Record<number, QuizMod> = {};
+    Object.entries(QUIZZES).forEach(([k, q]) => { out[Number(k)] = shuffleOpts(q); });
+    return out;
+  });
+  const [quizSel, setQuizSel] = useState<number | null>(null);
 
-  // Matching states
-  const [matchSelectedA, setMatchSelectedA] = useState<number | null>(null);
-  const [matchedPairs, setMatchedPairs] = useState<Set<number>>(new Set());
-  const [rightOrder] = useState(() => pickN(MATCH_PAIRS.map(p => p.b), 4).sort(() => Math.random() - 0.5));
+  // Matching
+  const [selectedLeft, setSelectedLeft] = useState<number | null>(null);
+  const [matched, setMatched] = useState<Set<number>>(new Set());
+  const [wrongFlash, setWrongFlash] = useState<{ left: number; right: number } | null>(null);
+  const [shuffledRight] = useState(() => shuffle(MATCH_PAIRS.map((p, i) => ({ idx: i, text: p.right }))));
 
-  // Builder states
-  const [builder5Text, setBuilder5Text] = useState('');
-  const [builder8Text, setBuilder8Text] = useState('');
-  const [builder19Text, setBuilder19Text] = useState('');
+  // Builders (dos fases: confirmar → continuar)
+  const [builderText, setBuilderText] = useState('');
+  const [builderDone, setBuilderDone] = useState(false);
+  const [builderError, setBuilderError] = useState<string | null>(null);
 
-  // Classify states
-  const [c2Answers, setC2Answers] = useState<{ [key: number]: string }>({});
-  const [c2Checked, setC2Checked] = useState(false);
+  // Clasificador (case 6)
+  const [c2Answers, setC2Answers] = useState<Record<number, string>>({});
+  // VF (12 y 14)
+  const [vf1Answers, setVf1Answers] = useState<Record<number, boolean>>({});
+  const [vf2Answers, setVf2Answers] = useState<Record<number, boolean>>({});
 
-  // VF states
-  const [vf1Answers, setVf1Answers] = useState<{ [key: number]: boolean }>({});
-  const [vf1Checked, setVf1Checked] = useState(false);
-  const [vf2Answers, setVf2Answers] = useState<{ [key: number]: boolean }>({});
-  const [vf2Checked, setVf2Checked] = useState(false);
-
-  // Sprint states
-  const [sprintRunning, setSprintRunning] = useState(false);
-  const [sprintSec, setSprintSec] = useState(60);
+  // Sprint
+  const [sprintPhase, setSprintPhase] = useState<'idle' | 'running' | 'done'>('idle');
+  const [sprintSec, setSprintSec] = useState(SPRINT_DURATION);
   const [sprintText, setSprintText] = useState('');
-  const sprintTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [sprintValid, setSprintValid] = useState(false);
 
-  // Sort states
-  const [sortOrder, setSortOrder] = useState<number[]>(() => [0, 1, 2, 3, 4, 5].sort(() => Math.random() - 0.5));
-  const [sortChecked, setSortChecked] = useState(false);
+  // Sort (reordenar con flechas; resaltar mal ubicados al verificar)
+  const [sortOrder, setSortOrder] = useState<number[]>(() => shuffle([0, 1, 2, 3, 4, 5]));
+  const [sortSolved, setSortSolved] = useState(false);
+  const [sortWrong, setSortWrong] = useState<Set<number>>(new Set());
 
-  // Theory steps allow back
-  const theorySteps = new Set([0, 1, 3, 7, 11, 15]);
-  const canGoBack = theorySteps.has(step);
+  const addXP = (amount: number) => {
+    if (amount <= 0) return;
+    setXp(p => p + amount);
+    setXpToast(prev => ({ amount, id: (prev?.id ?? 0) + 1 }));
+  };
+  // XP del módulo actual, una sola vez (evita re-otorgar al volver con "Volver")
+  const awardStep = (amount: number, countCorrect = true) => {
+    if (awardedSteps.current.has(step)) return;
+    awardedSteps.current.add(step);
+    addXP(amount);
+    if (countCorrect) setCorrectCount(c => c + 1);
+  };
 
-  useEffect(() => { return () => { if (sprintTimerRef.current) clearInterval(sprintTimerRef.current); }; }, []);
+  // Reset de estados por módulo
+  useEffect(() => {
+    setQuizSel(null);
+    setSelectedLeft(null);
+    setWrongFlash(null);
+    setBuilderText('');
+    setBuilderDone(false);
+    setBuilderError(null);
+    setC2Answers({});
+    setVf1Answers({});
+    setVf2Answers({});
+    setSprintPhase('idle');
+    setSprintSec(SPRINT_DURATION);
+    setSprintText('');
+    setSortWrong(new Set());
+  }, [step]);
 
   // Sprint timer
   useEffect(() => {
-    if (!sprintRunning) return;
+    if (sprintPhase !== 'running') return;
     if (sprintSec <= 0) {
-      if (sprintTimerRef.current) clearInterval(sprintTimerRef.current);
-      setSprintRunning(false);
-      addXP(15);
+      const valid = sprintText.trim().length > 20 && !looksRandom(sprintText);
+      setSprintValid(valid);
+      setSprintPhase('done');
+      if (valid) awardStep(MODULE_XP[13]);
       return;
     }
-    sprintTimerRef.current = setTimeout(() => setSprintSec(s => s - 1), 1000);
-    return () => { if (sprintTimerRef.current) clearInterval(sprintTimerRef.current); };
-  }, [sprintRunning, sprintSec]);
+    const t = setTimeout(() => setSprintSec(s => s - 1), 1000);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sprintPhase, sprintSec]);
 
-  const addXP = (v: number) => {
-    setXp(prev => prev + v);
-    if (v > 0) setXpToast((prev) => ({ amount: v, id: (prev?.id ?? 0) + 1 }));
-  };
-  const nextStep = () => { if (step < MODULE_COUNT - 1) setStep(step + 1); };
-  const prevStep = () => { if (step > 0) setStep(step - 1); };
+  // Módulos puramente informativos (clasificación propia — el THEORY_STEPS del HTML marca mal builders)
+  const theorySteps = new Set([1, 3, 7, 11, 15]);
+  const showBack = theorySteps.has(step);
+
+  // Hardware back (Android)
+  useEffect(() => {
+    const onBack = () => {
+      if (showBack && step > 0) { setStep(s => s - 1); return true; }
+      if (step > 0 && step < TOTAL_STEPS - 1) {
+        Alert.alert('Módulo en curso', 'No puedes regresar durante esta actividad.', [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Salir', style: 'destructive', onPress: () => exitLevel({ confirm: false }) },
+        ]);
+        return true;
+      }
+      return false;
+    };
+    const h = BackHandler.addEventListener('hardwareBackPress', onBack);
+    return () => h.remove();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, showBack]);
+
+  const next = () => { if (step < TOTAL_STEPS - 1) setStep(s => s + 1); };
+  const prev = () => { if (step > 0) setStep(s => s - 1); };
 
   const finishLevel = () => {
-    let stars = xp >= 180 ? 3 : xp >= 120 ? 2 : xp >= 50 ? 1 : 0;
+    const stars = xp >= 185 ? 3 : xp >= 120 ? 2 : 1;
     completeLevel(14, stars, xp);
-    router.back();
+    router.replace('/level/15');
   };
 
-  // Quiz handlers
-  const handleQuiz = (choice: number, correct: number) => {
-    if (quizAnswered) return;
-    setQuizAnswered(true);
-    setQuizChoice(choice);
-    if (choice === correct) addXP(getCurrentXP());
+  // ---------- Acciones ----------
+  const answerQuiz = (i: number) => {
+    if (quizSel !== null) return;
+    const q = quizzes[step];
+    setQuizSel(i);
+    if (i === q.correct) awardStep(MODULE_XP[step]);
+    if (Platform.OS === 'android') Vibration.vibrate(100);
   };
 
-  // Matching handlers
-  const handleMatchA = (i: number) => {
-    if (matchedPairs.has(i)) return;
-    setMatchSelectedA(i);
-  };
-  const handleMatchB = (val: number) => {
-    if (matchSelectedA === null || matchedPairs.has(matchSelectedA)) return;
-    if (matchSelectedA === val) {
-      setMatchedPairs(prev => new Set(prev).add(val));
-      setMatchSelectedA(null);
-      if (matchedPairs.size + 1 >= MATCH_PAIRS.length) {
-        addXP(15);
-        Alert.alert('✅', '¡Todos los pares conectados!', [{ text: 'OK' }]);
-      }
+  const pressRight = (correctIdx: number, rightPos: number) => {
+    if (selectedLeft === null) return;
+    if (selectedLeft === correctIdx) {
+      const n = new Set(matched);
+      n.add(selectedLeft);
+      setMatched(n);
+      setSelectedLeft(null);
+      if (n.size === MATCH_PAIRS.length) awardStep(MODULE_XP[2]);
     } else {
-      Alert.alert('❌', 'Ese no es el par correcto.');
-      setMatchSelectedA(null);
+      const l = selectedLeft;
+      setWrongFlash({ left: l, right: rightPos });
+      setTimeout(() => { setWrongFlash(null); setSelectedLeft(null); }, 600);
     }
   };
 
-  // Classify handlers
-  const handleC2 = (idx: number, val: string) => {
+  const confirmBuilder = () => {
+    const b = BUILDERS[step];
+    const t = builderText.trim();
+    if (t.length <= 15) { setBuilderError('Escribe un poco más — al menos 16 caracteres.'); return; }
+    if (looksRandom(t)) { setBuilderError('Tu texto parece escrito al azar. Escríbelo con tus propias palabras.'); return; }
+    if (!containsTopic(t, b.terms)) { setBuilderError('⚠️ ' + b.topicMsg); return; }
+    setBuilderError(null);
+    setBuilderDone(true);
+    awardStep(MODULE_XP[step]);
+  };
+
+  const answerC2 = (idx: number, ans: string) => {
     if (c2Answers[idx] !== undefined) return;
-    setC2Answers(prev => ({ ...prev, [idx]: val }));
-    if (Object.keys(c2Answers).length + 1 >= CLASSIFY_ITEMS.length) {
-      setTimeout(() => {
-        setC2Checked(true);
-        addXP(15);
-      }, 300);
-    }
+    const n = { ...c2Answers, [idx]: ans };
+    setC2Answers(n);
+    if (Object.keys(n).length === CLASSIFY_ITEMS.length) awardStep(MODULE_XP[6]);
   };
-
-  // VF handlers
-  const handleVF1 = (idx: number, val: boolean) => {
+  const answerVf1 = (idx: number, ans: boolean) => {
     if (vf1Answers[idx] !== undefined) return;
-    setVf1Answers(prev => ({ ...prev, [idx]: val }));
-    if (Object.keys(vf1Answers).length + 1 >= VF_ITEMS_1.length) {
-      setVf1Checked(true);
-      addXP(15);
-    }
+    const n = { ...vf1Answers, [idx]: ans };
+    setVf1Answers(n);
+    if (Object.keys(n).length === VF_ITEMS_1.length) awardStep(MODULE_XP[12]);
   };
-  const handleVF2 = (idx: number, val: boolean) => {
+  const answerVf2 = (idx: number, ans: boolean) => {
     if (vf2Answers[idx] !== undefined) return;
-    setVf2Answers(prev => ({ ...prev, [idx]: val }));
-    if (Object.keys(vf2Answers).length + 1 >= VF_ITEMS_2.length) {
-      setVf2Checked(true);
-      addXP(15);
-    }
+    const n = { ...vf2Answers, [idx]: ans };
+    setVf2Answers(n);
+    if (Object.keys(n).length === VF_ITEMS_2.length) awardStep(MODULE_XP[14]);
   };
 
-  // Sprint handlers
-  const startSprint = () => { setSprintRunning(true); setSprintSec(60); };
   const submitSprint = () => {
-    if (sprintTimerRef.current) clearInterval(sprintTimerRef.current);
-    setSprintRunning(false);
-    addXP(15);
+    if (sprintPhase !== 'running') return;
+    const valid = sprintText.trim().length > 20 && !looksRandom(sprintText);
+    setSprintValid(valid);
+    setSprintPhase('done');
+    if (valid) awardStep(MODULE_XP[13]);
   };
 
-  // Sort handlers
   const moveSort = (pos: number, dir: number) => {
-    if (sortChecked) return;
+    if (sortSolved) return;
     const newPos = pos + dir;
     if (newPos < 0 || newPos >= sortOrder.length) return;
-    const newOrder = [...sortOrder];
-    [newOrder[pos], newOrder[newPos]] = [newOrder[newPos], newOrder[pos]];
-    setSortOrder(newOrder);
+    const n = [...sortOrder];
+    [n[pos], n[newPos]] = [n[newPos], n[pos]];
+    setSortOrder(n);
+    setSortWrong(new Set());
   };
   const checkSort = () => {
     const isOk = sortOrder.every((v, i) => v === i);
     if (isOk) {
-      setSortChecked(true);
-      addXP(15);
-      Alert.alert('✅', '¡Línea del tiempo perfecta!', [{ text: 'OK' }]);
+      setSortSolved(true);
+      awardStep(MODULE_XP[17]);
     } else {
-      Alert.alert('❌', 'Algunos elementos no están en el orden correcto.');
+      const wrong = new Set(sortOrder.reduce<number[]>((acc, v, i) => { if (v !== i) acc.push(i); return acc; }, []));
+      setSortWrong(wrong);
+      setTimeout(() => setSortWrong(new Set()), 3000);
     }
   };
 
-  const getCurrentXP = () => {
-    const xpMap: Record<number, number> = {
-      0: 0, 1: 10, 2: 15, 3: 10, 4: 15, 5: 15, 6: 15, 7: 10, 8: 20, 9: 10,
-      10: 15, 11: 10, 12: 15, 13: 15, 14: 15, 15: 10, 16: 15, 17: 15, 18: 20, 19: 15, 20: 0,
-    };
-    return xpMap[step] || 10;
+  // ---------- Bloques auxiliares ----------
+  const ModuleType = ({ icon, label }: { icon: string; label: string }) => (
+    <View style={styles.moduleType}>
+      <Text style={{ fontSize: 15 }}>{icon}</Text>
+      <Text style={styles.moduleTypeText}>{label}</Text>
+    </View>
+  );
+  const Title = ({ children }: { children: ReactNode }) => <Text style={styles.moduleTitle}>{children}</Text>;
+  const Body = ({ children, style }: { children: ReactNode; style?: object }) => <Text style={[styles.bodyText, style]}>{children}</Text>;
+  const B = ({ children }: { children: ReactNode }) => <Text style={styles.bold}>{children}</Text>;
+  const InfoBox = ({ children }: { children: ReactNode }) => (
+    <View style={styles.infoBox}><Text style={styles.infoBoxText}>{children}</Text></View>
+  );
+  const Fb = ({ ok, children }: { ok: boolean; children: ReactNode }) => (
+    <View style={[styles.feedback, ok ? styles.feedbackOk : styles.feedbackFail]}>
+      <Text style={[styles.feedbackText, { color: ok ? C.okText : C.failText }]}>{children}</Text>
+    </View>
+  );
+
+  // ---------- Render de módulos ----------
+  const renderBuilder = () => {
+    const b = BUILDERS[step];
+    return (
+      <>
+        <ModuleType icon={b.icon} label={b.label} />
+        <Title>{b.title}</Title>
+        <Body>{b.intro}</Body>
+        <InfoBox>{b.box}</InfoBox>
+        {b.example && (
+          <View style={styles.builderExample}>
+            <Text style={styles.builderExampleText}><Text style={styles.builderExampleLabel}>Ejemplo: </Text>{b.example}</Text>
+          </View>
+        )}
+        {b.outro && <Body>{b.outro}</Body>}
+        <TextInput
+          style={styles.builderInput}
+          placeholder={b.placeholder}
+          placeholderTextColor={C.placeholder}
+          multiline
+          value={builderText}
+          onChangeText={t => { setBuilderText(t); setBuilderError(null); }}
+          editable={!builderDone}
+        />
+        {builderError && <Fb ok={false}>{builderError}</Fb>}
+        {builderDone && <Fb ok>{b.fb}</Fb>}
+      </>
+    );
   };
 
-  // ---------- RENDER ----------
-  const renderStep = () => {
-    const btn = (label: string, onPress: () => void, disabled = false) => (
-      <TouchableOpacity style={[styles.btn, disabled && styles.btnOff]} onPress={onPress} disabled={disabled}>
-        <Text style={styles.btnText}>{label}</Text>
-      </TouchableOpacity>
+  const renderQuiz = () => {
+    const q = quizzes[step];
+    return (
+      <>
+        <ModuleType icon="❓" label="Quiz" />
+        <Title>{q.title}</Title>
+        <Body style={{ marginBottom: 16 }}><B>{q.question}</B></Body>
+        {q.options.map((opt, i) => (
+          <TouchableOpacity
+            key={i}
+            style={[
+              styles.option,
+              quizSel !== null && i === q.correct && styles.optionCorrect,
+              quizSel === i && i !== q.correct && styles.optionWrong,
+            ]}
+            disabled={quizSel !== null}
+            onPress={() => answerQuiz(i)}
+          >
+            <Text style={styles.optionIcon}>{['🅐', '🅑', '🅒', '🅓'][i]}</Text>
+            <Text style={[styles.optionText, quizSel !== null && i === q.correct && { color: C.okText }, quizSel === i && i !== q.correct && { color: C.failText }]}>{opt}</Text>
+          </TouchableOpacity>
+        ))}
+        {quizSel !== null && (
+          <Fb ok={quizSel === q.correct}>{quizSel === q.correct ? '✅ ' : '❌ Casi. '}{q.feedback}</Fb>
+        )}
+      </>
     );
-    const tag = (label: string) => <Text style={styles.tag}>{label}</Text>;
-    const title = (t: string) => <Text style={styles.title}>{t}</Text>;
-    const body = (t: string) => <Text style={styles.body}>{t}</Text>;
-    const infoBox = (t: string) => <View style={styles.infoBox}><Text style={styles.infoText}>{t}</Text></View>;
+  };
 
+  const renderStep = (): ReactNode => {
     switch (step) {
+      // ===== 0 · INTRO =====
       case 0: return (
-        <View style={styles.stepContainer}>
-          <View style={styles.iconCircle}><Text style={styles.iconEmoji}>🎵</Text></View>
-          {title('¿Puede la IA tener voz?')}
-          {body('Imagínate hablarle a tu computadora y que ella te responda con una voz que suena exactamente como la de tu artista favorito. Esto ya es posible hoy.')}
-          {infoBox('🎤 ElevenLabs — clona voces humanas\n👂 Whisper — transcribe audio a texto\n🎵 Suno y Udio — compone canciones completas\n🌐 Google Translate Voice — traduce en tiempo real')}
-          {btn('¡Comenzar! →', nextStep)}
-        </View>
+        <>
+          <ModuleType icon="🎵" label="Introducción" />
+          <Title>¿Puede la IA tener voz?</Title>
+          <Body>
+            Imagínate hablarle a tu computadora y que ella te responda con una voz que suena exactamente como la de tu artista favorito. O componer una canción completa — letra, melodía, batería — con solo escribir un párrafo. <B>Esto ya es posible hoy.</B>
+          </Body>
+          <Body>
+            En este nivel vas a explorar el mundo del <B>audio generado con IA</B>: voces artificiales, clonación de voz, transcripción automática y música creada desde cero.
+          </Body>
+          <InfoBox>
+            <B>Herramientas que vamos a conocer:</B>{'\n'}
+            🎤 <B>ElevenLabs</B> — clona voces humanas{'\n'}
+            👂 <B>Whisper</B> (OpenAI) — transcribe audio a texto{'\n'}
+            🎵 <B>Suno y Udio</B> — componen canciones completas{'\n'}
+            🌐 <B>Google Translate Voice / DeepL</B> — traducen en tiempo real
+          </InfoBox>
+        </>
       );
+
+      // ===== 1 · TEORÍA: texto a voz =====
       case 1: return (
-        <View style={styles.stepContainer}>
-          {tag('Nivel 14 · 21 módulos')}
-          {tag('🧠 Teoría')}
-          {title('¿Cómo convierte la IA texto en voz?')}
-          {body('1. Entender el texto: analiza palabras, puntuación y contexto emocional.\n2. Generar el audio: construye la voz poco a poco con las características únicas de la voz que debe imitar.')}
-          {infoBox('Analogía: el texto es la partitura y la IA es el músico que la toca.')}
-          {btn('Entendido →', nextStep)}
-        </View>
+        <>
+          <ModuleType icon="🧠" label="Teoría" />
+          <Title>¿Cómo convierte la IA texto en voz?</Title>
+          <Body>El proceso de convertir texto en voz se llama <B>Text-to-Speech (TTS)</B>. La IA lo hace en dos pasos:</Body>
+          <Body><B>1. Entender el texto:</B> analiza las palabras, la puntuación y el contexto emocional, y decide cómo debería sonar cada parte (pausas, énfasis, entonación).</Body>
+          <Body><B>2. Generar el audio:</B> usando ondas de sonido, la IA "construye" la voz poco a poco, añadiendo las características únicas de la voz que debe imitar.</Body>
+          <InfoBox><B>Analogía:</B> imagina una partitura de música. El texto sería la partitura escrita, y la IA sería el músico que la toca. Cada IA "músico" tiene su propio estilo.</InfoBox>
+          <Body>Las voces de IA modernas son tan buenas que en pruebas ciegas <B>muchas personas no pueden distinguirlas de voces humanas reales</B>. Esto tiene implicaciones increíbles... y también riesgos importantes.</Body>
+        </>
       );
+
+      // ===== 2 · MATCHING =====
       case 2: return (
-        <View style={styles.stepContainer}>
-          {tag('🔗 Matching')}
-          {title('Voces reales vs IA')}
-          <Text style={styles.subtitle}>Conecta cada elemento con su descripción correcta.</Text>
-          <View style={styles.matchRow}>
-            <View style={{ flex: 1 }}>
-              {MATCH_PAIRS.map((p, i) => (
-                <TouchableOpacity key={i} style={[styles.matchCard, matchSelectedA === i && styles.matchSelected, matchedPairs.has(i) && styles.matchDone]}
-                  onPress={() => handleMatchA(i)} disabled={matchedPairs.has(i)}>
-                  <Text style={styles.matchText}>{p.a}</Text>
+        <>
+          <ModuleType icon="🔗" label="Matching" />
+          <Title>Voces reales vs IA</Title>
+          <Body style={{ marginBottom: 16 }}>Conecta cada elemento con su descripción. Toca uno del lado izquierdo, luego el correcto del lado derecho.</Body>
+          <View style={styles.matchGrid}>
+            <View style={styles.matchCol}>
+              {MATCH_PAIRS.map((pair, i) => (
+                <TouchableOpacity
+                  key={`l${i}`}
+                  style={[styles.matchItem, selectedLeft === i && styles.matchItemSelected, matched.has(i) && styles.matchItemMatched, wrongFlash?.left === i && styles.matchItemWrong]}
+                  disabled={matched.has(i)}
+                  onPress={() => setSelectedLeft(i)}
+                >
+                  <Text style={[styles.matchItemText, selectedLeft === i && { color: C.tealLight }, matched.has(i) && { color: C.okText }, wrongFlash?.left === i && { color: C.failText }]}>{pair.left}</Text>
                 </TouchableOpacity>
               ))}
             </View>
-            <View style={{ flex: 1 }}>
-              {rightOrder.map((b, i) => {
-                const origIdx = MATCH_PAIRS.findIndex(p => p.b === b);
+            <View style={styles.matchCol}>
+              {shuffledRight.map((item, pos) => {
+                const isMatched = matched.has(item.idx);
                 return (
-                  <TouchableOpacity key={i} style={[styles.matchCard, matchedPairs.has(origIdx) && styles.matchDone]}
-                    onPress={() => handleMatchB(origIdx)} disabled={matchedPairs.has(origIdx)}>
-                    <Text style={styles.matchText}>{b}</Text>
+                  <TouchableOpacity
+                    key={`r${pos}`}
+                    style={[styles.matchItem, isMatched && styles.matchItemMatched, wrongFlash?.right === pos && styles.matchItemWrong]}
+                    disabled={isMatched || selectedLeft === null}
+                    onPress={() => pressRight(item.idx, pos)}
+                  >
+                    <Text style={[styles.matchItemText, isMatched && { color: C.okText }, wrongFlash?.right === pos && { color: C.failText }]}>{item.text}</Text>
                   </TouchableOpacity>
                 );
               })}
             </View>
           </View>
-          {matchedPairs.size >= 4 && btn('Continuar →', nextStep)}
-        </View>
+          {matched.size === MATCH_PAIRS.length && <Fb ok>✅ ¡Todos los pares conectados correctamente!</Fb>}
+        </>
       );
+
+      // ===== 3 · TEORÍA: ElevenLabs =====
       case 3: return (
-        <View style={styles.stepContainer}>
-          {tag('🎤 Casos reales')}
-          {title('ElevenLabs: la empresa que clona voces')}
-          {body('Fundada en 2022. Con solo 1-3 minutos de audio de una persona, pueden crear un clon de voz casi indistinguible del original.')}
-          {infoBox('Usos legítimos:\n🎬 Doblaje de películas\n📚 Audiolibros\n♿ Accesibilidad\n🎮 Voces de videojuegos')}
-          {btn('Entendido →', nextStep)}
-        </View>
+        <>
+          <ModuleType icon="🎤" label="Casos reales" />
+          <Title>La empresa que clona voces</Title>
+          <Body><B>ElevenLabs</B> es una empresa fundada en 2022 por dos amigos de la universidad — uno de Polonia y otro de EE.UU. — que querían escuchar películas dobladas en sus idiomas nativos con voces de alta calidad.</Body>
+          <Body>Con solo <B>1-3 minutos de audio</B> de una persona pueden crear un clon de voz casi indistinguible del original.</Body>
+          <InfoBox>
+            <B>¿Para qué se usa legítimamente?</B>{'\n'}
+            🎬 Doblaje de películas a otros idiomas{'\n'}
+            📚 Audiolibros generados automáticamente{'\n'}
+            ♿ Accesibilidad para personas con discapacidades del habla{'\n'}
+            🎮 Voces de personajes en videojuegos{'\n'}
+            📣 Locución de publicidad y podcasts
+          </InfoBox>
+          <Body>Pero como toda tecnología poderosa, también puede usarse mal. Por eso trabajan en sistemas de detección de audio falso.</Body>
+        </>
       );
-      case 4: return (
-        <View style={styles.stepContainer}>
-          {tag('❓ Quiz')}
-          {title('Whisper en acción')}
-          <Text style={styles.quizQ}>{QUIZ_WHISPER.q}</Text>
-          {QUIZ_WHISPER.opts.map((o, i) => (
-            <TouchableOpacity key={i} style={[styles.quizOpt, quizChoice === i && (i === QUIZ_WHISPER.correct ? styles.optCorrect : styles.optWrong)]}
-              onPress={() => handleQuiz(i, QUIZ_WHISPER.correct)} disabled={quizAnswered}>
-              <Text style={styles.optText}>{o}</Text>
-            </TouchableOpacity>
-          ))}
-          {quizAnswered && <Text style={styles.feedback}>{QUIZ_WHISPER.fb}</Text>}
-          {quizAnswered && btn('Continuar →', nextStep)}
-        </View>
-      );
-      case 5: return (
-        <View style={styles.stepContainer}>
-          {tag('✏️ Constructor')}
-          {title('Diseña tu voz de IA')}
-          {body('Define: tono, velocidad, acento, emoción predominante, nombre y personalidad.')}
-          <TextInput style={styles.textArea} placeholder="Describe la voz y personalidad de tu asistente de IA ideal..." value={builder5Text} onChangeText={setBuilder5Text} multiline />
-          {builder5Text.trim().length > 15 && <Text style={styles.feedback}>🎤 ¡Diseño increíble! Eso es exactamente lo que hacen los ingenieros de producto.</Text>}
-          {btn('Continuar →', () => { addXP(15); nextStep(); }, builder5Text.trim().length <= 15)}
-        </View>
-      );
+
+      // ===== 4, 9, 10, 16, 18 · QUIZ =====
+      case 4: case 9: case 10: case 16: case 18: return renderQuiz();
+
+      // ===== 5, 8, 19 · BUILDER =====
+      case 5: case 8: case 19: return renderBuilder();
+
+      // ===== 6 · CLASIFICADOR =====
       case 6: return (
-        <View style={styles.stepContainer}>
-          {tag('⚖️ Clasificador')}
-          {title('¿Bueno o peligroso?')}
-          {CLASSIFY_ITEMS.map((item, i) => (
-            <View key={i} style={styles.classifyItem}>
-              <Text style={styles.classifyText}>{item.text}</Text>
-              <View style={styles.classifyRow}>
-                <TouchableOpacity style={[styles.classifyBtn, c2Answers[i] === 'ok' && (item.correct === 'ok' ? styles.optCorrect : styles.optWrong)]}
-                  onPress={() => handleC2(i, 'ok')} disabled={c2Answers[i] !== undefined}>
-                  <Text style={styles.classifyBtnText}>✅ Uso válido</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.classifyBtn, c2Answers[i] === 'bad' && (item.correct === 'bad' ? styles.optCorrect : styles.optWrong)]}
-                  onPress={() => handleC2(i, 'bad')} disabled={c2Answers[i] !== undefined}>
-                  <Text style={styles.classifyBtnText}>⚠️ Problemático</Text>
-                </TouchableOpacity>
+        <>
+          <ModuleType icon="⚖️" label="Clasificador" />
+          <Title>¿Bueno o peligroso?</Title>
+          <Body style={{ marginBottom: 4 }}>Clasifica cada uso de la clonación de voz con IA:</Body>
+          {CLASSIFY_ITEMS.map((item, idx) => {
+            const ans = c2Answers[idx];
+            return (
+              <View key={idx} style={styles.vfItem}>
+                <Text style={styles.vfStatement}>{item.text}</Text>
+                <View style={styles.vfButtons}>
+                  <TouchableOpacity
+                    style={[styles.vfBtn, ans === 'ok' && (item.correct === 'ok' ? styles.vfBtnCorrect : styles.vfBtnWrong)]}
+                    disabled={ans !== undefined}
+                    onPress={() => answerC2(idx, 'ok')}
+                  >
+                    <Text style={[styles.vfBtnText, ans === 'ok' && { color: item.correct === 'ok' ? C.okText : C.failText }]}>✅ Uso válido</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.vfBtn, ans === 'bad' && (item.correct === 'bad' ? styles.vfBtnCorrect : styles.vfBtnWrong)]}
+                    disabled={ans !== undefined}
+                    onPress={() => answerC2(idx, 'bad')}
+                  >
+                    <Text style={[styles.vfBtnText, ans === 'bad' && { color: item.correct === 'bad' ? C.okText : C.failText }]}>⚠️ Problemático</Text>
+                  </TouchableOpacity>
+                </View>
+                {ans !== undefined && <Fb ok={ans === item.correct}>{item.feedback}</Fb>}
               </View>
-              {c2Answers[i] !== undefined && <Text style={styles.fbSmall}>{item.fb}</Text>}
-            </View>
-          ))}
-          {c2Checked && btn('Continuar →', nextStep)}
-        </View>
+            );
+          })}
+        </>
       );
+
+      // ===== 7 · TEORÍA: Suno y Udio =====
       case 7: return (
-        <View style={styles.stepContainer}>
-          {tag('🎵 Casos reales')}
-          {title('Suno y Udio: canciones desde cero')}
-          {body('Escribe "canción de rock épico sobre un gato que quiere conquistar el mundo" y en 30 segundos tienes una canción completa. Manejan pop, rock, reggaeton, cumbia, jazz, electrónica...')}
-          {infoBox('1. Describe el estilo y tema\n2. Opcionalmente escribe la letra\n3. En 30-60 segundos tienes una canción completa')}
-          {btn('Entendido →', nextStep)}
-        </View>
+        <>
+          <ModuleType icon="🎵" label="Casos reales" />
+          <Title>Suno y Udio: canciones desde cero</Title>
+          <Body>¿Y si pudieras escribir "canción de rock épico sobre un gato que quiere conquistar el mundo" y en 30 segundos tuvieras una canción completa con letra, melodía, guitarra y batería? Eso hacen <B>Suno</B> y <B>Udio</B>.</Body>
+          <Body>Aprendieron de millones de canciones para entender ritmo, armonía, estructura de versos y coros, y distintos géneros musicales.</Body>
+          <InfoBox>
+            <B>¿Cómo se usa Suno?</B>{'\n'}
+            1. Describes el estilo y tema de la canción{'\n'}
+            2. Opcionalmente escribes la letra{'\n'}
+            3. En 30-60 segundos tienes una canción completa{'\n\n'}
+            <B>Géneros:</B> pop, rock, reggaeton, cumbia, jazz, electrónica, clásica, K-pop... ¡casi cualquier estilo!
+          </InfoBox>
+          <Body>En 2024, varias canciones generadas con Suno llegaron a playlists populares de Spotify sin que los oyentes supieran que eran de IA.</Body>
+        </>
       );
-      case 8: return (
-        <View style={styles.stepContainer}>
-          {tag('🎵 Constructor')}
-          {title('Compone una canción')}
-          {body('Incluye: género musical, tema de la letra, mood/emoción, primera estrofa (opcional).')}
-          <TextInput style={styles.textArea} placeholder="Género + tema + mood + versos iniciales..." value={builder8Text} onChangeText={setBuilder8Text} multiline />
-          {builder8Text.trim().length > 15 && <Text style={styles.feedback}>🎵 ¡Ese prompt generaría una canción increíble! Con Suno o Udio podrías escucharla en menos de un minuto.</Text>}
-          {btn('Continuar →', () => { addXP(20); nextStep(); }, builder8Text.trim().length <= 15)}
-        </View>
-      );
-      case 9: return (
-        <View style={styles.stepContainer}>
-          {tag('❓ Quiz')}
-          {title('La voz falsa peligrosa')}
-          <Text style={styles.quizQ}>{QUIZ_ESTAFA.q}</Text>
-          {QUIZ_ESTAFA.opts.map((o, i) => (
-            <TouchableOpacity key={i} style={[styles.quizOpt, quizChoice === i && (i === QUIZ_ESTAFA.correct ? styles.optCorrect : styles.optWrong)]}
-              onPress={() => handleQuiz(i, QUIZ_ESTAFA.correct)} disabled={quizAnswered}>
-              <Text style={styles.optText}>{o}</Text>
-            </TouchableOpacity>
-          ))}
-          {quizAnswered && <Text style={styles.feedback}>{QUIZ_ESTAFA.fb}</Text>}
-          {quizAnswered && btn('Continuar →', nextStep)}
-        </View>
-      );
-      case 10: return (
-        <View style={styles.stepContainer}>
-          {tag('❓ Quiz')}
-          {title('Detecta la voz artificial')}
-          <Text style={styles.quizQ}>{QUIZ_DETECTAR.q}</Text>
-          {QUIZ_DETECTAR.opts.map((o, i) => (
-            <TouchableOpacity key={i} style={[styles.quizOpt, quizChoice === i && (i === QUIZ_DETECTAR.correct ? styles.optCorrect : styles.optWrong)]}
-              onPress={() => handleQuiz(i, QUIZ_DETECTAR.correct)} disabled={quizAnswered}>
-              <Text style={styles.optText}>{o}</Text>
-            </TouchableOpacity>
-          ))}
-          {quizAnswered && <Text style={styles.feedback}>{QUIZ_DETECTAR.fb}</Text>}
-          {quizAnswered && btn('Continuar →', nextStep)}
-        </View>
-      );
+
+      // ===== 11 · TEORÍA: medios que ya usan IA =====
       case 11: return (
-        <View style={styles.stepContainer}>
-          {tag('📻 Casos reales')}
-          {title('El audio de IA ya está en todas partes')}
-          {body('Radios automatizadas, audiolibros narrados por IA, podcasts generados automáticamente, doblajes con IA.')}
-          {infoBox('Impacto en empleos: Los actores de doblaje están preocupados por esta tendencia.')}
-          {btn('Entendido →', nextStep)}
-        </View>
+        <>
+          <ModuleType icon="📻" label="Casos reales" />
+          <Title>El audio de IA ya está en todas partes</Title>
+          <Body>Puede que ya hayas escuchado audio generado por IA sin saberlo:</Body>
+          <Body><B>📻 Radios automatizadas:</B> varias emisoras en EE.UU., Reino Unido y España ya transmiten locutores de IA 24/7, sobre todo de noche.</Body>
+          <Body><B>📖 Audiolibros:</B> Amazon tiene miles de audiolibros narrados por IA. Son más baratos de producir que con actores humanos.</Body>
+          <Body><B>🎧 Podcasts:</B> muchos creadores usan ElevenLabs para generar versiones en audio de sus artículos de blog.</Body>
+          <Body><B>📺 Doblajes:</B> Netflix y Disney ya prueban doblaje automático con IA para idiomas poco rentables de doblar.</Body>
+          <InfoBox><B>Impacto en empleos:</B> los actores de doblaje en México, Argentina y España están muy preocupados. Es un debate activo sobre el futuro del trabajo creativo.</InfoBox>
+        </>
       );
+
+      // ===== 12 · VERDADERO/FALSO =====
       case 12: return (
-        <View style={styles.stepContainer}>
-          {tag('✔️ Verdadero o Falso')}
-          {VF_ITEMS_1.map((item, i) => (
-            <View key={i} style={styles.classifyItem}>
-              <Text style={styles.classifyText}>"{item.s}"</Text>
-              <View style={styles.classifyRow}>
-                <TouchableOpacity style={[styles.classifyBtn, vf1Answers[i] === true && (item.correct ? styles.optCorrect : styles.optWrong)]}
-                  onPress={() => handleVF1(i, true)} disabled={vf1Answers[i] !== undefined}>
-                  <Text style={styles.classifyBtnText}>✅ Verdadero</Text>
+        <>
+          <ModuleType icon="✔️" label="Verdadero o Falso" />
+          <Title>Verdadero o Falso</Title>
+          {VF_ITEMS_1.map((item, idx) => {
+            const ans = vf1Answers[idx];
+            return (
+              <View key={idx} style={styles.vfItem}>
+                <Text style={styles.vfStatement}>"{item.text}"</Text>
+                <View style={styles.vfButtons}>
+                  <TouchableOpacity
+                    style={[styles.vfBtn, ans === true && (item.correct ? styles.vfBtnCorrect : styles.vfBtnWrong)]}
+                    disabled={ans !== undefined}
+                    onPress={() => answerVf1(idx, true)}
+                  >
+                    <Text style={[styles.vfBtnText, ans === true && { color: item.correct ? C.okText : C.failText }]}>✅ Verdadero</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.vfBtn, ans === false && (!item.correct ? styles.vfBtnCorrect : styles.vfBtnWrong)]}
+                    disabled={ans !== undefined}
+                    onPress={() => answerVf1(idx, false)}
+                  >
+                    <Text style={[styles.vfBtnText, ans === false && { color: !item.correct ? C.okText : C.failText }]}>❌ Falso</Text>
+                  </TouchableOpacity>
+                </View>
+                {ans !== undefined && <Fb ok={ans === item.correct}>{ans === item.correct ? '✅ ' : '❌ Incorrecto. '}{item.feedback}</Fb>}
+              </View>
+            );
+          })}
+        </>
+      );
+
+      // ===== 13 · SPRINT =====
+      case 13: {
+        const minutes = Math.floor(sprintSec / 60);
+        const seconds = String(sprintSec % 60).padStart(2, '0');
+        return (
+          <>
+            <ModuleType icon="⚡" label="Sprint" />
+            <Title>Sprint: tu personaje de audio</Title>
+            <View style={styles.sprintBox}>
+              <Text style={styles.sprintInstruction}>⚡ ¡2 minutos! Diseña 3 personajes de voz para un videojuego. Cada uno con: nombre + personalidad + tipo de voz.</Text>
+              <Text style={[styles.timerText, sprintPhase === 'running' && sprintSec <= 15 ? styles.timerDanger : sprintPhase === 'running' && sprintSec <= 30 ? styles.timerWarning : null]}>
+                {sprintPhase === 'done' ? '0:00' : `${minutes}:${seconds}`}
+              </Text>
+              {sprintPhase === 'idle' && (
+                <TouchableOpacity style={styles.btn} onPress={() => setSprintPhase('running')}>
+                  <Text style={styles.btnText}>▶ Iniciar Sprint</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.classifyBtn, vf1Answers[i] === false && (!item.correct ? styles.optCorrect : styles.optWrong)]}
-                  onPress={() => handleVF1(i, false)} disabled={vf1Answers[i] !== undefined}>
-                  <Text style={styles.classifyBtnText}>❌ Falso</Text>
+              )}
+            </View>
+            <TextInput
+              style={styles.builderInput}
+              placeholder={'Personaje 1: [Nombre] — [Personalidad] — [Tipo de voz]\nPersonaje 2: ...\nPersonaje 3: ...'}
+              placeholderTextColor={C.placeholder}
+              multiline
+              value={sprintText}
+              onChangeText={setSprintText}
+              editable={sprintPhase === 'running'}
+            />
+            {sprintPhase === 'running' && (
+              <TouchableOpacity style={[styles.btn, sprintText.trim().length <= 20 && styles.mainBtnDisabled]} onPress={submitSprint} disabled={sprintText.trim().length <= 20}>
+                <Text style={styles.btnText}>Entregar ✓</Text>
+              </TouchableOpacity>
+            )}
+            {sprintPhase === 'done' && (
+              <Fb ok={sprintValid}>⚡ ¡Sprint terminado! {sprintValid ? 'Diseñaste personajes de audio únicos.' : 'La próxima vez intenta describir los 3 personajes completos.'}</Fb>
+            )}
+          </>
+        );
+      }
+
+      // ===== 14 · ¿LEGAL O ILEGAL? =====
+      case 14: return (
+        <>
+          <ModuleType icon="⚖️" label="¿Legal o ilegal?" />
+          <Title>Verdadero o Falso</Title>
+          {VF_ITEMS_2.map((item, idx) => {
+            const ans = vf2Answers[idx];
+            return (
+              <View key={idx} style={styles.vfItem}>
+                <Text style={styles.vfStatement}>"{item.text}"</Text>
+                <View style={styles.vfButtons}>
+                  <TouchableOpacity
+                    style={[styles.vfBtn, ans === true && (item.correct ? styles.vfBtnCorrect : styles.vfBtnWrong)]}
+                    disabled={ans !== undefined}
+                    onPress={() => answerVf2(idx, true)}
+                  >
+                    <Text style={[styles.vfBtnText, ans === true && { color: item.correct ? C.okText : C.failText }]}>✅ Verdadero</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.vfBtn, ans === false && (!item.correct ? styles.vfBtnCorrect : styles.vfBtnWrong)]}
+                    disabled={ans !== undefined}
+                    onPress={() => answerVf2(idx, false)}
+                  >
+                    <Text style={[styles.vfBtnText, ans === false && { color: !item.correct ? C.okText : C.failText }]}>❌ Falso</Text>
+                  </TouchableOpacity>
+                </View>
+                {ans !== undefined && <Fb ok={ans === item.correct}>{ans === item.correct ? '✅ ' : '❌ Incorrecto. '}{item.feedback}</Fb>}
+              </View>
+            );
+          })}
+        </>
+      );
+
+      // ===== 15 · TEORÍA: traducción en tiempo real =====
+      case 15: return (
+        <>
+          <ModuleType icon="🌐" label="Casos reales" />
+          <Title>El intérprete automático ya existe</Title>
+          <Body>Imagina hablar en español y que tu amigo en Japón te escuche directamente en japonés, con tu misma voz pero traducida. <B>Esto ya es posible hoy.</B></Body>
+          <Body><B>HeyGen</B> permite hacer videos donde una persona habla en un idioma y se genera automáticamente en otro, con los labios sincronizados.</Body>
+          <Body><B>Seamless Communication</B> (de Meta) traduce voz en tiempo real preservando el tono y las emociones del hablante original.</Body>
+          <InfoBox><B>Impacto educativo:</B> imagina tomar clases de un profesor de Finlandia y escucharlo perfectamente en español, con su voz original. ¡Esta tecnología está eliminando las barreras del idioma!</InfoBox>
+          <Body>Sin embargo, también preocupa que cualquier persona pueda ser "traducida" diciendo cosas que nunca dijo en realidad.</Body>
+        </>
+      );
+
+      // ===== 17 · ORDENA POR SOFISTICACIÓN (sin años visibles) =====
+      case 17: return (
+        <>
+          <ModuleType icon="📈" label="Ordena" />
+          <Title>De lo más básico a lo más avanzado</Title>
+          <Body style={{ marginBottom: 12 }}>El audio con IA fue volviéndose más poderoso con los años. Ordena estas tecnologías de la <B>más básica (arriba)</B> a la <B>más avanzada (abajo)</B>. Piensa en cuánto puede hacer cada una.</Body>
+          {sortOrder.map((origIdx, pos) => (
+            <View key={pos} style={[styles.sortRow, sortWrong.has(pos) && styles.sortRowWrong, sortSolved && styles.sortRowOk]}>
+              <Text style={styles.sortNum}>{pos + 1}</Text>
+              <Text style={styles.sortText}>{SORT_ITEMS[origIdx].text}</Text>
+              <View style={styles.sortArrows}>
+                <TouchableOpacity onPress={() => moveSort(pos, -1)} disabled={pos === 0 || sortSolved}>
+                  <Text style={[styles.sortArrow, (pos === 0 || sortSolved) && { opacity: 0.25 }]}>▲</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => moveSort(pos, 1)} disabled={pos === sortOrder.length - 1 || sortSolved}>
+                  <Text style={[styles.sortArrow, (pos === sortOrder.length - 1 || sortSolved) && { opacity: 0.25 }]}>▼</Text>
                 </TouchableOpacity>
               </View>
-              {vf1Answers[i] !== undefined && <Text style={styles.fbSmall}>{item.fb}</Text>}
             </View>
           ))}
-          {vf1Checked && btn('Continuar →', nextStep)}
-        </View>
-      );
-      case 13: return (
-        <View style={styles.stepContainer}>
-          {tag('⚡ Sprint')}
-          {title('Diseña personajes de audio')}
-          {!sprintRunning ? (
+          {sortSolved && (
             <>
-              <Text style={styles.sprintTimer}>{Math.floor(sprintSec/60)}:{String(sprintSec%60).padStart(2,'0')}</Text>
-              <TextInput style={styles.textArea} placeholder="Personaje 1: [Nombre] — [Personalidad] — [Tipo de voz]\nPersonaje 2: ...\nPersonaje 3: ..." value={sprintText} onChangeText={setSprintText} multiline />
-              <View style={styles.sprintRow}>
-                {btn('▶ Iniciar Sprint', startSprint)}
-                <TouchableOpacity style={styles.btnSecondary} onPress={submitSprint}><Text>Entregar</Text></TouchableOpacity>
+              <Fb ok>✅ ¡Exacto! Cada paso podía hacer más que el anterior. Y así ocurrió en la vida real:</Fb>
+              <View style={styles.revealBox}>
+                {SORT_ITEMS.map((it, i) => (
+                  <Text key={i} style={styles.revealLine}>{i + 1}. {it.reveal}</Text>
+                ))}
               </View>
-            </>
-          ) : (
-            <>
-              <Text style={styles.sprintTimer}>{Math.floor(sprintSec/60)}:{String(sprintSec%60).padStart(2,'0')}</Text>
-              <TextInput style={styles.textArea} placeholder="Personaje 1: [Nombre] — [Personalidad] — [Tipo de voz]\nPersonaje 2: ...\nPersonaje 3: ..." value={sprintText} onChangeText={setSprintText} multiline />
-              {btn('Entregar sprint', submitSprint)}
             </>
           )}
-          {sprintSec <= 0 && sprintRunning && btn('Continuar →', nextStep)}
-        </View>
+          {!sortSolved && sortWrong.size > 0 && <Fb ok={false}>❌ Los elementos en rojo aún no están en el orden correcto. Piensa cuál tecnología es más sencilla y cuál puede hacer más.</Fb>}
+        </>
       );
-      case 14: return (
-        <View style={styles.stepContainer}>
-          {tag('✔️ Verdadero o Falso')}
-          {VF_ITEMS_2.map((item, i) => (
-            <View key={i} style={styles.classifyItem}>
-              <Text style={styles.classifyText}>"{item.s}"</Text>
-              <View style={styles.classifyRow}>
-                <TouchableOpacity style={[styles.classifyBtn, vf2Answers[i] === true && (item.correct ? styles.optCorrect : styles.optWrong)]}
-                  onPress={() => handleVF2(i, true)} disabled={vf2Answers[i] !== undefined}>
-                  <Text style={styles.classifyBtnText}>✅ Verdadero</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.classifyBtn, vf2Answers[i] === false && (!item.correct ? styles.optCorrect : styles.optWrong)]}
-                  onPress={() => handleVF2(i, false)} disabled={vf2Answers[i] !== undefined}>
-                  <Text style={styles.classifyBtnText}>❌ Falso</Text>
-                </TouchableOpacity>
-              </View>
-              {vf2Answers[i] !== undefined && <Text style={styles.fbSmall}>{item.fb}</Text>}
-            </View>
-          ))}
-          {vf2Checked && btn('Continuar →', nextStep)}
-        </View>
-      );
-      case 15: return (
-        <View style={styles.stepContainer}>
-          {tag('🌐 Casos reales')}
-          {title('El intérprete automático ya existe')}
-          {body('HeyGen permite hacer videos donde una persona habla en un idioma y se genera automáticamente en otro. Seamless Communication de Meta traduce voz en tiempo real.')}
-          {infoBox('Impacto educativo: Podrás tomar clases de un profesor en Finlandia y escucharlo perfectamente en español, con su voz original.')}
-          {btn('Entendido →', nextStep)}
-        </View>
-      );
-      case 16: return (
-        <View style={styles.stepContainer}>
-          {tag('❓ Quiz')}
-          {title('IA de audio y accesibilidad')}
-          <Text style={styles.quizQ}>{QUIZ_ACCESIBILIDAD.q}</Text>
-          {QUIZ_ACCESIBILIDAD.opts.map((o, i) => (
-            <TouchableOpacity key={i} style={[styles.quizOpt, quizChoice === i && (i === QUIZ_ACCESIBILIDAD.correct ? styles.optCorrect : styles.optWrong)]}
-              onPress={() => handleQuiz(i, QUIZ_ACCESIBILIDAD.correct)} disabled={quizAnswered}>
-              <Text style={styles.optText}>{o}</Text>
-            </TouchableOpacity>
-          ))}
-          {quizAnswered && <Text style={styles.feedback}>{QUIZ_ACCESIBILIDAD.fb}</Text>}
-          {quizAnswered && btn('Continuar →', nextStep)}
-        </View>
-      );
-      case 17: return (
-        <View style={styles.stepContainer}>
-          {tag('📅 Ordena')}
-          {title('Ordena la línea del tiempo')}
-          <Text style={styles.subtitle}>Arrastra para ordenar estos hitos del más antiguo al más reciente.</Text>
-          {sortOrder.map((origIdx, pos) => (
-            <View key={pos} style={styles.sortRow}>
-              <Text style={styles.sortNum}>{pos + 1}</Text>
-              <Text style={styles.sortText}>{SORT_ITEMS[origIdx]}</Text>
-              <View style={styles.sortArrows}>
-                <TouchableOpacity onPress={() => moveSort(pos, -1)} disabled={pos === 0 || sortChecked}><MaterialIcons name="keyboard-arrow-up" size={20} /></TouchableOpacity>
-                <TouchableOpacity onPress={() => moveSort(pos, 1)} disabled={pos === sortOrder.length - 1 || sortChecked}><MaterialIcons name="keyboard-arrow-down" size={20} /></TouchableOpacity>
-              </View>
-            </View>
-          ))}
-          {!sortChecked ? btn('Verificar orden', checkSort) : btn('Continuar →', nextStep)}
-        </View>
-      );
-      case 18: return (
-        <View style={styles.stepContainer}>
-          {tag('❓ Quiz de cierre')}
-          <Text style={styles.quizQ}>{QUIZ_FINAL.q}</Text>
-          {QUIZ_FINAL.opts.map((o, i) => (
-            <TouchableOpacity key={i} style={[styles.quizOpt, quizChoice === i && (i === QUIZ_FINAL.correct ? styles.optCorrect : styles.optWrong)]}
-              onPress={() => handleQuiz(i, QUIZ_FINAL.correct)} disabled={quizAnswered}>
-              <Text style={styles.optText}>{o}</Text>
-            </TouchableOpacity>
-          ))}
-          {quizAnswered && <Text style={styles.feedback}>{QUIZ_FINAL.fb}</Text>}
-          {quizAnswered && btn('Continuar →', nextStep)}
-        </View>
-      );
-      case 19: return (
-        <View style={styles.stepContainer}>
-          {tag('💭 Reflexión final')}
-          {title('El futuro del audio')}
-          {body('¿Cuál es el uso de la IA de audio que más te emociona? ¿Y cuál te preocupa más?')}
-          <TextInput style={styles.textArea} placeholder="Escribe tu reflexión..." value={builder19Text} onChangeText={setBuilder19Text} multiline />
-          {builder19Text.trim().length > 15 && <Text style={styles.feedback}>💭 ¡Excelente reflexión! Las preguntas que haces son exactamente las que los legisladores están debatiendo ahora mismo.</Text>}
-          {btn('Completar nivel →', () => { addXP(15); nextStep(); }, builder19Text.trim().length <= 15)}
-        </View>
-      );
+
+      // ===== 20 · COMPLETADO =====
       case 20: return (
-        <View style={styles.completeContainer}>
-          <View style={styles.completeIcon}><Text style={styles.iconEmoji}>🎵</Text></View>
-          <Text style={styles.completeTitle}>¡Badge desbloqueado!</Text>
-          <View style={styles.badgeBox}><Text style={styles.badgeText}>🏅 Sound Designer</Text></View>
-          <Text style={{ ...typography.bold, fontSize: 13, color: '#67e8f9', marginBottom: 8, opacity: 0.8 }}>Nivel 14 de 36</Text>
-          <Text style={styles.completeSub}>¡Nivel 14 completado! Ahora entiendes el mundo del audio con IA: voces sintéticas, clonación, música generativa y los riesgos que conlleva esta tecnología.</Text>
-          <Text style={styles.xpBig}>⭐ {xp} XP ganados</Text>
-          <View style={{ backgroundColor: '#031820', borderRadius: 10, padding: 11, marginBottom: 14, borderWidth: 1, borderColor: '#0d4a5a', width: '100%' }}>
-            <Text style={{ fontSize: 12, color: '#67e8f9', lineHeight: 20 }}>
-              🎬 <Text style={{ fontWeight: '700' }}>Nivel 15: IA y Video{'\n\n'}</Text>
-              Del audio al video: Runway, Sora, Kling. Cómo se generan videos con IA, deepfakes, copyright y el futuro del cine. Completarás el Módulo 3 del Mundo 3.
+        <View style={styles.completionScreen}>
+          <Text style={styles.completionIcon}>🎵</Text>
+          <Text style={styles.completionTitle}>¡Badge desbloqueado!</Text>
+          <Text style={styles.completionBadge}>🏅 Sound Designer</Text>
+          <Text style={styles.completionText}>
+            ¡Nivel 14 completado! Ahora entiendes el mundo del audio con IA: voces sintéticas, clonación, música generativa y los riesgos que conlleva esta tecnología.
+          </Text>
+          <Text style={styles.xpGained}>+<Text style={{ color: C.tealLight }}>{xp}</Text> XP</Text>
+          <View style={styles.statsRow}>
+            <View style={styles.statItem}>
+              <Text style={styles.statNum}>{correctCount}</Text>
+              <Text style={styles.statLbl}>Correctas</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Text style={styles.statNum}>{CONTENT_STEPS}</Text>
+              <Text style={styles.statLbl}>Módulos</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Text style={styles.statNum}>N15</Text>
+              <Text style={styles.statLbl}>Próximo nivel</Text>
+            </View>
+          </View>
+          <View style={styles.nextLevelBox}>
+            <Text style={styles.nextLevelText}>
+              🎬 <Text style={{ fontWeight: '700', color: C.text }}>Nivel 15: IA y Video{'\n\n'}</Text>
+              Del audio al video: Runway, Sora, Kling. Cómo se generan videos con IA, deepfakes, copyright y el futuro del cine.
             </Text>
           </View>
-          {btn('Volver al mapa', finishLevel)}
+          <TouchableOpacity style={[styles.btn, { width: '100%' }]} onPress={finishLevel}>
+            <Text style={styles.btnText}>Siguiente nivel →</Text>
+          </TouchableOpacity>
         </View>
       );
+
       default: return null;
     }
   };
 
-  const progressPercent = (step / (MODULE_COUNT - 1)) * 100;
+  // ---------- Botón principal ----------
+  const getBtn = (): { label: string; enabled: boolean; note?: string; onPress: () => void } | null => {
+    switch (step) {
+      case 0: return { label: '¡Empezar! →', enabled: true, onPress: next };
+      case 1: case 3: case 7: case 11: case 15:
+        return { label: 'Continuar →', enabled: true, onPress: () => { awardStep(MODULE_XP[step]); next(); } };
+      case 4: case 9: case 10: case 16: case 18:
+        return { label: 'Continuar →', enabled: quizSel !== null || devMode, note: quizSel === null ? `Responde para continuar · +${MODULE_XP[step]} XP` : undefined, onPress: next };
+      case 5: case 8: case 19: {
+        const isReflect = step === 19;
+        if (!builderDone) return { label: isReflect ? 'Enviar reflexión →' : 'Confirmar →', enabled: builderText.trim().length > 15 || devMode, note: `Escribe al menos 16 caracteres · +${MODULE_XP[step]} XP`, onPress: confirmBuilder };
+        return { label: step === 19 ? 'Completar nivel →' : 'Continuar →', enabled: true, onPress: next };
+      }
+      case 2: return { label: 'Continuar →', enabled: matched.size === MATCH_PAIRS.length || devMode, note: matched.size < MATCH_PAIRS.length ? `Conecta los ${MATCH_PAIRS.length} pares · +${MODULE_XP[step]} XP` : undefined, onPress: next };
+      case 6: return { label: 'Continuar →', enabled: Object.keys(c2Answers).length === CLASSIFY_ITEMS.length || devMode, note: `Clasifica los ${CLASSIFY_ITEMS.length} usos · +${MODULE_XP[step]} XP`, onPress: next };
+      case 12: return { label: 'Continuar →', enabled: Object.keys(vf1Answers).length === VF_ITEMS_1.length || devMode, note: `Responde las ${VF_ITEMS_1.length} afirmaciones · +${MODULE_XP[step]} XP`, onPress: next };
+      case 13: return { label: 'Continuar →', enabled: sprintPhase === 'done' || devMode, note: sprintPhase !== 'done' ? 'Escribe tus personajes y pulsa "Entregar" · +15 XP' : undefined, onPress: next };
+      case 14: return { label: 'Continuar →', enabled: Object.keys(vf2Answers).length === VF_ITEMS_2.length || devMode, note: `Responde las ${VF_ITEMS_2.length} afirmaciones · +${MODULE_XP[step]} XP`, onPress: next };
+      case 17:
+        if (!sortSolved) return { label: 'Verificar orden →', enabled: true, note: `Ordena de la más básica a la más avanzada · +${MODULE_XP[step]} XP`, onPress: checkSort };
+        return { label: 'Continuar →', enabled: true, onPress: next };
+      case 20: return null; // botón dentro de la pantalla final
+      default: return null;
+    }
+  };
+
+  const btn = getBtn();
+  const progress = Math.round((step / (TOTAL_STEPS - 1)) * 100);
 
   return (
     <View style={styles.screen}>
-      <View style={styles.bar}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <MaterialIcons name="close" size={24} color={colors.textSecondary} />
-        </TouchableOpacity>
-        <View style={styles.track}><View style={[styles.fill, { width: `${progressPercent}%` }]} /></View>
-        <Text style={styles.xpChip}>{xp} XP</Text>
+      {/* Barra superior: salida + XP */}
+      <View style={styles.topBar}>
+        <TouchableOpacity onPress={() => exitLevel()} style={styles.closeBtn}><Text style={styles.closeBtnText}>✕</Text></TouchableOpacity>
+        <View style={{ flex: 1 }} />
+        <View style={styles.xpChip}><Text style={styles.xpChipText}>{xp} XP</Text></View>
       </View>
-      <ScrollView contentContainerStyle={styles.scrollContent}>{renderStep()}</ScrollView>
-      {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} />}
-      {canGoBack && (
-        <View style={styles.footerRow}>
-          <TouchableOpacity style={styles.backButton} onPress={prevStep}>
-            <Text style={styles.backButtonText}>← Volver</Text>
-          </TouchableOpacity>
+
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.container}>
+        {/* Header del nivel (como el HTML) */}
+        <View style={styles.header}>
+          <View style={styles.levelBadge}><Text style={styles.levelBadgeText}>🎵 MUNDO 3 · NIVEL 14</Text></View>
+          <Text style={styles.levelTitle}>IA que <Text style={{ color: C.tealLight }}>Canta y Habla</Text></Text>
+          <Text style={styles.subtitle}>Audio, voz y música generados con inteligencia artificial</Text>
+          <View style={styles.progressBar}><View style={[styles.progressFill, { width: `${progress}%` }]} /></View>
+          <View style={styles.progressLabelRow}>
+            <Text style={styles.progressLabel}>{step === 0 ? 'Introducción' : step < TOTAL_STEPS - 1 ? `Módulo ${step} de ${CONTENT_STEPS}` : '¡Nivel completado!'}</Text>
+            <Text style={styles.progressLabel}>{xp} / {MAX_XP} XP</Text>
+          </View>
+        </View>
+
+        {/* Tarjeta del módulo */}
+        <View style={styles.moduleCard}>
+          <View style={styles.moduleCardAccent} />
+          {MODULE_XP[step] > 0 && (
+            <View style={styles.moduleXpBadge}><Text style={styles.moduleXpBadgeText}>+{MODULE_XP[step]} XP</Text></View>
+          )}
+          {renderStep()}
+        </View>
+      </ScrollView>
+
+      {/* Footer */}
+      {btn && (
+        <View style={styles.btnRow}>
+          <View style={styles.btnRowInner}>
+            {showBack && <TouchableOpacity style={styles.backBtn} onPress={prev}><Text style={styles.backBtnText}>← Volver</Text></TouchableOpacity>}
+            <TouchableOpacity style={[styles.mainBtn, { flex: 1 }, !btn.enabled && styles.mainBtnDisabled]} onPress={btn.onPress} disabled={!btn.enabled}>
+              <Text style={styles.btnText}>{btn.label}</Text>
+            </TouchableOpacity>
+          </View>
+          {btn.note ? <Text style={styles.btnNote}>{btn.note}</Text> : null}
         </View>
       )}
+
+      {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} bgColor={C.teal} textColor="#fff" />}
     </View>
   );
 }
 
-// Helper
-function pickN<T>(arr: T[], n: number): T[] {
-  const shuffled = [...arr].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, n);
-}
-
+// ===================== ESTILOS (paleta oscura teal del HTML nivel-14) =====================
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#020f12' },
-  bar: { flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
-  track: { flex: 1, height: 6, backgroundColor: colors.borderLight, borderRadius: 3, marginHorizontal: 12 },
-  fill: { height: '100%', backgroundColor: '#00bcd4', borderRadius: 3 },
-  xpChip: { ...typography.bold, fontSize: 14, color: colors.accentDark },
-  scrollContent: { padding: 16, paddingBottom: 40 },
-  stepContainer: { flex: 1 },
-  tag: { fontSize: 11, fontWeight: '600', color: '#0f766e', backgroundColor: '#f0fdfa', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, marginBottom: 12 },
-  iconCircle: { width: 80, height: 80, borderRadius: 24, backgroundColor: '#ccfbf1', justifyContent: 'center', alignItems: 'center', marginBottom: 14, alignSelf: 'center' },
-  iconEmoji: { fontSize: 42 },
-  title: { ...typography.extraBold, fontSize: 19, color: colors.textPrimary, marginBottom: 8, textAlign: 'center' },
-  subtitle: { ...typography.regular, fontSize: 13, color: colors.textSecondary, marginBottom: 14, textAlign: 'center' },
-  body: { ...typography.regular, fontSize: 13, color: colors.textPrimary, lineHeight: 20, marginBottom: 12 },
-  card: { backgroundColor: colors.surface, borderRadius: 14, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: colors.border },
-  cardTitle: { ...typography.bold, fontSize: 13, color: colors.textPrimary, marginBottom: 4 },
-  cardText: { ...typography.regular, fontSize: 12, color: colors.textSecondary },
-  infoBox: { backgroundColor: '#f0fdfa', borderLeftWidth: 4, borderLeftColor: '#14b8a6', borderRadius: 4, padding: 14, marginVertical: 10 },
-  infoText: { ...typography.regular, fontSize: 13, color: colors.textPrimary, lineHeight: 22 },
-  btn: { backgroundColor: '#0d9488', padding: 14, borderRadius: 12, alignItems: 'center', marginTop: 16 },
-  btnText: { ...typography.bold, color: '#fff', fontSize: 15 },
-  btnOff: { opacity: 0.4 },
-  btnSecondary: { backgroundColor: colors.surface, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: colors.border, alignItems: 'center' },
-  quizQ: { ...typography.bold, fontSize: 13, padding: 10, backgroundColor: '#f0fdfa', borderRadius: 10, marginBottom: 10, borderWidth: 1, borderColor: '#5eead4' },
-  quizOpt: { padding: 12, borderRadius: 10, borderWidth: 1, borderColor: colors.border, marginBottom: 6 },
-  optText: { fontSize: 13, color: colors.textPrimary },
-  optCorrect: { borderColor: colors.success, backgroundColor: '#dcfce7' },
-  optWrong: { borderColor: colors.error, backgroundColor: '#fff1f2' },
-  feedback: { fontSize: 12, marginTop: 8, padding: 12, borderRadius: 10, backgroundColor: '#dcfce7', color: '#065f46', borderWidth: 1, borderColor: '#a7f3d0' },
-  fbSmall: { fontSize: 11, marginTop: 6, color: '#065f46' },
-  matchRow: { flexDirection: 'row', gap: 10, marginBottom: 12 },
-  matchCard: { backgroundColor: colors.surface, padding: 10, borderRadius: 10, borderWidth: 1, borderColor: colors.border, marginBottom: 6 },
-  matchSelected: { borderColor: '#06b6d4', backgroundColor: '#ecfeff' },
-  matchDone: { borderColor: colors.success, backgroundColor: '#dcfce7' },
-  matchText: { fontSize: 11, color: colors.textPrimary, textAlign: 'center' },
-  textArea: { borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 12, minHeight: 80, fontSize: 13, backgroundColor: '#fafafa', marginBottom: 10 },
-  classifyItem: { marginBottom: 14 },
-  classifyText: { ...typography.bold, fontSize: 13, marginBottom: 8 },
-  classifyRow: { flexDirection: 'row', gap: 8 },
-  classifyBtn: { flex: 1, padding: 10, borderRadius: 8, borderWidth: 1, borderColor: colors.border, alignItems: 'center' },
-  classifyBtnText: { fontSize: 12, fontWeight: '600' },
-  sprintTimer: { fontSize: 36, fontWeight: '800', textAlign: 'center', color: '#0d9488', marginBottom: 10 },
-  sprintRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
-  sortRow: { flexDirection: 'row', alignItems: 'center', padding: 10, backgroundColor: colors.surface, borderRadius: 10, borderWidth: 1, marginBottom: 6 },
-  sortNum: { width: 26, height: 26, borderRadius: 13, backgroundColor: '#0d9488', color: '#fff', textAlign: 'center', lineHeight: 26, fontWeight: '700', fontSize: 12, marginRight: 8 },
-  sortText: { flex: 1, fontSize: 11, color: colors.textPrimary },
-  sortArrows: { flexDirection: 'column' },
-  completeContainer: { alignItems: 'center', padding: 20 },
-  completeIcon: { width: 86, height: 86, borderRadius: 24, backgroundColor: '#ccfbf1', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
-  completeTitle: { ...typography.extraBold, fontSize: 22 },
-  badgeBox: { backgroundColor: '#f0fdfa', borderWidth: 2, borderColor: '#5eead4', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 8, marginVertical: 12 },
-  badgeText: { fontSize: 16, fontWeight: '700', color: '#0f766e' },
-  completeSub: { ...typography.regular, textAlign: 'center', marginBottom: 12 },
-  xpBig: { ...typography.bold, fontSize: 18, color: colors.accentDark, marginBottom: 16 },
-  footerRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 16, gap: 8 },
-  backButton: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, padding: 14, borderRadius: 11, alignItems: 'center', paddingHorizontal: 20 },
-  backButtonText: { ...typography.bold, color: colors.textSecondary, fontSize: 15 },
+  screen: { flex: 1, backgroundColor: C.bg },
+
+  topBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 13, paddingTop: 11, paddingBottom: 8, backgroundColor: C.bg, borderBottomWidth: 1, borderBottomColor: C.border },
+  closeBtn: { minWidth: 42, minHeight: 42, borderRadius: 10, backgroundColor: C.card, borderWidth: 1, borderColor: C.border, alignItems: 'center', justifyContent: 'center' },
+  closeBtnText: { fontSize: 12, color: C.tealLight, fontWeight: '800' },
+  xpChip: { paddingHorizontal: 11, paddingVertical: 4, borderRadius: 12, backgroundColor: C.card2, borderWidth: 1, borderColor: C.border },
+  xpChipText: { fontSize: 12, color: C.tealLight, fontWeight: '700' },
+
+  container: { padding: 16, paddingBottom: 28 },
+
+  // Header del nivel
+  header: { marginBottom: 20 },
+  levelBadge: { alignSelf: 'flex-start', backgroundColor: C.emerald, borderRadius: 99, paddingHorizontal: 16, paddingVertical: 6, marginBottom: 12 },
+  levelBadgeText: { ...typography.bold, fontSize: 12, color: '#fff', letterSpacing: 0.6 },
+  levelTitle: { ...typography.extraBold, fontSize: 28, color: C.text, lineHeight: 34 },
+  subtitle: { ...typography.regular, fontSize: 13, color: C.muted, marginTop: 4, marginBottom: 14 },
+  progressBar: { width: '100%', height: 8, backgroundColor: C.border, borderRadius: 99, overflow: 'hidden' },
+  progressFill: { height: '100%', backgroundColor: C.teal, borderRadius: 99 },
+  progressLabelRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 },
+  progressLabel: { fontSize: 11, color: C.muted, fontWeight: '500' },
+
+  // Tarjeta del módulo
+  moduleCard: { backgroundColor: C.card, borderRadius: 16, padding: 22, borderWidth: 1, borderColor: C.border, overflow: 'hidden' },
+  moduleCardAccent: { position: 'absolute', top: 0, left: 0, right: 0, height: 3, backgroundColor: C.teal },
+  moduleXpBadge: { position: 'absolute', top: 14, right: 14, backgroundColor: C.card2, borderWidth: 1, borderColor: C.border, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
+  moduleXpBadgeText: { fontSize: 11, fontWeight: '700', color: C.tealLight },
+  moduleType: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
+  moduleTypeText: { ...typography.bold, fontSize: 11, textTransform: 'uppercase', letterSpacing: 1, color: C.tealLight },
+  moduleTitle: { ...typography.extraBold, fontSize: 19, color: C.text, marginBottom: 14, lineHeight: 25 },
+  bodyText: { ...typography.regular, fontSize: 14, lineHeight: 23, color: C.muted, marginBottom: 12 },
+  bold: { fontWeight: '700', color: C.text },
+  infoBox: { backgroundColor: C.card2, borderLeftWidth: 4, borderLeftColor: C.teal, borderTopRightRadius: 12, borderBottomRightRadius: 12, paddingHorizontal: 16, paddingVertical: 13, marginBottom: 14 },
+  infoBoxText: { ...typography.regular, fontSize: 13, lineHeight: 24, color: C.muted },
+
+  // Quiz
+  option: { flexDirection: 'row', backgroundColor: C.card2, paddingHorizontal: 16, paddingVertical: 13, borderRadius: 12, marginBottom: 10, borderWidth: 2, borderColor: C.border, alignItems: 'center' },
+  optionCorrect: { borderColor: C.green, backgroundColor: C.okBg },
+  optionWrong: { borderColor: C.red, backgroundColor: C.failBg },
+  optionIcon: { marginRight: 10, fontSize: 16 },
+  optionText: { flex: 1, fontSize: 13, lineHeight: 19, color: C.text, fontWeight: '500' },
+
+  // Feedback
+  feedback: { marginTop: 12, paddingHorizontal: 16, paddingVertical: 13, borderRadius: 12, borderWidth: 1 },
+  feedbackOk: { backgroundColor: C.okBg, borderColor: C.okBorder },
+  feedbackFail: { backgroundColor: C.failBg, borderColor: C.failBorder },
+  feedbackText: { fontSize: 13, lineHeight: 20, fontWeight: '500' },
+
+  // Matching
+  matchGrid: { flexDirection: 'row', gap: 10 },
+  matchCol: { flex: 1, gap: 8 },
+  matchItem: { backgroundColor: C.card2, paddingHorizontal: 10, paddingVertical: 12, borderRadius: 10, borderWidth: 2, borderColor: C.border, alignItems: 'center', justifyContent: 'center', minHeight: 64 },
+  matchItemSelected: { borderColor: C.cyan, backgroundColor: '#062d38' },
+  matchItemMatched: { borderColor: C.green, backgroundColor: C.okBg },
+  matchItemWrong: { borderColor: C.red, backgroundColor: C.failBg },
+  matchItemText: { fontSize: 12, color: C.text, textAlign: 'center', lineHeight: 17, fontWeight: '500' },
+
+  // Builder
+  builderInput: { backgroundColor: C.surface, borderWidth: 2, borderColor: C.border, borderRadius: 12, padding: 14, fontSize: 14, lineHeight: 21, color: C.text, minHeight: 100, marginVertical: 10, textAlignVertical: 'top' },
+  builderExample: { backgroundColor: C.card2, borderLeftWidth: 3, borderLeftColor: C.tealLight, borderTopRightRadius: 10, borderBottomRightRadius: 10, paddingHorizontal: 16, paddingVertical: 12, marginBottom: 12 },
+  builderExampleText: { fontSize: 13, color: C.muted, lineHeight: 20, fontStyle: 'italic' },
+  builderExampleLabel: { color: C.tealLight, fontWeight: '700', fontStyle: 'normal' },
+
+  // Sprint
+  sprintBox: { backgroundColor: '#041520', borderWidth: 2, borderColor: C.teal, borderRadius: 16, padding: 22, alignItems: 'center', marginBottom: 12 },
+  sprintInstruction: { textAlign: 'center', marginBottom: 6, fontSize: 13, lineHeight: 20, color: C.muted },
+  timerText: { fontSize: 44, fontWeight: '800', color: C.tealLight, fontVariant: ['tabular-nums'], marginVertical: 8 },
+  timerWarning: { color: C.yellow },
+  timerDanger: { color: C.red },
+
+  // VF & Clasificador
+  vfItem: { marginBottom: 12, backgroundColor: C.card2, borderWidth: 1, borderColor: C.border, borderRadius: 12, padding: 16 },
+  vfStatement: { fontSize: 13, fontWeight: '600', marginBottom: 12, color: C.text, lineHeight: 20 },
+  vfButtons: { flexDirection: 'row', gap: 8 },
+  vfBtn: { flex: 1, paddingVertical: 10, borderRadius: 8, borderWidth: 2, borderColor: C.border, alignItems: 'center', backgroundColor: 'transparent' },
+  vfBtnCorrect: { borderColor: C.green, backgroundColor: C.okBg },
+  vfBtnWrong: { borderColor: C.red, backgroundColor: C.failBg },
+  vfBtnText: { ...typography.bold, fontSize: 12, color: C.muted },
+
+  // Sort
+  sortRow: { flexDirection: 'row', alignItems: 'center', padding: 10, backgroundColor: C.card2, borderRadius: 10, borderWidth: 2, borderColor: C.border, marginBottom: 8 },
+  sortRowWrong: { borderColor: C.red, backgroundColor: C.failBg },
+  sortRowOk: { borderColor: C.green, backgroundColor: C.okBg },
+  sortNum: { width: 26, height: 26, borderRadius: 13, backgroundColor: C.teal, color: '#00252b', textAlign: 'center', lineHeight: 26, fontWeight: '800', fontSize: 12, marginRight: 10, overflow: 'hidden' },
+  sortText: { flex: 1, fontSize: 12, color: C.text, lineHeight: 17 },
+  sortArrows: { flexDirection: 'column', marginLeft: 8 },
+  sortArrow: { fontSize: 14, color: C.tealLight, paddingVertical: 2, paddingHorizontal: 4 },
+  revealBox: { backgroundColor: C.card2, borderRadius: 12, borderWidth: 1, borderColor: C.border, padding: 14, marginTop: 10 },
+  revealLine: { fontSize: 12, color: C.muted, lineHeight: 22 },
+
+  // Botones
+  btn: { backgroundColor: C.teal, padding: 14, borderRadius: 10, alignItems: 'center', marginTop: 12 },
+  btnText: { ...typography.bold, color: '#fff', fontSize: 14 },
+
+  // Completado
+  completionScreen: { alignItems: 'center', paddingVertical: 20 },
+  completionIcon: { fontSize: 64, marginBottom: 12 },
+  completionTitle: { ...typography.extraBold, fontSize: 26, color: C.tealLight, textAlign: 'center', marginBottom: 4 },
+  completionBadge: { ...typography.extraBold, fontSize: 20, color: C.tealLight, marginVertical: 8 },
+  completionText: { ...typography.regular, fontSize: 14, lineHeight: 22, textAlign: 'center', marginBottom: 16, color: C.muted },
+  xpGained: { ...typography.extraBold, fontSize: 34, color: C.text, marginBottom: 16 },
+  statsRow: { flexDirection: 'row', width: '100%', gap: 8, marginBottom: 16 },
+  statItem: { flex: 1, alignItems: 'center', backgroundColor: C.card, borderWidth: 1, borderColor: C.border, borderRadius: 12, paddingVertical: 14, paddingHorizontal: 8 },
+  statNum: { ...typography.extraBold, fontSize: 20, color: C.tealLight },
+  statLbl: { fontSize: 10, color: C.muted, marginTop: 2, textAlign: 'center' },
+  nextLevelBox: { backgroundColor: C.card2, borderRadius: 10, padding: 13, marginBottom: 16, borderWidth: 1, borderColor: C.border, width: '100%' },
+  nextLevelText: { fontSize: 12, color: C.muted, lineHeight: 20 },
+
+  // Footer
+  btnRow: { paddingHorizontal: 13, paddingVertical: 12, borderTopWidth: 1, borderTopColor: C.border, backgroundColor: C.surface },
+  btnRowInner: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+  backBtn: { paddingHorizontal: 16, paddingVertical: 13, borderRadius: 10, backgroundColor: C.card2, borderWidth: 1, borderColor: C.border, minHeight: 48, justifyContent: 'center' },
+  backBtnText: { fontSize: 14, fontWeight: '700', color: C.muted },
+  mainBtn: { padding: 13, borderRadius: 10, backgroundColor: C.teal, alignItems: 'center', minHeight: 48, justifyContent: 'center' },
+  mainBtnDisabled: { opacity: 0.35 },
+  btnNote: { fontSize: 11, color: C.placeholder, textAlign: 'center', marginTop: 5, minHeight: 15 },
 });

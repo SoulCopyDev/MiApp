@@ -1,3 +1,4 @@
+import { exitLevel } from '../../utils/exitLevel';
 import { router } from 'expo-router';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
@@ -98,7 +99,7 @@ export default function World6Level8() {
 
   const handleClose = () => {
     completeLevel(43, 3, 0);
-    router.back();
+    exitLevel({ confirm: false });
   };
 
   return (

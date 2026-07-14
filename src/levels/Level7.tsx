@@ -1,3 +1,4 @@
+import { exitLevel } from '../utils/exitLevel';
 import { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
@@ -317,8 +318,8 @@ export default function World2Level1() {
 
   const handleClose = () => {
     const msg = isExamMode ? 'Estás en una actividad. Si sales perderás el progreso. ¿Seguro?' : '¿Seguro que quieres salir?';
-    if (Platform.OS === 'web') { if (window.confirm(msg)) navigation.goBack(); return; }
-    Alert.alert('Salir', msg, [{ text: 'Cancelar', style: 'cancel' }, { text: 'Salir', style: 'destructive', onPress: () => navigation.goBack() }]);
+    if (Platform.OS === 'web') { if (window.confirm(msg)) exitLevel({ confirm: false }); return; }
+    Alert.alert('Salir', msg, [{ text: 'Cancelar', style: 'cancel' }, { text: 'Salir', style: 'destructive', onPress: () => exitLevel({ confirm: false }) }]);
   };
 
   const handleFinish = () => {
@@ -327,7 +328,7 @@ export default function World2Level1() {
     else if (xp >= 130) stars = 2;
     else if (xp >= 60) stars = 1;
     completeLevel(7, stars, xp);
-    navigation.goBack();
+    exitLevel({ confirm: false });
   };
 
   // ============ MECÁNICAS ============

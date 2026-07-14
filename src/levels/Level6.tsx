@@ -1,3 +1,4 @@
+import { exitLevel } from '../utils/exitLevel';
 import { router } from 'expo-router';
 import React, { useState, useEffect, useRef } from 'react';
 import {
@@ -325,7 +326,7 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
       if (!canGoBack) {
         Alert.alert('Actividad en curso', 'No puedes salir mientras realizas esta actividad.', [
           { text: 'Cancelar', style: 'cancel' },
-          { text: 'Salir', style: 'destructive', onPress: () => router.back() },
+          { text: 'Salir', style: 'destructive', onPress: () => exitLevel({ confirm: false }) },
         ]);
         return true;
       }
@@ -410,13 +411,13 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
   const handleClose = () => {
     if (Platform.OS === 'web') {
       if (!canGoBack) { window.alert('Actividad en curso. Completa la actividad antes de salir.'); return; }
-      if (window.confirm('¿Seguro que quieres salir del nivel?')) router.back();
+      if (window.confirm('¿Seguro que quieres salir del nivel?')) exitLevel({ confirm: false });
       return;
     }
     if (!canGoBack) { Alert.alert('Actividad en curso', 'Completa la actividad antes de salir.', [{ text: 'OK' }]); return; }
     Alert.alert('Salir', '¿Seguro que quieres salir del nivel?', [
       { text: 'Cancelar', style: 'cancel' },
-      { text: 'Salir', onPress: () => router.back() },
+      { text: 'Salir', onPress: () => exitLevel({ confirm: false }) },
     ]);
   };
 
