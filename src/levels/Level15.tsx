@@ -1,665 +1,1046 @@
-import { exitLevel } from '../utils/exitLevel';
-import { router } from 'expo-router';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type ReactNode } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
-  Alert, BackHandler,
+  View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet,
+  Alert, BackHandler, Vibration, Platform,
 } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { useGameStore } from '../store/gameStore';
-import { colors, typography } from '../theme';
+import { typography } from '../theme';
+import { exitLevel } from '../utils/exitLevel';
 import XPToast from '../components/XPToast';
 
-// ---------- Tipos ----------
-type ModuleData = {
-  type: 'theory' | 'quiz' | 'matching' | 'builder' | 'vf' | 'classify3ext' | 'sprint' | 'dragdrop' | 'completion';
-  title: string;
-  xp: number;
-  q?: string;
-  opts?: string[];
-  correct?: number;
-  fb?: string;
-  pairs?: { a: string; b: string }[];
-  items?: { s?: string; text?: string; correct: boolean | string; fb: string }[];
-  instruction?: string;
-  duration?: number;
-  placeholder?: string;
-  zones?: string[];
-  correctMap?: { [key: string]: number };
+// ===================== PALETA (hex exactos del HTML nivel-15, tema oscuro dorado M3) =====================
+const C = {
+  bg: '#0f0800', surface: '#1a1100', card: '#241700', card2: '#2e1d00',
+  text: '#fef9ed', muted: '#c9a84c', border: '#3d2800',
+  gold: '#f59e0b', goldLight: '#fcd34d', warm: '#fbbf24', amber: '#d97706', orange: '#ea580c',
+  green: '#22c55e', okBg: '#052e16', okBorder: '#16a34a', okText: '#86efac',
+  red: '#ef4444', failBg: '#2d0707', failBorder: '#dc2626', failText: '#fca5a5',
+  yellow: '#fbbf24',
+  placeholder: '#7a5f28',
 };
 
-// ---------- Datos de módulos ----------
-const MODULES: ModuleData[] = [
-  // 0 INTRO
-  { type: 'theory', title: 'Introducción', xp: 0 },
-  // 1 THEORY: cómo funciona
-  { type: 'theory', title: '¿Cómo funciona?', xp: 10 },
-  // 2 MATCHING
-  { type: 'matching', title: 'Sora, Runway y Pika', xp: 15,
-    pairs: [
-      { a: '🎬 Sora (OpenAI)', b: 'Genera videos de hasta 60s desde texto con calidad cinematográfica' },
-      { a: '✂️ Runway ML', b: 'Especialista en edición: elimina fondos, añade efectos especiales con IA' },
-      { a: '🎥 Pika Labs', b: 'Anima imágenes estáticas y crea cortos artísticos animados' },
-      { a: '🇨🇳 Kling AI', b: 'Genera videos ultra realistas, fuerte en movimientos de personas' }
-    ] },
-  // 3 BUILDER
-  { type: 'builder', title: 'Tu primer prompt de video', xp: 15 },
-  // 4 THEORY: publicidad
-  { type: 'theory', title: 'Video IA en publicidad', xp: 10 },
-  // 5 REFLEXIÓN
-  { type: 'builder', title: '¿Es arte un video de IA?', xp: 10 },
-  // 6 VF: deepfakes
-  { type: 'vf', title: 'Verdadero o Falso: deepfakes', xp: 15,
-    items: [
-      { s: 'Un deepfake de video siempre se puede detectar fácilmente porque la imagen se ve borrosa.', correct: false, fb: 'FALSO. Los deepfakes modernos son extremadamente convincentes.' },
-      { s: 'Los deepfakes de video solo pueden hacer que una persona diga cosas que nunca dijo.', correct: false, fb: 'FALSO. Pueden cambiar apariencia física, voz, contexto del video y más.' },
-      { s: 'Existen leyes en varios países que hacen ilegal crear deepfakes de personas sin su permiso.', correct: true, fb: 'VERDADERO. EE.UU., Reino Unido, Australia y la UE tienen leyes contra deepfakes no consentidos.' }
-    ] },
-  // 7 CLASSIFY
-  { type: 'classify3ext', title: '¿Real o generado por IA?', xp: 15,
-    instruction: 'Identifica si cada señal es REAL (sí existe) o FALSA (no es confiable):',
-    items: [
-      { text: 'Los movimientos de los ojos son demasiado perfectos o los parpadeos no ocurren en momentos naturales', correct: 'real', fb: '✅ Señal real. Las IAs de video frecuentemente fallan con parpadeos y movimientos oculares.' },
-      { text: 'El video tiene colores muy brillantes y vivos (la IA siempre genera colores brillantes)', correct: 'falsa', fb: 'No es una señal confiable. Los videos de IA pueden tener cualquier paleta de colores.' },
-      { text: 'Las manos de las personas en el video se ven extrañas, con demasiados o pocos dedos', correct: 'real', fb: '✅ Señal real. Al igual que en imágenes, las IAs tienen problemas con las manos.' },
-      { text: 'El fondo del video es perfectamente estático sin ningún elemento que se mueva', correct: 'real', fb: '✅ Señal real. Algunos modelos generan fondos estáticos cuando en la realidad tendrían movimiento.' }
-    ] },
-  // 8 QUIZ
-  { type: 'quiz', title: 'IA en las noticias', xp: 10,
-    q: 'Un periódico publica un video de un político haciendo declaraciones polémicas. Antes de compartirlo, ¿cuál es la acción más inteligente?',
-    opts: ['Compartirlo inmediatamente porque parece muy real', 'Verificar la fuente original, buscar en medios de confianza, y usar herramientas de detección de deepfakes antes de compartir', 'Solo compartirlo si tiene más de 1 millón de vistas', 'Preguntarle a la IA si el video es falso o real'],
-    correct: 1, fb: '¡Exacto! Verificar antes de compartir. Los deepfakes de políticos ya han causado crisis reales en elecciones de varios países.' },
-  // 9 THEORY: animación
-  { type: 'theory', title: 'Anima lo que quieras', xp: 10 },
-  // 10 QUIZ
-  { type: 'quiz', title: 'Hollywood y la IA', xp: 15,
-    q: '¿Para qué usa Hollywood principalmente la IA de video en este momento?',
-    opts: ['Para eliminar completamente a los actores humanos', 'Para generar concept videos y previzualización de escenas antes de filmarlas, y añadir efectos en post-producción', 'Para crear películas completas sin ningún ser humano', 'Solo para anuncios publicitarios'],
-    correct: 1, fb: '¡Correcto! Hollywood usa la IA como herramienta creativa de apoyo: visualizar escenas y mejorar efectos especiales.' },
-  // 11 SPRINT
-  { type: 'sprint', title: 'Sprint: tu cortometraje', xp: 20, duration: 90,
-    instruction: '🎬 ¡90 segundos! Escribe las 3 escenas de un cortometraje de 30 segundos.',
-    placeholder: 'Escena 1 (0-10s): ...\nEscena 2 (10-20s): ...\nEscena 3 (20-30s): ...' },
-  // 12 BUILDER
-  { type: 'builder', title: 'El director de IA', xp: 15 },
-  // 13 THEORY: copyright
-  { type: 'theory', title: '¿A quién pertenece?', xp: 10 },
-  // 14 QUIZ
-  { type: 'quiz', title: 'El pipeline completo', xp: 15,
-    q: 'Valentina quiere crear un video para su proyecto escolar: animación, narración con su voz, y música de fondo. ¿Cuál es el pipeline correcto?',
-    opts: ['Solo ChatGPT puede hacer todo eso', 'Pika/Runway para video → ElevenLabs para narración → Suno para música → unirlos en editor', 'Solo se puede con equipos profesionales', 'Midjourney primero, luego convertir manualmente'],
-    correct: 1, fb: '¡Exacto! IA de video + IA de voz + IA de música = producción audiovisual completa con herramientas accesibles.' },
-  // 15 DRAG DROP
-  { type: 'dragdrop', title: '¿Gratis o de pago?', xp: 15,
-    instruction: 'Clasifica estas herramientas según su modelo de acceso:',
-    zones: ['🆓 Gratis / Plan gratuito', '💰 Solo de pago / Limitado'],
-    items: [
-      { text: 'Pika Labs — plan gratuito limitado', correct: '0', fb: 'Pika Labs ofrece un plan gratuito limitado.' },
-      { text: 'Sora Pro — acceso de pago ($20/mes)', correct: '1', fb: 'Sora Pro requiere suscripción de pago.' },
-      { text: 'CapCut AI — gratuito con funciones de IA', correct: '0', fb: 'CapCut incluye funciones de IA en su plan gratuito.' },
-      { text: 'Runway Pro — plan de pago profesional', correct: '1', fb: 'Runway Pro es un plan de pago orientado a uso profesional.' },
-      { text: 'Luma Dream Machine — plan gratuito básico', correct: '0', fb: 'Luma Dream Machine tiene plan gratuito básico.' },
-      { text: 'Adobe Firefly Video — requiere suscripción Adobe', correct: '1', fb: 'Firefly Video requiere una suscripción de Adobe.' }
-    ] },
-  // 16 VF
-  { type: 'vf', title: '¿Qué puede y qué no?', xp: 15,
-    items: [
-      { s: 'Las IAs de video de 2024 pueden generar perfectamente cualquier texto escrito dentro del video.', correct: false, fb: 'FALSO. Las IAs de video tienen grandes dificultades generando texto legible dentro del video.' },
-      { s: 'Una IA de video puede generar escenas con física perfectamente realista.', correct: false, fb: 'FALSO. La física es uno de los mayores desafíos. A veces el agua "flota" o las sombras no coinciden.' },
-      { s: 'Es posible generar un video de 5 segundos con IA desde texto en menos de 2 minutos.', correct: true, fb: 'VERDADERO. Herramientas como Pika y Luma generan clips cortos en 1-3 minutos.' }
-    ] },
-  // 17 REFLEXIÓN
-  { type: 'builder', title: 'El futuro del cine', xp: 15 },
-  // 18 QUIZ
-  { type: 'quiz', title: 'Quiz final de video', xp: 20,
-    q: 'Tomás en Argentina quiere hacer un video corto para historia, animando imágenes de la época colonial. Presupuesto cero. ¿Mejor opción?',
-    opts: ['Contratar una productora profesional', 'Usar Pika Labs o Luma (plan gratuito) para animar imágenes y CapCut AI para editar', 'Esperar 5 años hasta que sea gratuito', 'Solo es posible con Adobe Premiere'],
-    correct: 1, fb: '¡Perfecto! Pika y Luma tienen planes gratuitos para proyectos escolares. CapCut también es gratuito.' },
-  // 19 REFLEXIÓN FINAL
-  { type: 'builder', title: 'Reflexión de cierre', xp: 15 },
-  // 20 COMPLETION
-  { type: 'completion', title: '¡Nivel completado!', xp: 0 }
+// ===================== HELPERS =====================
+const normalize = (s: string) =>
+  s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+
+function looksRandom(text: string): boolean {
+  const words = normalize(text).split(/\s+/).filter(w => w.length > 0);
+  if (words.length === 0) return true;
+  const noVowels = words.filter(w => w.length >= 4 && !/[aeiou]/.test(w));
+  if (noVowels.length >= Math.max(1, Math.floor(words.length / 2))) return true;
+  if (words.length >= 4) {
+    const unique = new Set(words);
+    if (unique.size / words.length < 0.5) return true;
+  }
+  return false;
+}
+
+function containsTopic(text: string, terms: string[]): boolean {
+  const t = normalize(text);
+  return terms.some(term =>
+    term.length <= 3 ? new RegExp(`\\b${term}\\b`).test(t) : t.includes(term)
+  );
+}
+
+const VIDEO_TERMS = ['video', 'escena', 'camara', 'plano', 'personaje', 'accion', 'mueve', 'movimiento', 'estilo', 'segundos', 'zoom', 'paneo', 'cinematic', 'cinematico', 'realista', 'animacion', 'luz', 'graba', 'guion', 'dialogo', 'musica', 'mensaje', 'corto', 'pelicula'];
+const REFLECT_TERMS = ['ia', 'video', 'arte', 'artista', 'artistas', 'cine', 'pelicula', 'peliculas', 'actor', 'actores', 'deepfake', 'copyright', 'derechos', 'futuro', 'tecnologia', 'creativ', 'creatividad', 'humano', 'humanos', 'opinion', 'pienso', 'creo', 'emociona', 'preocupa', 'sorprend', 'proyecto', 'peligro', 'peligroso'];
+
+function shuffle<T>(arr: T[]): T[] {
+  const a = arr.slice();
+  for (let j = a.length - 1; j > 0; j--) {
+    const k = Math.floor(Math.random() * (j + 1));
+    [a[j], a[k]] = [a[k], a[j]];
+  }
+  return a;
+}
+function shuffleOpts<T extends { options: string[]; correct: number }>(q: T): T {
+  const paired = q.options.map((opt, i) => ({ opt, isCorrect: i === q.correct }));
+  const sh = shuffle(paired);
+  return { ...q, options: sh.map(p => p.opt), correct: sh.findIndex(p => p.isCorrect) };
+}
+
+// ===================== DATOS (fieles al HTML nivel-15) =====================
+type QuizMod = { title: string; question: string; options: string[]; correct: number; feedback: string };
+
+// Quizzes con opciones balanceadas en longitud (la correcta no debe ser la más larga)
+const QUIZZES: Record<number, QuizMod> = {
+  8: {
+    title: 'IA en las noticias',
+    question: 'Un periódico en India publica un video que supuestamente muestra a un político haciendo declaraciones polémicas. Antes de compartirlo, ¿cuál es la acción más inteligente?',
+    options: [
+      'Compartirlo de inmediato con todos tus contactos porque el video parece muy real',
+      'Verificar la fuente original y buscar el video en medios de confianza antes de compartir',
+      'Compartirlo solo si ya tiene más de un millón de reproducciones en internet',
+      'Preguntarle a un chatbot de IA si cree que el video es verdadero o falso',
+    ],
+    correct: 1,
+    feedback: 'Esta es la regla de oro del periodismo digital: verificar antes de compartir. Los deepfakes de políticos ya han causado crisis reales en elecciones de varios países de Asia y África.',
+  },
+  10: {
+    title: 'Hollywood y la IA',
+    question: '¿Para qué usa Hollywood principalmente la IA de video en este momento (no para reemplazar actores completos)?',
+    options: [
+      'Para eliminar por completo a los actores humanos y ahorrar dinero en sus salarios',
+      'Para previsualizar escenas antes de filmarlas y mejorar los efectos en la post-producción',
+      'Para crear películas enteras sin que ningún ser humano participe en el proceso',
+      'Solo para anuncios de publicidad en televisión, nunca para películas de cine',
+    ],
+    correct: 1,
+    feedback: 'Por ahora, Hollywood usa la IA como herramienta creativa de apoyo: visualizar escenas antes de filmarlas y mejorar efectos especiales. Los actores humanos siguen siendo esenciales para la actuación principal.',
+  },
+  14: {
+    title: 'El pipeline completo',
+    question: 'Valentina quiere crear un video completo para su proyecto escolar: necesita un video animado, una narración con su voz y música de fondo. ¿Cuál es el pipeline correcto de herramientas de IA?',
+    options: [
+      'Solo ChatGPT puede encargarse del video, la narración y la música, todo al mismo tiempo',
+      'Pika o Runway para el video, ElevenLabs para la voz y Suno para la música',
+      'Únicamente se puede lograr contratando a un equipo profesional de producción audiovisual',
+      'Usar Midjourney primero y luego ir convirtiendo todas las imágenes a video a mano',
+    ],
+    correct: 1,
+    feedback: 'Este es el flujo de trabajo real que usan los creadores hoy: IA de video + IA de voz + IA de música = una producción audiovisual completa con herramientas accesibles para cualquiera.',
+  },
+  18: {
+    title: 'Quiz final de video',
+    question: 'Tomás en Argentina quiere hacer un video corto para el proyecto de historia de su colegio, animando imágenes de la época colonial. Tiene presupuesto cero. ¿Cuál es la mejor opción?',
+    options: [
+      'Contratar a una productora de video profesional para que haga todo el proyecto completo',
+      'Usar Pika o Luma (plan gratuito) para animar las imágenes y editarlas en CapCut',
+      'Esperar unos cinco años hasta que la IA de video sea totalmente gratuita para todos',
+      'Hacerlo únicamente con software profesional de pago, como Adobe Premiere Pro',
+    ],
+    correct: 1,
+    feedback: 'Pika y Luma tienen planes gratuitos suficientes para proyectos escolares. Con CapCut (también gratuito) puede editar, añadir texto y música. ¡Tomás puede hacer un video increíble sin gastar un peso!',
+  },
+};
+
+// Módulo 2 · Matching
+const MATCH_PAIRS = [
+  { left: '🎬 Sora (OpenAI)', right: 'Genera videos de hasta 60s desde texto con calidad cinematográfica' },
+  { left: '✂️ Runway ML', right: 'Especialista en edición: quita fondos y añade efectos especiales con IA' },
+  { left: '🎥 Pika Labs', right: 'Anima imágenes estáticas y crea cortos artísticos animados' },
+  { left: '🇨🇳 Kling AI', right: 'Genera videos ultra realistas, fuerte en movimientos de personas' },
 ];
 
-const TOTAL_STEPS = MODULES.length;
+// Módulo 6 · Verdadero/Falso (deepfakes)
+const VF_ITEMS_1 = [
+  { text: 'Un deepfake de video siempre se puede detectar fácilmente porque la imagen se ve borrosa.', correct: false, feedback: 'FALSO. Los deepfakes modernos son extremadamente convincentes. Los mejores modelos pueden crear videos falsos que la mayoría de personas no distingue de lo real.' },
+  { text: 'Los deepfakes de video solo pueden hacer que una persona diga cosas que nunca dijo.', correct: false, feedback: 'FALSO. Los deepfakes pueden cambiar la apariencia física, la voz, el contexto del video y más. No solo las palabras.' },
+  { text: 'Existen leyes en varios países que hacen ilegal crear deepfakes de personas sin su permiso.', correct: true, feedback: 'VERDADERO. EE.UU., Reino Unido, Australia y la Unión Europea tienen leyes contra los deepfakes no consentidos, especialmente los de desinformación.' },
+];
 
-export default function World3Level3() {
+// Módulo 7 · Detector (señal real / no confiable)
+const CLASSIFY_ITEMS = [
+  { text: 'Los ojos se mueven de forma demasiado perfecta o los parpadeos no ocurren en momentos naturales', correct: 'real', feedback: '✅ Señal real. Los videos de IA de personas frecuentemente fallan con el parpadeo y los movimientos oculares.' },
+  { text: 'El video tiene colores muy brillantes y vivos (la IA siempre genera colores brillantes)', correct: 'falsa', feedback: 'No es confiable. Los colores brillantes también aparecen en videos reales editados; la IA puede tener cualquier paleta.' },
+  { text: 'Las manos de las personas se ven extrañas, con demasiados o muy pocos dedos', correct: 'real', feedback: '✅ Señal real. Igual que en imágenes, las IA de video tienen problemas con las manos. Es de las señales más confiables.' },
+  { text: 'El fondo del video es perfectamente estático, sin ningún elemento que se mueva', correct: 'real', feedback: '✅ Señal real. Algunos modelos generan fondos estáticos aunque en una escena real habría movimiento (hojas, nubes...).' },
+];
+
+// Módulo 16 · Verdadero/Falso (límites)
+const VF_ITEMS_2 = [
+  { text: 'Las IA de video de hoy pueden generar perfectamente cualquier texto escrito dentro del video.', correct: false, feedback: 'FALSO. Igual que con imágenes, las IA de video tienen grandes dificultades generando texto legible dentro del video. Es uno de sus límites más evidentes.' },
+  { text: 'Una IA de video puede generar escenas con física perfectamente realista (agua que cae, fuego que arde bien).', correct: false, feedback: 'FALSO. La física es uno de los mayores desafíos. A veces el agua "flota", las sombras no coinciden o los objetos se comportan de forma imposible.' },
+  { text: 'Es posible generar un video de 5 segundos con IA desde texto en menos de 2 minutos.', correct: true, feedback: 'VERDADERO. Herramientas como Pika y Luma Dream Machine generan clips cortos en 1-3 minutos con hardware estándar en la nube.' },
+];
+
+// Módulo 15 · Drag & drop (gratis vs de pago). zone 0 = gratis, 1 = pago.
+const DD_ITEMS: { text: string; zone: 0 | 1; why: string }[] = [
+  { text: 'Pika Labs — plan gratuito limitado', zone: 0, why: 'Pika ofrece un plan gratuito (con límites) para empezar.' },
+  { text: 'Sora Pro — acceso de pago ($20/mes)', zone: 1, why: 'Sora Pro requiere una suscripción de pago mensual.' },
+  { text: 'CapCut AI — gratuito con funciones de IA', zone: 0, why: 'CapCut incluye funciones de IA en su plan gratuito.' },
+  { text: 'Runway Pro — plan de pago profesional', zone: 1, why: 'Runway Pro es un plan de pago para uso profesional.' },
+  { text: 'Luma Dream Machine — plan gratuito básico', zone: 0, why: 'Luma Dream Machine tiene un plan gratuito básico.' },
+  { text: 'Adobe Firefly Video — requiere suscripción Adobe', zone: 1, why: 'Firefly Video necesita una suscripción de Adobe.' },
+];
+const DD_ZONES = ['🆓 Gratis / Plan gratuito disponible', '💰 Solo de pago / Muy limitado gratis'];
+
+// Builders y reflexiones
+const BUILDERS: Record<number, { icon: string; label: string; title: string; intro: string; box: string; example?: string; outro?: string; placeholder: string; fb: string; terms: string[]; topicMsg: string }> = {
+  3: {
+    icon: '✏️', label: 'Constructor', title: 'Escribe el guión de tu escena',
+    intro: 'Un buen prompt de video necesita más elementos que uno de imagen. La clave: el movimiento debe ser claro.',
+    box: '🎭 Personaje/sujeto: ¿quién o qué aparece?\n🎬 Acción: ¿qué hace? ¿cómo se mueve?\n🌍 Escenario: ¿dónde ocurre?\n🎨 Estilo visual: ¿realista? ¿animación? ¿cinemático?\n⏱️ Duración: ¿cuántos segundos?\n🎥 Movimiento de cámara: ¿zoom? ¿paneo? ¿vuelo?',
+    example: '"Una joven estudiante de Nigeria corriendo en cámara lenta por un mercado colorido de Lagos, luz cálida de atardecer, la cámara la sigue desde atrás, 8 segundos, estilo documental artístico"',
+    placeholder: 'Escribe tu prompt de video: personaje + acción + escenario + estilo + movimiento de cámara...',
+    fb: '🎬 ¡Ese prompt tiene todos los elementos! Un director de cine de IA trabajaría muy bien con esta descripción.',
+    terms: VIDEO_TERMS, topicMsg: 'Describe una escena de video: personaje, acción, escenario, estilo o movimiento de cámara.',
+  },
+  5: {
+    icon: '💭', label: 'Reflexión', title: 'La pregunta del millón',
+    intro: 'En 2024, el video musical "The Hardest Part" de Washed Out fue el primer video de un artista importante hecho completamente con IA (usando Sora). Fue nominado a premios de innovación y criticado por animadores.',
+    box: '🤔 ¿Quién es el "artista": quien escribe el prompt o la IA que lo genera?\n🎬 ¿Puede una IA "sentir" lo que quiere expresar artísticamente?\n⚖️ ¿Es justo que una IA compita con animadores que estudian años su oficio?',
+    placeholder: '¿Crees que un video creado con IA es arte verdadero? ¿Por qué sí o por qué no?',
+    fb: '💭 ¡Tu reflexión toca aspectos muy importantes! Filósofos, artistas y tecnólogos debaten esto exactamente ahora mismo.',
+    terms: REFLECT_TERMS, topicMsg: 'Habla del tema: si el video con IA es arte, el papel del artista, los animadores o la creatividad.',
+  },
+  12: {
+    icon: '🎬', label: 'Constructor', title: 'Crea tu guión de 30 segundos',
+    intro: 'Ahora vas a ser director de cine. Escribe el guión detallado para un cortometraje de 30 segundos usando IA. Incluye:',
+    box: '🎬 Escena: descripción visual detallada\n💬 Diálogo (si hay): lo que dicen los personajes\n🎨 Estilo visual: realista, anime, documental, ciencia ficción...\n🎵 Música/sonido: ¿qué se escucha?\n📌 Mensaje: ¿qué quieres que sienta el espectador?',
+    example: '"Un niño de 8 años en Cartagena ve un mural enorme de mariposas. Se detiene. Las mariposas cobran vida y vuelan. El niño sonríe. Estilo realista-mágico. Música: marimba suave. Mensaje: la magia existe en lo cotidiano."',
+    placeholder: 'Escribe tu guión de 30 segundos: escena + diálogo + estilo + música + mensaje...',
+    fb: '🎬 ¡Ese guión tiene potencial! Escena clara, estilo definido y un mensaje. Con Sora o Runway podrías verlo hecho video en minutos.',
+    terms: VIDEO_TERMS, topicMsg: 'Escribe un guión: escena, estilo, música o mensaje de tu cortometraje.',
+  },
+  17: {
+    icon: '🔮', label: 'Reflexión', title: '¿Cine sin actores en 10 años?',
+    intro: 'SAG-AFTRA (el sindicato de actores de Hollywood) negoció en 2023 acuerdos para proteger a los actores del uso de IA. Pero la tecnología avanza más rápido que las leyes.',
+    box: '🎬 ¿Querrías ver una película donde todos los "actores" son generados por IA?\n👤 ¿Perdería algo especial una actuación si no hay un ser humano real detrás?\n💼 ¿Qué crees que deberían hacer actores, directores y guionistas para adaptarse?',
+    placeholder: '¿Cómo imaginas el cine y la televisión en 2035 con la IA de video?',
+    fb: '🎬 ¡Tu visión del futuro del cine muestra que piensas en las implicaciones humanas de la tecnología! Eso es lo que hacen los mejores innovadores.',
+    terms: REFLECT_TERMS, topicMsg: 'Habla del futuro del cine: actores, películas, la IA de video o cómo adaptarse.',
+  },
+  19: {
+    icon: '💭', label: 'Reflexión final', title: 'Tú y el video con IA',
+    intro: 'Has recorrido un mundo increíble: cómo funciona el video de IA, deepfakes, copyright, herramientas y el futuro del cine. Ahora te preguntamos:',
+    box: '🎬 ¿Qué proyecto de video con IA harías hoy si tuvieras acceso a Sora?\n✨ ¿Qué fue lo que más te sorprendió de este nivel?\n⚖️ ¿El video de IA hace el mundo más interesante o más peligroso?',
+    placeholder: 'Escribe tu reflexión final sobre la IA que filma...',
+    fb: '🎬 ¡Esa reflexión demuestra que eres un pensador crítico sobre la tecnología! Esa mezcla de creatividad y pensamiento crítico es justo lo que el mundo necesita.',
+    terms: REFLECT_TERMS, topicMsg: 'Comparte tu reflexión: qué proyecto harías, qué te sorprendió, o si el video con IA es más interesante o peligroso.',
+  },
+};
+
+// XP por módulo (campo xp real del HTML). Suma real = 265 (el header del HTML decía 250 — el conteo real manda)
+const MODULE_XP: number[] = [0, 10, 15, 15, 10, 10, 15, 15, 10, 10, 15, 20, 15, 10, 15, 15, 15, 15, 20, 15, 0];
+const MAX_XP = MODULE_XP.reduce((a, b) => a + b, 0); // 265
+const TOTAL_STEPS = 21;   // 0=intro … 20=completado
+const CONTENT_STEPS = 19; // módulos de contenido (1..19)
+const SPRINT_DURATION = 90;
+
+export default function Level15() {
   const completeLevel = useGameStore(s => s.completeLevel);
+  const devMode = useGameStore(s => s.devMode);
 
-  const [current, setCurrent] = useState(0);
+  const [step, setStep] = useState(0);
   const [xp, setXp] = useState(0);
   const [xpToast, setXpToast] = useState<{ amount: number; id: number } | null>(null);
-  const [correctAnswers, setCorrectAnswers] = useState(0);
+  const [correctCount, setCorrectCount] = useState(0);
+  const awardedSteps = useRef<Set<number>>(new Set());
 
-  // Quiz
-  const [quizSelected, setQuizSelected] = useState<number | null>(null);
-  const [quizDone, setQuizDone] = useState(false);
+  // Quizzes con opciones barajadas (la correcta no debe tener posición fija)
+  const [quizzes] = useState<Record<number, QuizMod>>(() => {
+    const out: Record<number, QuizMod> = {};
+    Object.entries(QUIZZES).forEach(([k, q]) => { out[Number(k)] = shuffleOpts(q); });
+    return out;
+  });
+  const [quizSel, setQuizSel] = useState<number | null>(null);
 
   // Matching
-  const [matchSel, setMatchSel] = useState<number | null>(null);
-  const [matchedLeft, setMatchedLeft] = useState<Set<number>>(new Set());
-  const [matchedRight, setMatchedRight] = useState<Set<number>>(new Set());
-  const [rightOrder] = useState(() => {
-    if (MODULES[2]?.pairs) {
-      return MODULES[2].pairs.map(p => p.b).sort(() => Math.random() - 0.5);
-    }
-    return [];
-  });
+  const [selectedLeft, setSelectedLeft] = useState<number | null>(null);
+  const [matched, setMatched] = useState<Set<number>>(new Set());
+  const [wrongFlash, setWrongFlash] = useState<{ left: number; right: number } | null>(null);
+  const [shuffledRight] = useState(() => shuffle(MATCH_PAIRS.map((p, i) => ({ idx: i, text: p.right }))));
 
-  // Builder
+  // Builders (dos fases: confirmar → continuar)
   const [builderText, setBuilderText] = useState('');
   const [builderDone, setBuilderDone] = useState(false);
+  const [builderError, setBuilderError] = useState<string | null>(null);
 
-  // VF / Classify
-  const [vfAnswers, setVfAnswers] = useState<{ [key: number]: boolean | string }>({});
-  const [vfLocked, setVfLocked] = useState<Set<number>>(new Set());
+  // VF (6, 16) y Classify (7)
+  const [vf1Answers, setVf1Answers] = useState<Record<number, boolean>>({});
+  const [vf2Answers, setVf2Answers] = useState<Record<number, boolean>>({});
+  const [c3Answers, setC3Answers] = useState<Record<number, string>>({});
 
   // Sprint
-  const [sprintRunning, setSprintRunning] = useState(false);
-  const [sprintSec, setSprintSec] = useState(0);
+  const [sprintPhase, setSprintPhase] = useState<'idle' | 'running' | 'done'>('idle');
+  const [sprintSec, setSprintSec] = useState(SPRINT_DURATION);
   const [sprintText, setSprintText] = useState('');
-  const [sprintDone, setSprintDone] = useState(false);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const [sprintValid, setSprintValid] = useState(false);
 
-  // Drag drop
-  const [ddPlaced, setDdPlaced] = useState<{ [key: number]: number }>({});
+  // Drag & drop (array fijo + mapa placed con índice ORIGINAL)
+  const [ddPlaced, setDdPlaced] = useState<{ [idx: number]: 0 | 1 }>({});
   const [ddSel, setDdSel] = useState<number | null>(null);
-  const ddItems = MODULES[15]?.items || [];
+  const [ddOverZone, setDdOverZone] = useState<0 | 1 | null>(null);
+  const [ddChecked, setDdChecked] = useState(false);
+  const [ddSolved, setDdSolved] = useState(false);
+  const ddPlacedRef = useRef(ddPlaced);
+  useEffect(() => { ddPlacedRef.current = ddPlaced; }, [ddPlaced]);
+  const ddIdxRef = useRef<number | null>(null);
+  const ddAllPlaced = DD_ITEMS.every((_, i) => ddPlaced[i] !== undefined);
 
-  const theorySteps = new Set([0, 1, 4, 9, 13]);
+  const addXP = (amount: number) => {
+    if (amount <= 0) return;
+    setXp(p => p + amount);
+    setXpToast(prev => ({ amount, id: (prev?.id ?? 0) + 1 }));
+  };
+  // XP del módulo actual, una sola vez (evita re-otorgar al volver con "Volver")
+  const awardStep = (amount: number, countCorrect = true) => {
+    if (awardedSteps.current.has(step)) return;
+    awardedSteps.current.add(step);
+    addXP(amount);
+    if (countCorrect) setCorrectCount(c => c + 1);
+  };
 
+  // Reset de estados por módulo
   useEffect(() => {
-    const h = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (!theorySteps.has(current)) {
-        Alert.alert('Actividad en curso', 'Completa la actividad antes de salir.');
-        return true;
-      }
-      return false;
-    });
-    return () => h.remove();
-  }, [current]);
+    setQuizSel(null);
+    setSelectedLeft(null);
+    setWrongFlash(null);
+    setBuilderText('');
+    setBuilderDone(false);
+    setBuilderError(null);
+    setVf1Answers({});
+    setVf2Answers({});
+    setC3Answers({});
+    setSprintPhase('idle');
+    setSprintSec(SPRINT_DURATION);
+    setSprintText('');
+  }, [step]);
 
   // Sprint timer
   useEffect(() => {
-    if (!sprintRunning || sprintDone) return;
+    if (sprintPhase !== 'running') return;
     if (sprintSec <= 0) {
-      setSprintDone(true);
-      if (timerRef.current) clearInterval(timerRef.current);
+      const valid = sprintText.trim().length > 25 && !looksRandom(sprintText);
+      setSprintValid(valid);
+      setSprintPhase('done');
+      if (valid) awardStep(MODULE_XP[11]);
       return;
     }
-    timerRef.current = setTimeout(() => setSprintSec(s => s - 1), 1000);
-    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-  }, [sprintRunning, sprintSec, sprintDone]);
+    const t = setTimeout(() => setSprintSec(s => s - 1), 1000);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sprintPhase, sprintSec]);
 
-  const addXP = (v: number) => {
-    setXp(prev => prev + v);
-    if (v > 0) setXpToast((prev) => ({ amount: v, id: (prev?.id ?? 0) + 1 }));
-  };
-  const nextModule = () => {
-    if (current < MODULES.length - 1) {
-      setCurrent(c => c + 1);
-      resetActivityStates();
-    }
-  };
-  const prevModule = () => {
-    if (current > 0) {
-      setCurrent(c => c - 1);
-      resetActivityStates();
-    }
-  };
+  // Módulos puramente informativos (clasificación propia — el THEORY_STEPS del HTML marca mal reflexiones)
+  const theorySteps = new Set([1, 4, 9, 13]);
+  const showBack = theorySteps.has(step);
 
-  const resetActivityStates = () => {
-    setQuizSelected(null); setQuizDone(false);
-    setMatchSel(null); setMatchedLeft(new Set()); setMatchedRight(new Set());
-    setBuilderText(''); setBuilderDone(false);
-    setVfAnswers({}); setVfLocked(new Set());
-    setSprintRunning(false); setSprintSec(0); setSprintText(''); setSprintDone(false);
-    if (timerRef.current) clearInterval(timerRef.current);
-    setDdPlaced({}); setDdSel(null);
-  };
-
-  // Quiz
-  const answerQuiz = (idx: number) => {
-    if (quizDone) return;
-    setQuizSelected(idx);
-    setQuizDone(true);
-    const m = MODULES[current];
-    if (idx === m.correct) {
-      setCorrectAnswers(c => c + 1);
-      addXP(m.xp);
-    }
-  };
-
-  // Matching
-  const handleMatchLeft = (idx: number) => {
-    if (matchedLeft.has(idx)) return;
-    setMatchSel(idx);
-  };
-  const handleMatchRight = (ri: number) => {
-    if (matchSel === null || matchedRight.has(ri)) return;
-    const m = MODULES[current];
-    const correctRight = m.pairs![matchSel].b;
-    if (rightOrder[ri] === correctRight) {
-      setMatchedLeft(prev => new Set(prev).add(matchSel));
-      setMatchedRight(prev => new Set(prev).add(ri));
-      setMatchSel(null);
-      if (matchedLeft.size + 1 >= m.pairs!.length) {
-        setCorrectAnswers(c => c + 1);
-        addXP(m.xp);
-        Alert.alert('✅', '¡Todos los pares conectados!');
+  // Hardware back (Android)
+  useEffect(() => {
+    const onBack = () => {
+      if (showBack && step > 0) { setStep(s => s - 1); return true; }
+      if (step > 0 && step < TOTAL_STEPS - 1) {
+        Alert.alert('Módulo en curso', 'No puedes regresar durante esta actividad.', [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Salir', style: 'destructive', onPress: () => exitLevel({ confirm: false }) },
+        ]);
+        return true;
       }
+      return false;
+    };
+    const h = BackHandler.addEventListener('hardwareBackPress', onBack);
+    return () => h.remove();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, showBack]);
+
+  // Drag & drop web — soltar en CUALQUIER zona; validar solo al pulsar Verificar
+  useEffect(() => {
+    if (Platform.OS !== 'web' || step !== 15 || ddSolved) return;
+    const cleanups: (() => void)[] = [];
+    const setup = () => {
+      DD_ITEMS.forEach((_, idx) => {
+        if (ddPlacedRef.current[idx] !== undefined) return;
+        const el = document.getElementById(`dd15-chip-${idx}`);
+        if (!el) return;
+        el.setAttribute('draggable', 'true');
+        (el as HTMLElement).style.cursor = 'grab';
+        const onDragStart = (e: DragEvent) => { ddIdxRef.current = idx; setDdSel(null); if (e.dataTransfer) { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(idx)); } };
+        const onDragEnd = () => { ddIdxRef.current = null; setDdOverZone(null); };
+        el.addEventListener('dragstart', onDragStart);
+        el.addEventListener('dragend', onDragEnd);
+        cleanups.push(() => { el.removeEventListener('dragstart', onDragStart); el.removeEventListener('dragend', onDragEnd); });
+      });
+      ([0, 1] as const).forEach(zone => {
+        const el = document.getElementById(`dd15-zone-${zone}`);
+        if (!el) return;
+        const onOver = (e: Event) => { e.preventDefault(); setDdOverZone(zone); };
+        const onLeave = (e: DragEvent) => { if (!el.contains(e.relatedTarget as Node)) setDdOverZone(null); };
+        const onDrop = (e: Event) => { e.preventDefault(); setDdOverZone(null); const idx = ddIdxRef.current; if (idx === null || ddPlacedRef.current[idx] !== undefined) return; setDdPlaced(p => ({ ...p, [idx]: zone })); ddIdxRef.current = null; };
+        el.addEventListener('dragover', onOver);
+        el.addEventListener('dragleave', onLeave);
+        el.addEventListener('drop', onDrop);
+        cleanups.push(() => { el.removeEventListener('dragover', onOver); el.removeEventListener('dragleave', onLeave); el.removeEventListener('drop', onDrop); });
+      });
+    };
+    const t = setTimeout(setup, 50);
+    return () => { clearTimeout(t); cleanups.forEach(fn => fn()); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, ddPlaced, ddSolved]);
+
+  const next = () => { if (step < TOTAL_STEPS - 1) setStep(s => s + 1); };
+  const prev = () => { if (step > 0) setStep(s => s - 1); };
+
+  const finishLevel = () => {
+    const stars = xp >= 185 ? 3 : xp >= 120 ? 2 : 1;
+    completeLevel(15, stars, xp);
+    router.replace('/level/16');
+  };
+
+  // ---------- Acciones ----------
+  const answerQuiz = (i: number) => {
+    if (quizSel !== null) return;
+    const q = quizzes[step];
+    setQuizSel(i);
+    if (i === q.correct) awardStep(MODULE_XP[step]);
+    if (Platform.OS === 'android') Vibration.vibrate(100);
+  };
+
+  const pressRight = (correctIdx: number, rightPos: number) => {
+    if (selectedLeft === null) return;
+    if (selectedLeft === correctIdx) {
+      const n = new Set(matched);
+      n.add(selectedLeft);
+      setMatched(n);
+      setSelectedLeft(null);
+      if (n.size === MATCH_PAIRS.length) awardStep(MODULE_XP[2]);
     } else {
-      Alert.alert('❌', 'Ese no es el par correcto. Intenta de nuevo.');
-      setMatchSel(null);
+      const l = selectedLeft;
+      setWrongFlash({ left: l, right: rightPos });
+      setTimeout(() => { setWrongFlash(null); setSelectedLeft(null); }, 600);
     }
   };
 
-  // Builder
-  const handleBuilderNext = () => {
-    if (builderText.trim().length > 15 && !builderDone) {
-      setBuilderDone(true);
-      const m = MODULES[current];
-      setCorrectAnswers(c => c + 1);
-      addXP(m.xp);
-    }
+  const confirmBuilder = () => {
+    const b = BUILDERS[step];
+    const t = builderText.trim();
+    if (t.length <= 15) { setBuilderError('Escribe un poco más — al menos 16 caracteres.'); return; }
+    if (looksRandom(t)) { setBuilderError('Tu texto parece escrito al azar. Escríbelo con tus propias palabras.'); return; }
+    if (!containsTopic(t, b.terms)) { setBuilderError('⚠️ ' + b.topicMsg); return; }
+    setBuilderError(null);
+    setBuilderDone(true);
+    awardStep(MODULE_XP[step]);
   };
 
-  // VF / Classify
-  const answerVF = (idx: number, answer: boolean | string) => {
-    if (vfLocked.has(idx)) return;
-    setVfLocked(prev => new Set(prev).add(idx));
-    setVfAnswers(prev => ({ ...prev, [idx]: answer }));
-    const m = MODULES[current];
-    const items = m.items || [];
-    if (vfLocked.size + 1 >= items.length) {
-      setCorrectAnswers(c => c + 1);
-      addXP(m.xp);
-    }
+  const answerVf1 = (idx: number, ans: boolean) => {
+    if (vf1Answers[idx] !== undefined) return;
+    const n = { ...vf1Answers, [idx]: ans };
+    setVf1Answers(n);
+    if (Object.keys(n).length === VF_ITEMS_1.length) awardStep(MODULE_XP[6]);
+  };
+  const answerVf2 = (idx: number, ans: boolean) => {
+    if (vf2Answers[idx] !== undefined) return;
+    const n = { ...vf2Answers, [idx]: ans };
+    setVf2Answers(n);
+    if (Object.keys(n).length === VF_ITEMS_2.length) awardStep(MODULE_XP[16]);
+  };
+  const answerC3 = (idx: number, ans: string) => {
+    if (c3Answers[idx] !== undefined) return;
+    const n = { ...c3Answers, [idx]: ans };
+    setC3Answers(n);
+    if (Object.keys(n).length === CLASSIFY_ITEMS.length) awardStep(MODULE_XP[7]);
   };
 
-  // Sprint
-  const startSprint = () => {
-    const m = MODULES[current];
-    setSprintRunning(true);
-    setSprintSec(m.duration || 60);
-    setSprintText('');
-    setSprintDone(false);
-  };
-  const handleSprintNext = () => {
-    if (sprintText.trim().length > 30) {
-      setCorrectAnswers(c => c + 1);
-    }
-    addXP(MODULES[current].xp);
-    nextModule();
+  const submitSprint = () => {
+    if (sprintPhase !== 'running') return;
+    const valid = sprintText.trim().length > 25 && !looksRandom(sprintText);
+    setSprintValid(valid);
+    setSprintPhase('done');
+    if (valid) awardStep(MODULE_XP[11]);
   };
 
-  // Drag drop
-  const handleDdDrop = (zoneIdx: number) => {
-    if (ddSel === null) return;
-    setDdPlaced(prev => ({ ...prev, [ddSel]: zoneIdx }));
+  const ddPlace = (zone: 0 | 1) => {
+    if (ddSel === null || ddPlaced[ddSel] !== undefined || ddSolved) return;
+    setDdPlaced(p => ({ ...p, [ddSel]: zone }));
     setDdSel(null);
   };
-  const removeDdItem = (itemIdx: number) => {
-    setDdPlaced(prev => {
-      const n = { ...prev };
-      delete n[itemIdx];
-      return n;
-    });
+  const ddReturn = (idx: number) => {
+    if (ddSolved) return;
+    setDdChecked(false);
+    setDdPlaced(p => { const n = { ...p }; delete n[idx]; return n; });
   };
-  const checkDrag = () => {
-    const m = MODULES[current];
-    let correct = true;
-    m.items?.forEach((item, i) => {
-      if (ddPlaced[i] !== parseInt(item.correct as string)) correct = false;
-    });
-    if (correct) {
-      setCorrectAnswers(c => c + 1);
-      addXP(m.xp);
-      Alert.alert('✅', '¡Clasificación perfecta!');
-    } else {
-      Alert.alert('❌', 'Algunas clasificaciones no son correctas. Intenta de nuevo.');
+  const ddAllCorrect = DD_ITEMS.every((it, i) => ddPlaced[i] === it.zone);
+  const verifyDd = () => {
+    setDdChecked(true);
+    if (DD_ITEMS.every((it, i) => ddPlaced[i] === it.zone)) {
+      setDdSolved(true);
+      awardStep(MODULE_XP[15]);
     }
   };
 
-  // Finish
-  const finishLevel = () => {
-    let stars = xp >= 200 ? 3 : xp >= 130 ? 2 : 1;
-    completeLevel(15, stars, xp);
-    exitLevel({ confirm: false });
-  };
+  // ---------- Bloques auxiliares ----------
+  const ModuleType = ({ icon, label }: { icon: string; label: string }) => (
+    <View style={styles.moduleType}>
+      <Text style={{ fontSize: 15 }}>{icon}</Text>
+      <Text style={styles.moduleTypeText}>{label}</Text>
+    </View>
+  );
+  const Title = ({ children }: { children: ReactNode }) => <Text style={styles.moduleTitle}>{children}</Text>;
+  const Body = ({ children, style }: { children: ReactNode; style?: object }) => <Text style={[styles.bodyText, style]}>{children}</Text>;
+  const B = ({ children }: { children: ReactNode }) => <Text style={styles.bold}>{children}</Text>;
+  const InfoBox = ({ children }: { children: ReactNode }) => (
+    <View style={styles.infoBox}><Text style={styles.infoBoxText}>{children}</Text></View>
+  );
+  const Fb = ({ ok, children }: { ok: boolean; children: ReactNode }) => (
+    <View style={[styles.feedback, ok ? styles.feedbackOk : styles.feedbackFail]}>
+      <Text style={[styles.feedbackText, { color: ok ? C.okText : C.failText }]}>{children}</Text>
+    </View>
+  );
 
-  // ========== RENDER ==========
-  const renderTheory = (m: ModuleData) => {
-    const texts: Record<number, { title: string; body: string; info?: string }> = {
-      0: { title: '¿Puede la IA hacer una película?', body: 'En 2023 OpenAI mostró Sora: una IA que genera videos de hasta un minuto con calidad cinematográfica. Perros jugando en la nieve, ciudades futuristas, océanos en tormenta — todo desde texto, sin cámaras ni actores.', info: '🎬 Sora (OpenAI) · 🎞️ Runway ML · 🎥 Pika Labs · 🇨🇳 Kling AI' },
-      1: { title: 'Imágenes que se mueven: el secreto técnico', body: 'Un video es una secuencia de imágenes (24-60 por segundo). La IA debe crear cada fotograma y asegurar coherencia entre todos. Para un video de 5 segundos a 24fps, la IA genera 120 imágenes coherentes.', info: 'Por eso el video de IA es mucho más difícil que las imágenes estáticas.' },
-      4: { title: 'Las marcas ya lo usan', body: 'Coca-Cola lanzó un comercial navideño con IA en 2024. Nike genera variaciones de comerciales para diferentes países. Hollywood usa IA para "concept videos" antes de filmar con actores reales.', info: 'Un comercial tradicional cuesta $200K-$2M USD. Una IA puede generar uno similar por unos pocos dólares.' },
-      9: { title: 'De foto estática a video en segundos', body: 'Con Runway o Pika puedes: animar fotos familiares, convertir dibujos en animaciones, hacer que retratos "hablen". En Japón, museos usan IA para "animar" cuadros famosos.', info: 'El Museo del Prado en España experimenta con esto para conectar con audiencias jóvenes.' },
-      13: { title: 'El problema del copyright en video de IA', body: '¿De quién es un video generado con IA? La IA no puede ser propietaria legal. El usuario depende de los términos de servicio. Muchas empresas reclaman derechos sobre lo generado en sus plataformas.', info: 'En 2023, el Sindicato de Actores de Hollywood hizo huelga por esto. ¡Los actores ganaron: ahora se requiere consentimiento y pago!' }
-    };
-    const t = texts[current] || { title: m.title, body: '' };
+  // ---------- Render de módulos ----------
+  const renderBuilder = () => {
+    const b = BUILDERS[step];
     return (
-      <View style={styles.stepContainer}>
-        <Text style={styles.tag}>📖 {m.type === 'theory' && current === 0 ? 'Introducción' : current === 4 || current === 9 || current === 13 ? 'Casos reales' : 'Teoría'}</Text>
-        <Text style={styles.title}>{t.title}</Text>
-        <Text style={styles.body}>{t.body}</Text>
-        {t.info && <View style={styles.infoBox}><Text style={styles.infoText}>{t.info}</Text></View>}
-      </View>
-    );
-  };
-
-  const renderQuiz = (m: ModuleData) => (
-    <View style={styles.stepContainer}>
-      <Text style={styles.tag}>❓ Quiz</Text>
-      <Text style={styles.title}>{m.title}</Text>
-      <Text style={styles.quizQ}>{m.q}</Text>
-      {m.opts!.map((o, i) => (
-        <TouchableOpacity key={i} style={[styles.quizOpt, quizSelected === i && (i === m.correct ? styles.optCorrect : styles.optWrong)]}
-          onPress={() => answerQuiz(i)} disabled={quizDone}>
-          <Text style={quizSelected === i ? styles.optTextActive : styles.optText}>{['🅐', '🅑', '🅒', '🅓'][i]} {o}</Text>
-        </TouchableOpacity>
-      ))}
-      {quizDone && <Text style={styles.feedback}>{quizSelected === m.correct ? '✅ ¡Correcto! ' : '❌ Casi. '}{m.fb}</Text>}
-    </View>
-  );
-
-  const renderMatching = (m: ModuleData) => (
-    <View style={styles.stepContainer}>
-      <Text style={styles.tag}>🔗 Matching</Text>
-      <Text style={styles.title}>{m.title}</Text>
-      <Text style={styles.subtitle}>Conecta cada herramienta con su descripción.</Text>
-      <View style={styles.matchRow}>
-        <View style={{ flex: 1 }}>
-          {m.pairs!.map((p, i) => (
-            <TouchableOpacity key={i} style={[styles.matchCard, matchSel === i && styles.matchCardSel, matchedLeft.has(i) && styles.matchCardDone]}
-              onPress={() => handleMatchLeft(i)} disabled={matchedLeft.has(i)}>
-              <Text style={styles.matchText}>{p.a}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-        <View style={{ flex: 1 }}>
-          {rightOrder.map((r, i) => (
-            <TouchableOpacity key={i} style={[styles.matchCard, matchedRight.has(i) && styles.matchCardDone]}
-              onPress={() => handleMatchRight(i)} disabled={matchedRight.has(i)}>
-              <Text style={styles.matchText}>{r}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-    </View>
-  );
-
-  const renderBuilder = (m: ModuleData) => {
-    const placeholders: Record<number, string> = {
-      3: 'Describe tu escena: personaje + acción + escenario + estilo + movimiento de cámara...',
-      5: '¿Crees que un video creado con IA es arte verdadero? ¿Por qué?',
-      12: 'Escribe tu guión de 30 segundos: escena + diálogo + estilo + música + mensaje...',
-      17: '¿Cómo imaginas el cine y la televisión en 2035 con la IA de video?',
-      19: '¿Qué proyecto harías con Sora? ¿Qué te sorprendió más? ¿El video de IA hace el mundo más interesante o peligroso?'
-    };
-    const examples: Record<number, string> = {
-      3: 'Ej: "Una joven estudiante corriendo en cámara lenta por un mercado colorido de Lagos, luz cálida de atardecer, 8 segundos, estilo documental"',
-      12: 'Ej: "Una niña en Ciudad de México ve un mural de mariposas que cobran vida. Estilo realista-mágico. Música de marimba."'
-    };
-    return (
-      <View style={styles.stepContainer}>
-        <Text style={styles.tag}>✏️ {current === 5 || current === 17 || current === 19 ? 'Reflexión' : 'Constructor'}</Text>
-        <Text style={styles.title}>{m.title}</Text>
-        {examples[current] && <View style={styles.exampleBox}><Text style={styles.exampleText}>{examples[current]}</Text></View>}
-        <TextInput style={styles.textArea} placeholder={placeholders[current] || 'Escribe aquí...'} value={builderText}
-          onChangeText={setBuilderText} multiline editable={!builderDone} />
-        {builderDone && <Text style={styles.feedback}>✅ ¡Respuesta registrada! +{m.xp} XP</Text>}
-      </View>
-    );
-  };
-
-  const renderVF = (m: ModuleData) => (
-    <View style={styles.stepContainer}>
-      <Text style={styles.tag}>✔️ Verdadero o Falso</Text>
-      <Text style={styles.title}>{m.title}</Text>
-      {m.items!.map((item, i) => (
-        <View key={i} style={styles.vfCard}>
-          <Text style={styles.vfStmt}>"{item.s}"</Text>
-          <View style={styles.row}>
-            <TouchableOpacity style={[styles.vfBtn, vfAnswers[i] === true && styles.vfTrue, vfLocked.has(i) && item.correct === true && styles.vfCorrect]}
-              onPress={() => answerVF(i, true)} disabled={vfLocked.has(i)}>
-              <Text>✅ Verdadero</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.vfBtn, vfAnswers[i] === false && styles.vfFalse, vfLocked.has(i) && item.correct === false && styles.vfCorrect]}
-              onPress={() => answerVF(i, false)} disabled={vfLocked.has(i)}>
-              <Text>❌ Falso</Text>
-            </TouchableOpacity>
-          </View>
-          {vfLocked.has(i) && <Text style={styles.feedback}>{item.fb}</Text>}
-        </View>
-      ))}
-    </View>
-  );
-
-  const renderClassify = (m: ModuleData) => (
-    <View style={styles.stepContainer}>
-      <Text style={styles.tag}>🔍 Detecta</Text>
-      <Text style={styles.title}>{m.title}</Text>
-      <Text style={styles.subtitle}>{m.instruction}</Text>
-      {m.items!.map((item, i) => (
-        <View key={i} style={styles.vfCard}>
-          <Text style={styles.vfStmt}>{item.text}</Text>
-          <View style={styles.row}>
-            <TouchableOpacity style={[styles.vfBtn, vfAnswers[i] === 'real' && styles.vfTrue, vfLocked.has(i) && item.correct === 'real' && styles.vfCorrect]}
-              onPress={() => answerVF(i, 'real')} disabled={vfLocked.has(i)}>
-              <Text>✅ Es señal real</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.vfBtn, vfAnswers[i] === 'falsa' && styles.vfFalse, vfLocked.has(i) && item.correct === 'falsa' && styles.vfCorrect]}
-              onPress={() => answerVF(i, 'falsa')} disabled={vfLocked.has(i)}>
-              <Text>❌ No es confiable</Text>
-            </TouchableOpacity>
-          </View>
-          {vfLocked.has(i) && <Text style={styles.feedback}>{item.fb}</Text>}
-        </View>
-      ))}
-    </View>
-  );
-
-  const renderSprint = (m: ModuleData) => (
-    <View style={styles.stepContainer}>
-      <Text style={styles.tag}>⚡ Sprint</Text>
-      <Text style={styles.title}>{m.title}</Text>
-      {!sprintRunning && !sprintDone ? (
-        <>
-          <View style={styles.sprintBox}>
-            <Text style={styles.sprintInstr}>{m.instruction}</Text>
-            <Text style={styles.timer}>{Math.floor((m.duration || 60) / 60)}:{String((m.duration || 60) % 60).padStart(2, '0')}</Text>
-            <TouchableOpacity style={styles.btnPrimary} onPress={startSprint}><Text style={styles.btnText}>▶ Iniciar Sprint</Text></TouchableOpacity>
-          </View>
-          <TextInput style={styles.textArea} placeholder={m.placeholder} value={sprintText} onChangeText={setSprintText} multiline />
-        </>
-      ) : sprintRunning && !sprintDone ? (
-        <>
-          <View style={styles.sprintBox}>
-            <Text style={styles.timer}>{Math.floor(sprintSec / 60)}:{String(sprintSec % 60).padStart(2, '0')}</Text>
-          </View>
-          <TextInput style={styles.textArea} placeholder={m.placeholder} value={sprintText} onChangeText={setSprintText} multiline />
-          <TouchableOpacity style={styles.btnPrimary} onPress={handleSprintNext}><Text style={styles.btnText}>Entregar y continuar →</Text></TouchableOpacity>
-        </>
-      ) : (
-        <TouchableOpacity style={styles.btnPrimary} onPress={handleSprintNext}><Text style={styles.btnText}>Continuar →</Text></TouchableOpacity>
-      )}
-    </View>
-  );
-
-  const renderDragDrop = (m: ModuleData) => (
-    <View style={styles.stepContainer}>
-      <Text style={styles.tag}>↕️ Clasifica</Text>
-      <Text style={styles.title}>{m.title}</Text>
-      <Text style={styles.subtitle}>{m.instruction}</Text>
-      <View style={styles.chipWrap}>
-        {ddItems.map((item, i) => ddPlaced[i] === undefined && (
-          <TouchableOpacity key={i} style={[styles.chip, ddSel === i && styles.chipOn]}
-            onPress={() => setDdSel(ddSel === i ? null : i)}>
-            <Text style={styles.chipText}>{item.text}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-      {m.zones!.map((zone, zi) => (
-        <View key={zi}>
-          <Text style={styles.zoneLabel}>{zone}</Text>
-          <TouchableOpacity style={styles.dropZone} onPress={() => handleDdDrop(zi)}>
-            {Object.entries(ddPlaced).map(([k, v]) => v === zi && (
-              <TouchableOpacity key={k} onPress={() => removeDdItem(parseInt(k))}>
-                <Text style={styles.dropChip}>{ddItems[parseInt(k)].text} ✕</Text>
-              </TouchableOpacity>
-            ))}
-          </TouchableOpacity>
-        </View>
-      ))}
-      <TouchableOpacity style={styles.btnSecondary} onPress={checkDrag}><Text style={styles.btnSecondaryText}>Verificar</Text></TouchableOpacity>
-    </View>
-  );
-
-  const renderCompletion = () => (
-    <View style={styles.completeContainer}>
-      <View style={styles.completeIcon}><Text style={styles.iconEmoji}>🎬</Text></View>
-      <Text style={styles.completeTitle}>¡Badge desbloqueado!</Text>
-      <View style={styles.badgeBox}><Text style={styles.badgeText}>🏅 Film Director</Text></View>
-      <Text style={{ ...typography.bold, fontSize: 13, color: '#fcd34d', marginBottom: 8, opacity: 0.8 }}>Nivel 15 de 36</Text>
-      <Text style={styles.completeSub}>¡Completaste el Nivel 15 y el Módulo 3! Ahora entiendes el mundo del video con IA: cómo funciona, quién lo usa, deepfakes, copyright y el futuro del cine.</Text>
-      <Text style={styles.xpBig}>⭐ {xp} XP ganados</Text>
-      <View style={styles.statsRow}>
-        <View style={styles.statItem}><Text style={styles.statNum}>{correctAnswers}</Text><Text style={styles.statLbl}>Correctas</Text></View>
-        <View style={styles.statItem}><Text style={styles.statNum}>20</Text><Text style={styles.statLbl}>Módulos</Text></View>
-      </View>
-      <View style={{ backgroundColor: '#1a1000', borderRadius: 10, padding: 11, marginBottom: 14, borderWidth: 1, borderColor: '#5a3a00', width: '100%' }}>
-        <Text style={{ fontSize: 12, color: '#fcd34d', lineHeight: 20 }}>
-          💻 <Text style={{ fontWeight: '700' }}>Nivel 16: Tu Primera Web con IA{'\n\n'}</Text>
-          ¡Prepárate para el Nivel 16! Construirás apps web con herramientas no-code: Lovable, Bolt, Bubble. Aprenderás a describir tus ideas para que la IA las construya.
-        </Text>
-      </View>
-      <TouchableOpacity style={styles.btnPrimary} onPress={finishLevel}><Text style={styles.btnText}>Volver al mapa</Text></TouchableOpacity>
-    </View>
-  );
-
-  const renderModule = () => {
-    const m = MODULES[current];
-    const isTheory = theorySteps.has(current);
-    const isCompletion = m.type === 'completion';
-
-    return (
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {renderContent(m)}
-        {!isCompletion && (
-          <View style={styles.navRow}>
-            <TouchableOpacity style={[styles.btnNav, !isTheory && styles.btnHidden]} onPress={prevModule} disabled={!isTheory}>
-              <Text style={styles.btnNavText}>← Volver</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.btnPrimary} onPress={() => {
-              if (m.type === 'builder' && !builderDone) handleBuilderNext();
-              nextModule();
-            }} disabled={m.type === 'builder' && builderText.trim().length <= 15 && !builderDone}>
-              <Text style={styles.btnText}>Continuar →</Text>
-            </TouchableOpacity>
+      <>
+        <ModuleType icon={b.icon} label={b.label} />
+        <Title>{b.title}</Title>
+        <Body>{b.intro}</Body>
+        <InfoBox>{b.box}</InfoBox>
+        {b.example && (
+          <View style={styles.builderExample}>
+            <Text style={styles.builderExampleText}><Text style={styles.builderExampleLabel}>Ejemplo: </Text>{b.example}</Text>
           </View>
         )}
-      </ScrollView>
+        {b.outro && <Body>{b.outro}</Body>}
+        <TextInput
+          style={styles.builderInput}
+          placeholder={b.placeholder}
+          placeholderTextColor={C.placeholder}
+          multiline
+          value={builderText}
+          onChangeText={t => { setBuilderText(t); setBuilderError(null); }}
+          editable={!builderDone}
+        />
+        {builderError && <Fb ok={false}>{builderError}</Fb>}
+        {builderDone && <Fb ok>{b.fb}</Fb>}
+      </>
     );
   };
 
-  const renderContent = (m: ModuleData) => {
-    switch (m.type) {
-      case 'theory': return renderTheory(m);
-      case 'quiz': return renderQuiz(m);
-      case 'matching': return renderMatching(m);
-      case 'builder': return renderBuilder(m);
-      case 'vf': return renderVF(m);
-      case 'classify3ext': return renderClassify(m);
-      case 'sprint': return renderSprint(m);
-      case 'dragdrop': return renderDragDrop(m);
-      case 'completion': return renderCompletion();
+  const renderQuiz = () => {
+    const q = quizzes[step];
+    return (
+      <>
+        <ModuleType icon="❓" label="Quiz" />
+        <Title>{q.title}</Title>
+        <Body style={{ marginBottom: 16 }}><B>{q.question}</B></Body>
+        {q.options.map((opt, i) => (
+          <TouchableOpacity
+            key={i}
+            style={[
+              styles.option,
+              quizSel !== null && i === q.correct && styles.optionCorrect,
+              quizSel === i && i !== q.correct && styles.optionWrong,
+            ]}
+            disabled={quizSel !== null}
+            onPress={() => answerQuiz(i)}
+          >
+            <Text style={styles.optionIcon}>{['🅐', '🅑', '🅒', '🅓'][i]}</Text>
+            <Text style={[styles.optionText, quizSel !== null && i === q.correct && { color: C.okText }, quizSel === i && i !== q.correct && { color: C.failText }]}>{opt}</Text>
+          </TouchableOpacity>
+        ))}
+        {quizSel !== null && (
+          <Fb ok={quizSel === q.correct}>{quizSel === q.correct ? '✅ ' : '❌ Casi. '}{q.feedback}</Fb>
+        )}
+      </>
+    );
+  };
+
+  const renderVF = (items: typeof VF_ITEMS_1, answers: Record<number, boolean>, answer: (i: number, a: boolean) => void) => (
+    <>
+      {items.map((item, idx) => {
+        const ans = answers[idx];
+        return (
+          <View key={idx} style={styles.vfItem}>
+            <Text style={styles.vfStatement}>"{item.text}"</Text>
+            <View style={styles.vfButtons}>
+              <TouchableOpacity
+                style={[styles.vfBtn, ans === true && (item.correct ? styles.vfBtnCorrect : styles.vfBtnWrong)]}
+                disabled={ans !== undefined}
+                onPress={() => answer(idx, true)}
+              >
+                <Text style={[styles.vfBtnText, ans === true && { color: item.correct ? C.okText : C.failText }]}>✅ Verdadero</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.vfBtn, ans === false && (!item.correct ? styles.vfBtnCorrect : styles.vfBtnWrong)]}
+                disabled={ans !== undefined}
+                onPress={() => answer(idx, false)}
+              >
+                <Text style={[styles.vfBtnText, ans === false && { color: !item.correct ? C.okText : C.failText }]}>❌ Falso</Text>
+              </TouchableOpacity>
+            </View>
+            {ans !== undefined && <Fb ok={ans === item.correct}>{ans === item.correct ? '✅ ' : '❌ Incorrecto. '}{item.feedback}</Fb>}
+          </View>
+        );
+      })}
+    </>
+  );
+
+  const renderStep = (): ReactNode => {
+    switch (step) {
+      // ===== 0 · INTRO =====
+      case 0: return (
+        <>
+          <ModuleType icon="🎬" label="Introducción" />
+          <Title>¿Puede la IA hacer una película?</Title>
+          <Body>En 2023, el mundo se quedó sin palabras cuando OpenAI mostró <B>Sora</B>: una IA capaz de generar videos de hasta un minuto con calidad cinematográfica. Perros en la nieve, ciudades futuristas, océanos en tormenta — todo desde texto, sin cámaras ni actores.</Body>
+          <Body>En este nivel vas a entender cómo funciona la <B>generación de video con IA</B>, conocer las herramientas de hoy y explorar su potencial creativo y sus riesgos más serios.</Body>
+          <InfoBox>
+            <B>Las herramientas líderes hoy:</B>{'\n'}
+            🎬 <B>Sora</B> (OpenAI) — videos de alta calidad desde texto{'\n'}
+            🎞️ <B>Runway ML</B> — edición y generación creativa{'\n'}
+            🎥 <B>Pika Labs</B> — animación y efectos especiales{'\n'}
+            🇨🇳 <B>Kling AI</B> (China) — videos ultra realistas
+          </InfoBox>
+        </>
+      );
+
+      // ===== 1 · TEORÍA: cómo funciona =====
+      case 1: return (
+        <>
+          <ModuleType icon="🧠" label="Teoría" />
+          <Title>Imágenes que se mueven: el secreto técnico</Title>
+          <Body>Un video es una secuencia de imágenes (fotogramas) que se muestran muy rápido — normalmente <B>24 a 60 por segundo</B>. La IA no solo debe crear cada imagen perfecta, sino lograr que cada una tenga sentido respecto a la anterior y la siguiente.</Body>
+          <Body><B>El proceso simplificado:</B></Body>
+          <Body>1. Analiza tu descripción en texto{'\n'}2. Genera el primer fotograma{'\n'}3. Predice cómo se mueve cada elemento en el siguiente{'\n'}4. Repite miles de veces para crear movimiento fluido</Body>
+          <InfoBox><B>¿Por qué es tan difícil?</B> Para un video de 5 segundos a 24 fps, la IA genera 120 imágenes coherentes entre sí. Si falla en una sola, el video se ve "roto". Por eso el video de IA es mucho más difícil que las imágenes.</InfoBox>
+        </>
+      );
+
+      // ===== 2 · MATCHING =====
+      case 2: return (
+        <>
+          <ModuleType icon="🔗" label="Matching" />
+          <Title>Sora, Runway y Pika</Title>
+          <Body style={{ marginBottom: 16 }}>Conecta cada herramienta con su descripción. Toca una del lado izquierdo, luego la correcta del lado derecho.</Body>
+          <View style={styles.matchGrid}>
+            <View style={styles.matchCol}>
+              {MATCH_PAIRS.map((pair, i) => (
+                <TouchableOpacity
+                  key={`l${i}`}
+                  style={[styles.matchItem, selectedLeft === i && styles.matchItemSelected, matched.has(i) && styles.matchItemMatched, wrongFlash?.left === i && styles.matchItemWrong]}
+                  disabled={matched.has(i)}
+                  onPress={() => setSelectedLeft(i)}
+                >
+                  <Text style={[styles.matchItemText, selectedLeft === i && { color: C.goldLight }, matched.has(i) && { color: C.okText }, wrongFlash?.left === i && { color: C.failText }]}>{pair.left}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <View style={styles.matchCol}>
+              {shuffledRight.map((item, pos) => {
+                const isMatched = matched.has(item.idx);
+                return (
+                  <TouchableOpacity
+                    key={`r${pos}`}
+                    style={[styles.matchItem, isMatched && styles.matchItemMatched, wrongFlash?.right === pos && styles.matchItemWrong]}
+                    disabled={isMatched || selectedLeft === null}
+                    onPress={() => pressRight(item.idx, pos)}
+                  >
+                    <Text style={[styles.matchItemText, isMatched && { color: C.okText }, wrongFlash?.right === pos && { color: C.failText }]}>{item.text}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+          {matched.size === MATCH_PAIRS.length && <Fb ok>✅ ¡Todos los pares conectados! Conoces bien las herramientas de video con IA.</Fb>}
+        </>
+      );
+
+      // ===== 3, 12 · CONSTRUCTOR · 5, 17, 19 · REFLEXIÓN =====
+      case 3: case 5: case 12: case 17: case 19: return renderBuilder();
+
+      // ===== 4 · TEORÍA: publicidad =====
+      case 4: return (
+        <>
+          <ModuleType icon="📺" label="Casos reales" />
+          <Title>Las marcas ya lo usan</Title>
+          <Body>Grandes marcas del mundo ya incorporan la generación de video con IA en sus campañas:</Body>
+          <Body><B>🥤 Coca-Cola:</B> en 2024 lanzó un comercial navideño co-creado con IA. Fue tan controversial que a muchos les encantó y otros lo odiaron.</Body>
+          <Body><B>👟 Nike:</B> usa IA para generar variaciones de comerciales adaptadas a distintos países y culturas.</Body>
+          <Body><B>🎬 Hollywood:</B> varios estudios usan IA para "concept videos" — borradores visuales de escenas antes de filmarlas.</Body>
+          <InfoBox><B>El debate económico:</B> un comercial tradicional de 30 segundos cuesta entre $200,000 y $2,000,000 USD. Una IA puede generar uno similar por unos pocos dólares. ¿Qué pasará con directores, actores y equipos de producción?</InfoBox>
+        </>
+      );
+
+      // ===== 6 · VF deepfakes =====
+      case 6: return (
+        <>
+          <ModuleType icon="✔️" label="Verdadero o Falso" />
+          <Title>Deepfakes de video</Title>
+          {renderVF(VF_ITEMS_1, vf1Answers, answerVf1)}
+        </>
+      );
+
+      // ===== 7 · DETECTOR (real / no confiable) =====
+      case 7: return (
+        <>
+          <ModuleType icon="🔍" label="Detector" />
+          <Title>¿Real o generado por IA?</Title>
+          <Body style={{ marginBottom: 4 }}>Estas son señales que podrían delatar un video hecho con IA. Marca si cada una es una <B>señal real</B> o <B>no confiable</B>:</Body>
+          {CLASSIFY_ITEMS.map((item, idx) => {
+            const ans = c3Answers[idx];
+            return (
+              <View key={idx} style={styles.vfItem}>
+                <Text style={styles.vfStatement}>{item.text}</Text>
+                <View style={styles.vfButtons}>
+                  <TouchableOpacity
+                    style={[styles.vfBtn, ans === 'real' && (item.correct === 'real' ? styles.vfBtnCorrect : styles.vfBtnWrong)]}
+                    disabled={ans !== undefined}
+                    onPress={() => answerC3(idx, 'real')}
+                  >
+                    <Text style={[styles.vfBtnText, ans === 'real' && { color: item.correct === 'real' ? C.okText : C.failText }]}>✅ Señal real</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.vfBtn, ans === 'falsa' && (item.correct === 'falsa' ? styles.vfBtnCorrect : styles.vfBtnWrong)]}
+                    disabled={ans !== undefined}
+                    onPress={() => answerC3(idx, 'falsa')}
+                  >
+                    <Text style={[styles.vfBtnText, ans === 'falsa' && { color: item.correct === 'falsa' ? C.okText : C.failText }]}>❌ No confiable</Text>
+                  </TouchableOpacity>
+                </View>
+                {ans !== undefined && <Fb ok={ans === item.correct}>{item.feedback}</Fb>}
+              </View>
+            );
+          })}
+        </>
+      );
+
+      // ===== 8, 10, 14, 18 · QUIZ =====
+      case 8: case 10: case 14: case 18: return renderQuiz();
+
+      // ===== 9 · TEORÍA: animación =====
+      case 9: return (
+        <>
+          <ModuleType icon="✨" label="Casos reales" />
+          <Title>De foto estática a video en segundos</Title>
+          <Body>Una de las aplicaciones más asombrosas es la <B>animación de imágenes estáticas</B>. Con Runway o Pika puedes:</Body>
+          <Body><B>🖼️ Foto → Video:</B> tomar una foto familiar y hacer que las personas "se muevan" suavemente.</Body>
+          <Body><B>🎨 Arte → Animación:</B> convertir un dibujo o pintura en una animación corta.</Body>
+          <Body><B>📸 Retrato → Hablante:</B> hacer que una foto "hable" sincronizando los labios con un audio.</Body>
+          <InfoBox><B>Uso inspirador:</B> en Japón, varios museos han "animado" cuadros famosos para que el "artista" explique su obra. El Museo del Prado en España ya experimenta con esto para conectar con audiencias jóvenes.</InfoBox>
+          <Body>Pero esta misma tecnología puede crear videos falsos de personas fallecidas o hacer que figuras históricas "digan" cosas que nunca dijeron.</Body>
+        </>
+      );
+
+      // ===== 11 · SPRINT =====
+      case 11: {
+        const minutes = Math.floor(sprintSec / 60);
+        const seconds = String(sprintSec % 60).padStart(2, '0');
+        return (
+          <>
+            <ModuleType icon="⚡" label="Sprint" />
+            <Title>Sprint: tu cortometraje</Title>
+            <View style={styles.sprintBox}>
+              <Text style={styles.sprintInstruction}>🎬 ¡90 segundos! Escribe las 3 escenas de un cortometraje de IA de 30 segundos. Cada escena con: descripción visual + acción + duración aproximada.</Text>
+              <Text style={[styles.timerText, sprintPhase === 'running' && sprintSec <= 20 ? styles.timerDanger : sprintPhase === 'running' && sprintSec <= 45 ? styles.timerWarning : null]}>
+                {sprintPhase === 'done' ? '0:00' : `${minutes}:${seconds}`}
+              </Text>
+              {sprintPhase === 'idle' && (
+                <TouchableOpacity style={styles.btn} onPress={() => setSprintPhase('running')}>
+                  <Text style={styles.btnText}>▶ Iniciar Sprint</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            <TextInput
+              style={styles.builderInput}
+              placeholder={'Escena 1 (0-10s): ...\nEscena 2 (10-20s): ...\nEscena 3 (20-30s): ...'}
+              placeholderTextColor={C.placeholder}
+              multiline
+              value={sprintText}
+              onChangeText={setSprintText}
+              editable={sprintPhase === 'running'}
+            />
+            {sprintPhase === 'running' && (
+              <TouchableOpacity style={[styles.btn, sprintText.trim().length <= 25 && styles.mainBtnDisabled]} onPress={submitSprint} disabled={sprintText.trim().length <= 25}>
+                <Text style={styles.btnText}>Entregar ✓</Text>
+              </TouchableOpacity>
+            )}
+            {sprintPhase === 'done' && (
+              <Fb ok={sprintValid}>⚡ ¡Sprint terminado! {sprintValid ? 'Guión de 3 escenas completado — un director de IA trabajaría con eso.' : 'La próxima vez intenta describir las 3 escenas con más detalle.'}</Fb>
+            )}
+          </>
+        );
+      }
+
+      // ===== 13 · TEORÍA: copyright =====
+      case 13: return (
+        <>
+          <ModuleType icon="⚖️" label="Copyright y ética" />
+          <Title>El problema del copyright en video de IA</Title>
+          <Body>¿De quién es un video generado con IA? Es una pregunta compleja que se debate en tribunales de todo el mundo:</Body>
+          <Body><B>🤖 ¿La IA?</B> No. Las leyes de copyright requieren autoría humana; una IA no puede ser propietaria de nada.</Body>
+          <Body><B>👤 ¿Tú (el usuario)?</B> Depende de los términos de servicio de cada herramienta.</Body>
+          <Body><B>🏢 ¿La empresa que hizo la IA?</B> Muchas (Runway, Pika) reclaman derechos sobre lo generado en sus plataformas.</Body>
+          <InfoBox><B>Caso real:</B> en 2023, el sindicato de actores de Hollywood (SAG-AFTRA) hizo huelga en parte por esto: temían que los estudios clonaran sus imágenes sin pagarles. Lograron un acuerdo que exige consentimiento y pago. ¡Los actores ganaron esa batalla!</InfoBox>
+        </>
+      );
+
+      // ===== 15 · DRAG & DROP =====
+      case 15: return (
+        <>
+          <ModuleType icon="↕️" label="Clasifica" />
+          <Title>¿Gratis o de pago?</Title>
+          <Body>Clasifica estas herramientas de video con IA según su modelo de acceso. Toca una y luego su zona (o arrástrala).</Body>
+          <View style={styles.dragPool}>
+            {DD_ITEMS.map((item, idx) => ddPlaced[idx] === undefined ? (
+              <TouchableOpacity key={idx} id={`dd15-chip-${idx}`} style={[styles.dragItem, ddSel === idx && styles.dragItemSel]} disabled={ddSolved} onPress={() => setDdSel(ddSel === idx ? null : idx)}>
+                <Text style={styles.dragItemText}>{item.text}</Text>
+              </TouchableOpacity>
+            ) : null)}
+            {ddAllPlaced && <Text style={{ color: C.placeholder, fontSize: 12 }}>Todas las herramientas clasificadas ✓</Text>}
+          </View>
+          {([0, 1] as const).map(zone => (
+            <View key={zone}>
+              <Text style={styles.dropZoneLabel}>{DD_ZONES[zone]}</Text>
+              <TouchableOpacity id={`dd15-zone-${zone}`} activeOpacity={0.8} style={[styles.dropZone, ddOverZone === zone && styles.dropZoneOver]} disabled={ddSolved} onPress={() => ddPlace(zone)}>
+                {DD_ITEMS.map((item, idx) => ddPlaced[idx] === zone ? (
+                  <TouchableOpacity key={idx} disabled={ddSolved} onPress={() => ddReturn(idx)}
+                    style={[styles.dragItem, ddChecked && (item.zone === zone ? styles.dragItemOk : styles.dragItemBad)]}>
+                    <Text style={[styles.dragItemText, ddChecked && { color: item.zone === zone ? C.okText : C.failText }]}>
+                      {ddChecked ? (item.zone === zone ? '✓ ' : '✕ ') : ''}{item.text}
+                    </Text>
+                  </TouchableOpacity>
+                ) : null)}
+              </TouchableOpacity>
+            </View>
+          ))}
+          {ddChecked && ddSolved && <Fb ok>✅ ¡Clasificación perfecta! Conoces bien los modelos de acceso de las herramientas de IA.</Fb>}
+          {ddChecked && !ddSolved && (
+            <>
+              <Fb ok={false}>❌ Algunas no están bien. Toca las marcadas con ✕ para devolverlas y vuelve a intentarlo.</Fb>
+              {DD_ITEMS.map((item, idx) => ddPlaced[idx] !== undefined && ddPlaced[idx] !== item.zone ? (
+                <Fb key={idx} ok={false}>✕ "{item.text}" va en <Text style={{ fontWeight: '700' }}>{DD_ZONES[item.zone]}</Text>. {item.why}</Fb>
+              ) : null)}
+            </>
+          )}
+        </>
+      );
+
+      // ===== 16 · VF límites =====
+      case 16: return (
+        <>
+          <ModuleType icon="✔️" label="Verdadero o Falso" />
+          <Title>¿Qué puede y qué no?</Title>
+          {renderVF(VF_ITEMS_2, vf2Answers, answerVf2)}
+        </>
+      );
+
+      // ===== 20 · COMPLETADO =====
+      case 20: return (
+        <View style={styles.completionScreen}>
+          <Text style={styles.completionIcon}>🎬</Text>
+          <Text style={styles.completionTitle}>¡Badge desbloqueado!</Text>
+          <Text style={styles.completionBadge}>🏅 Film Director</Text>
+          <Text style={styles.completionText}>
+            ¡Completaste el Nivel 15 y el Módulo 3! Ahora entiendes el mundo del video con IA: cómo funciona, quién lo usa, deepfakes, copyright y el futuro del cine.
+          </Text>
+          <Text style={styles.xpGained}>+<Text style={{ color: C.goldLight }}>{xp}</Text> XP</Text>
+          <View style={styles.statsRow}>
+            <View style={styles.statItem}>
+              <Text style={styles.statNum}>{correctCount}</Text>
+              <Text style={styles.statLbl}>Correctas</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Text style={styles.statNum}>{CONTENT_STEPS}</Text>
+              <Text style={styles.statLbl}>Módulos</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Text style={styles.statNum}>N16</Text>
+              <Text style={styles.statLbl}>Próximo nivel</Text>
+            </View>
+          </View>
+          <View style={styles.nextLevelBox}>
+            <Text style={styles.nextLevelText}>
+              💻 <Text style={{ fontWeight: '700', color: C.text }}>Nivel 16: Tu Primera Web con IA{'\n\n'}</Text>
+              Construirás apps web con herramientas no-code: Lovable, Bolt, Bubble. Aprenderás a describir tus ideas para que la IA las construya.
+            </Text>
+          </View>
+          <TouchableOpacity style={[styles.btn, { width: '100%' }]} onPress={finishLevel}>
+            <Text style={styles.btnText}>Siguiente nivel →</Text>
+          </TouchableOpacity>
+        </View>
+      );
+
       default: return null;
     }
   };
 
-  const progressPercent = (current / (TOTAL_STEPS - 1)) * 100;
+  // ---------- Botón principal ----------
+  const getBtn = (): { label: string; enabled: boolean; note?: string; onPress: () => void } | null => {
+    switch (step) {
+      case 0: return { label: '¡Empezar! →', enabled: true, onPress: next };
+      case 1: case 4: case 9: case 13:
+        return { label: 'Continuar →', enabled: true, onPress: () => { awardStep(MODULE_XP[step]); next(); } };
+      case 8: case 10: case 14: case 18:
+        return { label: 'Continuar →', enabled: quizSel !== null || devMode, note: quizSel === null ? `Responde para continuar · +${MODULE_XP[step]} XP` : undefined, onPress: next };
+      case 3: case 5: case 12: case 17: case 19: {
+        const isReflect = step === 5 || step === 17 || step === 19;
+        if (!builderDone) return { label: isReflect ? 'Enviar reflexión →' : 'Confirmar →', enabled: builderText.trim().length > 15 || devMode, note: `Escribe al menos 16 caracteres · +${MODULE_XP[step]} XP`, onPress: confirmBuilder };
+        return { label: step === 19 ? 'Completar nivel →' : 'Continuar →', enabled: true, onPress: next };
+      }
+      case 2: return { label: 'Continuar →', enabled: matched.size === MATCH_PAIRS.length || devMode, note: matched.size < MATCH_PAIRS.length ? `Conecta los ${MATCH_PAIRS.length} pares · +${MODULE_XP[step]} XP` : undefined, onPress: next };
+      case 6: return { label: 'Continuar →', enabled: Object.keys(vf1Answers).length === VF_ITEMS_1.length || devMode, note: `Responde las ${VF_ITEMS_1.length} afirmaciones · +${MODULE_XP[step]} XP`, onPress: next };
+      case 7: return { label: 'Continuar →', enabled: Object.keys(c3Answers).length === CLASSIFY_ITEMS.length || devMode, note: `Responde las ${CLASSIFY_ITEMS.length} señales · +${MODULE_XP[step]} XP`, onPress: next };
+      case 11: return { label: 'Continuar →', enabled: sprintPhase === 'done' || devMode, note: sprintPhase !== 'done' ? 'Escribe tus escenas y pulsa "Entregar" · +20 XP' : undefined, onPress: next };
+      case 15:
+        if (!ddChecked || (!ddSolved && !ddAllCorrect)) return { label: 'Verificar →', enabled: ddAllPlaced || devMode, note: `Clasifica las ${DD_ITEMS.length} herramientas · +${MODULE_XP[step]} XP`, onPress: verifyDd };
+        return { label: 'Continuar →', enabled: true, onPress: next };
+      case 16: return { label: 'Continuar →', enabled: Object.keys(vf2Answers).length === VF_ITEMS_2.length || devMode, note: `Responde las ${VF_ITEMS_2.length} afirmaciones · +${MODULE_XP[step]} XP`, onPress: next };
+      case 20: return null; // botón dentro de la pantalla final
+      default: return null;
+    }
+  };
+
+  const btn = getBtn();
+  const progress = Math.round((step / (TOTAL_STEPS - 1)) * 100);
 
   return (
     <View style={styles.screen}>
-      <View style={styles.bar}>
-        <TouchableOpacity onPress={() => exitLevel({ confirm: false })}>
-          <MaterialIcons name="close" size={24} color={colors.textSecondary} />
-        </TouchableOpacity>
-        <View style={styles.track}><View style={[styles.fill, { width: `${progressPercent}%` }]} /></View>
-        <Text style={styles.xpChip}>{xp} XP</Text>
+      {/* Barra superior: salida + XP */}
+      <View style={styles.topBar}>
+        <TouchableOpacity onPress={() => exitLevel()} style={styles.closeBtn}><Text style={styles.closeBtnText}>✕</Text></TouchableOpacity>
+        <View style={{ flex: 1 }} />
+        <View style={styles.xpChip}><Text style={styles.xpChipText}>{xp} XP</Text></View>
       </View>
-      <Text style={styles.tag}>Nivel 15 · 21 módulos</Text>
-      {renderModule()}
-      {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} />}
+
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.container}>
+        {/* Header del nivel (como el HTML) */}
+        <View style={styles.header}>
+          <View style={styles.levelBadge}><Text style={styles.levelBadgeText}>🎬 MUNDO 3 · NIVEL 15</Text></View>
+          <Text style={styles.levelTitle}>IA que <Text style={{ color: C.goldLight }}>Filma</Text></Text>
+          <Text style={styles.subtitle}>Genera videos con inteligencia artificial</Text>
+          <View style={styles.progressBar}><View style={[styles.progressFill, { width: `${progress}%` }]} /></View>
+          <View style={styles.progressLabelRow}>
+            <Text style={styles.progressLabel}>{step === 0 ? 'Introducción' : step < TOTAL_STEPS - 1 ? `Módulo ${step} de ${CONTENT_STEPS}` : '¡Nivel completado!'}</Text>
+            <Text style={styles.progressLabel}>{xp} / {MAX_XP} XP</Text>
+          </View>
+        </View>
+
+        {/* Tarjeta del módulo */}
+        <View style={styles.moduleCard}>
+          <View style={styles.moduleCardAccent} />
+          {MODULE_XP[step] > 0 && (
+            <View style={styles.moduleXpBadge}><Text style={styles.moduleXpBadgeText}>+{MODULE_XP[step]} XP</Text></View>
+          )}
+          {renderStep()}
+        </View>
+      </ScrollView>
+
+      {/* Footer */}
+      {btn && (
+        <View style={styles.btnRow}>
+          <View style={styles.btnRowInner}>
+            {showBack && <TouchableOpacity style={styles.backBtn} onPress={prev}><Text style={styles.backBtnText}>← Volver</Text></TouchableOpacity>}
+            <TouchableOpacity style={[styles.mainBtn, { flex: 1 }, !btn.enabled && styles.mainBtnDisabled]} onPress={btn.onPress} disabled={!btn.enabled}>
+              <Text style={styles.btnText}>{btn.label}</Text>
+            </TouchableOpacity>
+          </View>
+          {btn.note ? <Text style={styles.btnNote}>{btn.note}</Text> : null}
+        </View>
+      )}
+
+      {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} bgColor={C.gold} textColor="#fff" />}
     </View>
   );
 }
 
+// ===================== ESTILOS (paleta oscura dorada del HTML nivel-15) =====================
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#0f0800' },
-  bar: { flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
-  track: { flex: 1, height: 6, backgroundColor: colors.borderLight, borderRadius: 3, marginHorizontal: 12 },
-  fill: { height: '100%', backgroundColor: '#f59e0b', borderRadius: 3 },
-  xpChip: { ...typography.bold, fontSize: 14, color: '#92400e' },
-  scrollContent: { padding: 16, paddingBottom: 40 },
-  stepContainer: { flex: 1 },
-  tag: { fontSize: 11, fontWeight: '600', color: '#92400e', backgroundColor: '#fef3c7', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, marginBottom: 12 },
-  title: { ...typography.extraBold, fontSize: 19, color: colors.textPrimary, marginBottom: 8, textAlign: 'center' },
-  subtitle: { ...typography.regular, fontSize: 13, color: colors.textSecondary, marginBottom: 14, lineHeight: 18 },
-  body: { ...typography.regular, fontSize: 13, color: colors.textPrimary, lineHeight: 22, marginBottom: 12 },
-  infoBox: { backgroundColor: '#fffbeb', borderLeftWidth: 4, borderLeftColor: '#f59e0b', borderRadius: 4, padding: 14, marginVertical: 10 },
-  infoText: { fontSize: 12, color: '#92400e', lineHeight: 20 },
-  quizQ: { ...typography.bold, fontSize: 13, padding: 12, backgroundColor: '#f8fafc', borderRadius: 10, marginBottom: 10 },
-  quizOpt: { padding: 14, borderRadius: 11, borderWidth: 2, borderColor: '#e2e8f0', marginBottom: 7, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  optText: { fontSize: 12, color: '#334155', flex: 1 },
-  optTextActive: { fontSize: 12, color: '#0f172a', fontWeight: '600', flex: 1 },
-  optCorrect: { borderColor: '#22c55e', backgroundColor: '#f0fdf4' },
-  optWrong: { borderColor: '#ef4444', backgroundColor: '#fff1f2' },
-  feedback: { marginTop: 10, padding: 12, borderRadius: 10, fontSize: 12, backgroundColor: '#f0fdf4', borderWidth: 1, borderColor: '#22c55e', color: '#065f46' },
-  matchRow: { flexDirection: 'row', gap: 10 },
-  matchCard: { backgroundColor: '#fff', padding: 12, borderRadius: 10, borderWidth: 1, borderColor: '#e2e8f0', marginBottom: 6 },
-  matchCardSel: { borderColor: '#f59e0b', backgroundColor: '#fef3c7' },
-  matchCardDone: { borderColor: '#22c55e', backgroundColor: '#f0fdf4' },
-  matchText: { fontSize: 12, color: '#334155' },
-  textArea: { borderWidth: 1.5, borderColor: '#f59e0b', borderRadius: 12, padding: 14, minHeight: 100, fontSize: 13, backgroundColor: '#fffbeb', marginBottom: 10, textAlignVertical: 'top' },
-  exampleBox: { backgroundColor: '#fffbeb', borderLeftWidth: 3, borderLeftColor: '#fcd34d', borderRadius: 4, padding: 12, marginBottom: 10 },
-  exampleText: { fontSize: 11, color: '#92400e', fontStyle: 'italic' },
-  vfCard: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: '#e2e8f0' },
-  vfStmt: { fontSize: 13, color: colors.textPrimary, marginBottom: 10, lineHeight: 20 },
-  row: { flexDirection: 'row', gap: 10 },
-  vfBtn: { flex: 1, padding: 12, borderRadius: 10, borderWidth: 2, borderColor: '#e2e8f0', alignItems: 'center' },
-  vfTrue: { borderColor: '#22c55e', backgroundColor: '#f0fdf4' },
-  vfFalse: { borderColor: '#ef4444', backgroundColor: '#fff1f2' },
-  vfCorrect: { borderColor: '#22c55e', backgroundColor: '#dcfce7' },
-  sprintBox: { alignItems: 'center', backgroundColor: '#fffbeb', borderRadius: 16, padding: 20, marginBottom: 12, borderWidth: 2, borderColor: '#f59e0b' },
-  sprintInstr: { fontSize: 12, color: '#92400e', textAlign: 'center', marginBottom: 8 },
-  timer: { fontSize: 40, fontWeight: '800', color: '#f59e0b', marginVertical: 8 },
-  btnPrimary: { backgroundColor: '#f59e0b', padding: 14, borderRadius: 12, alignItems: 'center', marginTop: 16 },
-  btnText: { ...typography.bold, color: '#fff', fontSize: 15 },
-  btnSecondary: { backgroundColor: '#fff', padding: 12, borderRadius: 10, alignItems: 'center', borderWidth: 1, borderColor: '#e2e8f0', marginTop: 12 },
-  btnSecondaryText: { ...typography.bold, color: '#92400e', fontSize: 14 },
-  navRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 16, gap: 12 },
-  btnNav: { padding: 12, borderRadius: 10, borderWidth: 1, borderColor: '#e2e8f0', backgroundColor: '#fff' },
-  btnNavText: { fontSize: 14, color: '#64748b', fontWeight: '600' },
-  btnHidden: { opacity: 0 },
-  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, padding: 12, backgroundColor: '#fffbeb', borderRadius: 12, borderWidth: 1, borderColor: '#fde68a', marginBottom: 12 },
-  chip: { padding: 8, borderRadius: 20, borderWidth: 1.5, borderColor: '#fcd34d', backgroundColor: '#fff' },
-  chipOn: { backgroundColor: '#fef3c7', borderColor: '#f59e0b' },
-  chipText: { fontSize: 11, color: '#92400e' },
-  zoneLabel: { ...typography.bold, fontSize: 12, color: '#92400e', marginBottom: 4, marginTop: 8 },
-  dropZone: { minHeight: 50, borderWidth: 2, borderStyle: 'dashed', borderColor: '#fcd34d', borderRadius: 12, padding: 10, backgroundColor: '#fff', flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  dropChip: { fontSize: 10, padding: 6, backgroundColor: '#fef3c7', borderRadius: 8, color: '#92400e' },
-  completeContainer: { alignItems: 'center', padding: 20 },
-  completeIcon: { width: 90, height: 90, borderRadius: 24, backgroundColor: '#fef3c7', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
-  iconEmoji: { fontSize: 44 },
-  completeTitle: { ...typography.extraBold, fontSize: 22, marginBottom: 4 },
-  badgeBox: { backgroundColor: '#fffbeb', borderWidth: 2, borderColor: '#f59e0b', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 10, marginBottom: 12 },
-  badgeText: { fontSize: 16, fontWeight: '700', color: '#92400e' },
-  completeSub: { ...typography.regular, textAlign: 'center', marginVertical: 8, color: colors.textSecondary },
-  xpBig: { ...typography.bold, fontSize: 20, color: '#92400e', marginBottom: 16 },
-  statsRow: { flexDirection: 'row', gap: 20, marginBottom: 16 },
-  statItem: { backgroundColor: '#fff', borderRadius: 12, padding: 16, alignItems: 'center', borderWidth: 1, borderColor: '#e2e8f0' },
-  statNum: { fontSize: 22, fontWeight: '800', color: '#f59e0b' },
-  statLbl: { fontSize: 11, color: '#64748b', marginTop: 2 },
+  screen: { flex: 1, backgroundColor: C.bg },
+
+  topBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 13, paddingTop: 11, paddingBottom: 8, backgroundColor: C.bg, borderBottomWidth: 1, borderBottomColor: C.border },
+  closeBtn: { minWidth: 42, minHeight: 42, borderRadius: 10, backgroundColor: C.card, borderWidth: 1, borderColor: C.border, alignItems: 'center', justifyContent: 'center' },
+  closeBtnText: { fontSize: 12, color: C.goldLight, fontWeight: '800' },
+  xpChip: { paddingHorizontal: 11, paddingVertical: 4, borderRadius: 12, backgroundColor: C.card2, borderWidth: 1, borderColor: C.border },
+  xpChipText: { fontSize: 12, color: C.goldLight, fontWeight: '700' },
+
+  container: { padding: 16, paddingBottom: 28 },
+
+  // Header del nivel
+  header: { marginBottom: 20 },
+  levelBadge: { alignSelf: 'flex-start', backgroundColor: C.amber, borderRadius: 99, paddingHorizontal: 16, paddingVertical: 6, marginBottom: 12 },
+  levelBadgeText: { ...typography.bold, fontSize: 12, color: '#fff', letterSpacing: 0.6 },
+  levelTitle: { ...typography.extraBold, fontSize: 28, color: C.text, lineHeight: 34 },
+  subtitle: { ...typography.regular, fontSize: 13, color: C.muted, marginTop: 4, marginBottom: 14 },
+  progressBar: { width: '100%', height: 8, backgroundColor: C.border, borderRadius: 99, overflow: 'hidden' },
+  progressFill: { height: '100%', backgroundColor: C.gold, borderRadius: 99 },
+  progressLabelRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 },
+  progressLabel: { fontSize: 11, color: C.muted, fontWeight: '500' },
+
+  // Tarjeta del módulo
+  moduleCard: { backgroundColor: C.card, borderRadius: 16, padding: 22, borderWidth: 1, borderColor: C.border, overflow: 'hidden' },
+  moduleCardAccent: { position: 'absolute', top: 0, left: 0, right: 0, height: 3, backgroundColor: C.gold },
+  moduleXpBadge: { position: 'absolute', top: 14, right: 14, backgroundColor: C.card2, borderWidth: 1, borderColor: C.border, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
+  moduleXpBadgeText: { fontSize: 11, fontWeight: '700', color: C.goldLight },
+  moduleType: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
+  moduleTypeText: { ...typography.bold, fontSize: 11, textTransform: 'uppercase', letterSpacing: 1, color: C.goldLight },
+  moduleTitle: { ...typography.extraBold, fontSize: 19, color: C.text, marginBottom: 14, lineHeight: 25 },
+  bodyText: { ...typography.regular, fontSize: 14, lineHeight: 23, color: C.muted, marginBottom: 12 },
+  bold: { fontWeight: '700', color: C.text },
+  infoBox: { backgroundColor: C.card2, borderLeftWidth: 4, borderLeftColor: C.gold, borderTopRightRadius: 12, borderBottomRightRadius: 12, paddingHorizontal: 16, paddingVertical: 13, marginBottom: 14 },
+  infoBoxText: { ...typography.regular, fontSize: 13, lineHeight: 24, color: C.muted },
+
+  // Quiz
+  option: { flexDirection: 'row', backgroundColor: C.card2, paddingHorizontal: 16, paddingVertical: 13, borderRadius: 12, marginBottom: 10, borderWidth: 2, borderColor: C.border, alignItems: 'center' },
+  optionCorrect: { borderColor: C.green, backgroundColor: C.okBg },
+  optionWrong: { borderColor: C.red, backgroundColor: C.failBg },
+  optionIcon: { marginRight: 10, fontSize: 16 },
+  optionText: { flex: 1, fontSize: 13, lineHeight: 19, color: C.text, fontWeight: '500' },
+
+  // Feedback
+  feedback: { marginTop: 12, paddingHorizontal: 16, paddingVertical: 13, borderRadius: 12, borderWidth: 1 },
+  feedbackOk: { backgroundColor: C.okBg, borderColor: C.okBorder },
+  feedbackFail: { backgroundColor: C.failBg, borderColor: C.failBorder },
+  feedbackText: { fontSize: 13, lineHeight: 20, fontWeight: '500' },
+
+  // Matching
+  matchGrid: { flexDirection: 'row', gap: 10 },
+  matchCol: { flex: 1, gap: 8 },
+  matchItem: { backgroundColor: C.card2, paddingHorizontal: 10, paddingVertical: 12, borderRadius: 10, borderWidth: 2, borderColor: C.border, alignItems: 'center', justifyContent: 'center', minHeight: 64 },
+  matchItemSelected: { borderColor: C.warm, backgroundColor: '#3d2200' },
+  matchItemMatched: { borderColor: C.green, backgroundColor: C.okBg },
+  matchItemWrong: { borderColor: C.red, backgroundColor: C.failBg },
+  matchItemText: { fontSize: 12, color: C.text, textAlign: 'center', lineHeight: 17, fontWeight: '500' },
+
+  // Builder
+  builderInput: { backgroundColor: C.surface, borderWidth: 2, borderColor: C.border, borderRadius: 12, padding: 14, fontSize: 14, lineHeight: 21, color: C.text, minHeight: 100, marginVertical: 10, textAlignVertical: 'top' },
+  builderExample: { backgroundColor: C.card2, borderLeftWidth: 3, borderLeftColor: C.goldLight, borderTopRightRadius: 10, borderBottomRightRadius: 10, paddingHorizontal: 16, paddingVertical: 12, marginBottom: 12 },
+  builderExampleText: { fontSize: 13, color: C.muted, lineHeight: 20, fontStyle: 'italic' },
+  builderExampleLabel: { color: C.goldLight, fontWeight: '700', fontStyle: 'normal' },
+
+  // Sprint
+  sprintBox: { backgroundColor: '#241200', borderWidth: 2, borderColor: C.gold, borderRadius: 16, padding: 22, alignItems: 'center', marginBottom: 12 },
+  sprintInstruction: { textAlign: 'center', marginBottom: 6, fontSize: 13, lineHeight: 20, color: C.muted },
+  timerText: { fontSize: 44, fontWeight: '800', color: C.goldLight, fontVariant: ['tabular-nums'], marginVertical: 8 },
+  timerWarning: { color: C.warm },
+  timerDanger: { color: C.red },
+
+  // VF & Detector
+  vfItem: { marginBottom: 12, backgroundColor: C.card2, borderWidth: 1, borderColor: C.border, borderRadius: 12, padding: 16 },
+  vfStatement: { fontSize: 13, fontWeight: '600', marginBottom: 12, color: C.text, lineHeight: 20 },
+  vfButtons: { flexDirection: 'row', gap: 8 },
+  vfBtn: { flex: 1, paddingVertical: 10, borderRadius: 8, borderWidth: 2, borderColor: C.border, alignItems: 'center', backgroundColor: 'transparent' },
+  vfBtnCorrect: { borderColor: C.green, backgroundColor: C.okBg },
+  vfBtnWrong: { borderColor: C.red, backgroundColor: C.failBg },
+  vfBtnText: { ...typography.bold, fontSize: 12, color: C.muted },
+
+  // Drag & drop
+  dragPool: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, padding: 14, backgroundColor: C.card2, borderWidth: 2, borderStyle: 'dashed', borderColor: C.border, borderRadius: 12, minHeight: 70, marginBottom: 12, alignItems: 'center' },
+  dragItem: { backgroundColor: C.surface, borderWidth: 2, borderColor: C.border, borderRadius: 8, paddingVertical: 8, paddingHorizontal: 12 },
+  dragItemSel: { borderColor: C.gold, backgroundColor: '#2e1a00' },
+  dragItemOk: { borderColor: C.green, backgroundColor: C.okBg },
+  dragItemBad: { borderColor: C.red, backgroundColor: C.failBg },
+  dragItemText: { fontSize: 12, color: C.text, lineHeight: 17 },
+  dropZoneLabel: { fontSize: 12, fontWeight: '700', color: C.goldLight, marginBottom: 6 },
+  dropZone: { minHeight: 70, padding: 12, borderWidth: 2, borderStyle: 'dashed', borderColor: C.border, borderRadius: 12, backgroundColor: C.card2, marginBottom: 10, flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'flex-start' },
+  dropZoneOver: { borderColor: C.gold, backgroundColor: '#2e1a00' },
+
+  // Botones
+  btn: { backgroundColor: C.gold, padding: 14, borderRadius: 10, alignItems: 'center', marginTop: 12 },
+  btnText: { ...typography.bold, color: '#fff', fontSize: 14 },
+
+  // Completado
+  completionScreen: { alignItems: 'center', paddingVertical: 20 },
+  completionIcon: { fontSize: 64, marginBottom: 12 },
+  completionTitle: { ...typography.extraBold, fontSize: 26, color: C.goldLight, textAlign: 'center', marginBottom: 4 },
+  completionBadge: { ...typography.extraBold, fontSize: 20, color: C.goldLight, marginVertical: 8 },
+  completionText: { ...typography.regular, fontSize: 14, lineHeight: 22, textAlign: 'center', marginBottom: 16, color: C.muted },
+  xpGained: { ...typography.extraBold, fontSize: 34, color: C.text, marginBottom: 16 },
+  statsRow: { flexDirection: 'row', width: '100%', gap: 8, marginBottom: 16 },
+  statItem: { flex: 1, alignItems: 'center', backgroundColor: C.card, borderWidth: 1, borderColor: C.border, borderRadius: 12, paddingVertical: 14, paddingHorizontal: 8 },
+  statNum: { ...typography.extraBold, fontSize: 20, color: C.goldLight },
+  statLbl: { fontSize: 10, color: C.muted, marginTop: 2, textAlign: 'center' },
+  nextLevelBox: { backgroundColor: C.card2, borderRadius: 10, padding: 13, marginBottom: 16, borderWidth: 1, borderColor: C.border, width: '100%' },
+  nextLevelText: { fontSize: 12, color: C.muted, lineHeight: 20 },
+
+  // Footer
+  btnRow: { paddingHorizontal: 13, paddingVertical: 12, borderTopWidth: 1, borderTopColor: C.border, backgroundColor: C.surface },
+  btnRowInner: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+  backBtn: { paddingHorizontal: 16, paddingVertical: 13, borderRadius: 10, backgroundColor: C.card2, borderWidth: 1, borderColor: C.border, minHeight: 48, justifyContent: 'center' },
+  backBtnText: { fontSize: 14, fontWeight: '700', color: C.muted },
+  mainBtn: { padding: 13, borderRadius: 10, backgroundColor: C.gold, alignItems: 'center', minHeight: 48, justifyContent: 'center' },
+  mainBtnDisabled: { opacity: 0.35 },
+  btnNote: { fontSize: 11, color: C.placeholder, textAlign: 'center', marginTop: 5, minHeight: 15 },
 });

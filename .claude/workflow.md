@@ -63,6 +63,7 @@ Refactor completo de numeración continua N1–N43. Ver propuesta en `/Descargas
 | AUDIT-EVAL2 | ✅ Resuelto | Eval2 fiel a evaluacion-mundo-02.html (quiz completo+shuffle, builder 3 min, badge) |
 | AUDIT-N13 | ✅ Resuelto | Level13 fiel a nivel-13.html (tema oscuro M3, 19 módulos/260 XP reales, D&D real, fix XP infinito/duplicado) |
 | AUDIT-N14 | ✅ Resuelto | Level14 reconstruido vs nivel-14.html (tema oscuro TEAL propio, 19 módulos/265 XP reales, quiz shuffle+longitud, fix reset de quiz entre pasos y sprint bloqueado, validación de builders, sort con flash rojo) |
+| AUDIT-N15 | ✅ Resuelto | Level15 reconstruido vs nivel-15.html (tema oscuro DORADO propio, 19 módulos/265 XP reales, fix nav que saltaba actividades, quiz shuffle+longitud, D&D con flash rojo + porqué, sprint con entrega anticipada, validación de builders/reflexiones) |
 
 ## Scripts disponibles
 
