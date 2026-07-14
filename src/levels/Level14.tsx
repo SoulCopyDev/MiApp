@@ -95,10 +95,10 @@ const QUIZZES: Record<number, QuizMod> = {
     title: 'Detecta la voz artificial',
     question: '¿Cuál de estas señales es una pista real de que podrías estar escuchando una voz de IA?',
     options: [
-      'La persona habla sin ningún acento, porque las IA no pueden imitar acentos regionales',
-      'Hay una pequeña pausa artificial al empezar y el ritmo es demasiado uniforme, sin las imperfecciones naturales del habla humana',
-      'La persona usa palabras muy difíciles, porque las IA no manejan vocabulario avanzado',
-      'El audio tiene demasiado ruido de fondo, porque las IA siempre generan sonido muy limpio',
+      'La persona habla sin ningún acento regional, porque las IA todavía no logran imitar acentos',
+      'El ritmo suena demasiado uniforme y perfecto, sin las pequeñas vacilaciones del habla humana',
+      'La persona usa palabras muy difíciles y técnicas, porque las IA dominan el vocabulario avanzado',
+      'El audio tiene demasiado ruido de fondo, porque las IA siempre generan un sonido muy limpio',
     ],
     correct: 1,
     feedback: 'Las voces de IA a veces se delatan por el ritmo demasiado uniforme, sin las pequeñas vacilaciones, "eehh" y variaciones naturales del habla humana. ¡Los humanos somos imperfectos, y eso es una ventaja!',
@@ -107,10 +107,10 @@ const QUIZZES: Record<number, QuizMod> = {
     title: 'IA de audio y accesibilidad',
     question: 'Aisha tiene esclerosis lateral amiotrófica (ELA), una enfermedad que le quitó la capacidad de hablar pero conserva todos sus recuerdos y pensamientos. ¿Cómo podría ayudarle la IA de audio?',
     options: [
-      'No puede ayudarle de ninguna forma, porque la IA no entiende de enfermedades ni de medicina',
-      'Podría clonar la voz que tenía antes, para que un lector de pantalla hable con SU voz real y no una genérica',
-      'Solo serviría para traducir sus pensamientos escritos al inglés y a otros idiomas extranjeros',
-      'La IA no es capaz de comunicarse con personas que tienen discapacidades motoras o del habla',
+      'No puede ayudarle de ninguna forma, porque la IA no entiende de enfermedades ni medicina',
+      'Clonar la voz que tenía antes, para que un lector hable con SU voz real',
+      'Solo serviría para traducir sus pensamientos escritos al inglés y a varios idiomas extranjeros',
+      'La IA no puede comunicarse con personas que tienen discapacidades motoras o del habla grave',
     ],
     correct: 1,
     feedback: 'Esto es real: el astrofísico Stephen Hawking usó durante años un sintetizador de voz. Hoy, con IA, Aisha podría conservar SU voz original — su identidad vocal — para comunicarse. ElevenLabs tiene un programa especial para esto.',
@@ -119,10 +119,10 @@ const QUIZZES: Record<number, QuizMod> = {
     title: 'Quiz de cierre',
     question: 'Tu profesor de Arte quiere crear un audiolibro de los cuentos que escriben los estudiantes, con las voces de los propios estudiantes pero sin tener que grabar durante horas. ¿Cuál es la solución más inteligente con IA?',
     options: [
-      'Contratar actores de doblaje profesionales para que graben en estudio cada uno de los cuentos',
-      'Grabar 2-3 minutos de la voz de cada estudiante, crear sus clones de voz con ElevenLabs y usar esa voz para narrar automáticamente sus propios cuentos',
-      'Usar solo voces genéricas de robot, iguales para todos los cuentos del audiolibro',
-      'Escribir los cuentos en papel y pedir que un voluntario los lea en voz alta durante horas',
+      'Contratar actores de doblaje profesionales para que graben en un estudio todos los cuentos escritos',
+      'Grabar unos minutos de la voz de cada estudiante y clonarla con ElevenLabs para narrar',
+      'Usar la misma voz genérica de robot para todos los cuentos del audiolibro de la clase',
+      'Escribir los cuentos en papel y pedir a un voluntario que los lea en voz alta',
     ],
     correct: 1,
     feedback: 'Con los clones de voz de cada estudiante, el audiolibro final sonaría como si cada uno hubiera narrado su propio cuento. Esto se puede hacer hoy con herramientas gratuitas o de bajo costo.',
@@ -160,14 +160,16 @@ const VF_ITEMS_2 = [
   { text: 'Una empresa puede usar fragmentos de tu voz de una llamada de servicio al cliente para entrenar su IA.', correct: false, feedback: 'FALSO. En muchos países esto requiere consentimiento explícito. El GDPR en Europa y otras leyes de privacidad lo regulan. ¡Lee los términos de servicio!' },
 ];
 
-// Módulo 17 · Ordena la línea del tiempo (del más antiguo al más reciente)
-const SORT_ITEMS = [
-  'Primer sintetizador de voz mecánico (1939)',
-  'IBM crea el primer sistema TTS básico para computadoras (1961)',
-  'Nuance crea Dragon Dictation para reconocimiento de voz (1990)',
-  'Siri se lanza como asistente de voz en el iPhone (2011)',
-  'ElevenLabs lanza clonación de voz de alta calidad (2022)',
-  'Suno permite crear canciones completas con texto (2023)',
+// Módulo 17 · Ordena por sofisticación (de la más básica a la más avanzada).
+// El índice del array = posición correcta. Los años NO se muestran durante el ejercicio
+// (para no poder adivinar el orden); se revelan como dato curioso solo al acertar.
+const SORT_ITEMS: { text: string; reveal: string }[] = [
+  { text: 'Una máquina imita sonidos de voz, muy robóticos', reveal: '1939 · Primer sintetizador de voz mecánico' },
+  { text: 'La computadora lee un texto en voz alta y plana', reveal: '1961 · IBM crea el primer sistema de texto a voz' },
+  { text: 'El teléfono empieza a escribir lo que le dictas', reveal: '1990 · Dragon: reconocimiento de voz' },
+  { text: 'Un asistente entiende y responde tus preguntas', reveal: '2011 · Siri llega al iPhone' },
+  { text: 'La IA copia la voz exacta de una persona', reveal: '2022 · ElevenLabs: clonación de voz de alta calidad' },
+  { text: 'Escribes una idea y la IA crea una canción entera', reveal: '2023 · Suno compone canciones completas' },
 ];
 
 // Builders (intro + caja + ejemplo + placeholder + feedback)
@@ -382,6 +384,14 @@ export default function Level14() {
     const n = { ...vf2Answers, [idx]: ans };
     setVf2Answers(n);
     if (Object.keys(n).length === VF_ITEMS_2.length) awardStep(MODULE_XP[14]);
+  };
+
+  const submitSprint = () => {
+    if (sprintPhase !== 'running') return;
+    const valid = sprintText.trim().length > 20 && !looksRandom(sprintText);
+    setSprintValid(valid);
+    setSprintPhase('done');
+    if (valid) awardStep(MODULE_XP[13]);
   };
 
   const moveSort = (pos: number, dir: number) => {
@@ -710,6 +720,11 @@ export default function Level14() {
               onChangeText={setSprintText}
               editable={sprintPhase === 'running'}
             />
+            {sprintPhase === 'running' && (
+              <TouchableOpacity style={[styles.btn, sprintText.trim().length <= 20 && styles.mainBtnDisabled]} onPress={submitSprint} disabled={sprintText.trim().length <= 20}>
+                <Text style={styles.btnText}>Entregar ✓</Text>
+              </TouchableOpacity>
+            )}
             {sprintPhase === 'done' && (
               <Fb ok={sprintValid}>⚡ ¡Sprint terminado! {sprintValid ? 'Diseñaste personajes de audio únicos.' : 'La próxima vez intenta describir los 3 personajes completos.'}</Fb>
             )}
@@ -763,16 +778,16 @@ export default function Level14() {
         </>
       );
 
-      // ===== 17 · ORDENA LA LÍNEA DEL TIEMPO =====
+      // ===== 17 · ORDENA POR SOFISTICACIÓN (sin años visibles) =====
       case 17: return (
         <>
-          <ModuleType icon="📅" label="Ordena" />
-          <Title>Ordena la línea del tiempo</Title>
-          <Body style={{ marginBottom: 12 }}>Ordena estos hitos del audio artificial del más antiguo al más reciente. Usa las flechas para mover cada elemento.</Body>
+          <ModuleType icon="📈" label="Ordena" />
+          <Title>De lo más básico a lo más avanzado</Title>
+          <Body style={{ marginBottom: 12 }}>El audio con IA fue volviéndose más poderoso con los años. Ordena estas tecnologías de la <B>más básica (arriba)</B> a la <B>más avanzada (abajo)</B>. Piensa en cuánto puede hacer cada una.</Body>
           {sortOrder.map((origIdx, pos) => (
             <View key={pos} style={[styles.sortRow, sortWrong.has(pos) && styles.sortRowWrong, sortSolved && styles.sortRowOk]}>
               <Text style={styles.sortNum}>{pos + 1}</Text>
-              <Text style={styles.sortText}>{SORT_ITEMS[origIdx]}</Text>
+              <Text style={styles.sortText}>{SORT_ITEMS[origIdx].text}</Text>
               <View style={styles.sortArrows}>
                 <TouchableOpacity onPress={() => moveSort(pos, -1)} disabled={pos === 0 || sortSolved}>
                   <Text style={[styles.sortArrow, (pos === 0 || sortSolved) && { opacity: 0.25 }]}>▲</Text>
@@ -783,8 +798,17 @@ export default function Level14() {
               </View>
             </View>
           ))}
-          {sortSolved && <Fb ok>✅ ¡Línea del tiempo perfecta! Conoces bien la historia del audio con IA.</Fb>}
-          {!sortSolved && sortWrong.size > 0 && <Fb ok={false}>❌ Algunos elementos (en rojo) no están en el orden correcto. ¡Ajústalos e intenta de nuevo!</Fb>}
+          {sortSolved && (
+            <>
+              <Fb ok>✅ ¡Exacto! Cada paso podía hacer más que el anterior. Y así ocurrió en la vida real:</Fb>
+              <View style={styles.revealBox}>
+                {SORT_ITEMS.map((it, i) => (
+                  <Text key={i} style={styles.revealLine}>{i + 1}. {it.reveal}</Text>
+                ))}
+              </View>
+            </>
+          )}
+          {!sortSolved && sortWrong.size > 0 && <Fb ok={false}>❌ Los elementos en rojo aún no están en el orden correcto. Piensa cuál tecnología es más sencilla y cuál puede hacer más.</Fb>}
         </>
       );
 
@@ -844,10 +868,10 @@ export default function Level14() {
       case 2: return { label: 'Continuar →', enabled: matched.size === MATCH_PAIRS.length || devMode, note: matched.size < MATCH_PAIRS.length ? `Conecta los ${MATCH_PAIRS.length} pares · +${MODULE_XP[step]} XP` : undefined, onPress: next };
       case 6: return { label: 'Continuar →', enabled: Object.keys(c2Answers).length === CLASSIFY_ITEMS.length || devMode, note: `Clasifica los ${CLASSIFY_ITEMS.length} usos · +${MODULE_XP[step]} XP`, onPress: next };
       case 12: return { label: 'Continuar →', enabled: Object.keys(vf1Answers).length === VF_ITEMS_1.length || devMode, note: `Responde las ${VF_ITEMS_1.length} afirmaciones · +${MODULE_XP[step]} XP`, onPress: next };
-      case 13: return { label: 'Continuar →', enabled: sprintPhase === 'done' || devMode, note: sprintPhase !== 'done' ? 'Completa el sprint de 60 segundos · +15 XP' : undefined, onPress: next };
+      case 13: return { label: 'Continuar →', enabled: sprintPhase === 'done' || devMode, note: sprintPhase !== 'done' ? 'Escribe tus personajes y pulsa "Entregar" · +15 XP' : undefined, onPress: next };
       case 14: return { label: 'Continuar →', enabled: Object.keys(vf2Answers).length === VF_ITEMS_2.length || devMode, note: `Responde las ${VF_ITEMS_2.length} afirmaciones · +${MODULE_XP[step]} XP`, onPress: next };
       case 17:
-        if (!sortSolved) return { label: 'Verificar orden →', enabled: true, note: `Ordena del más antiguo al más reciente · +${MODULE_XP[step]} XP`, onPress: checkSort };
+        if (!sortSolved) return { label: 'Verificar orden →', enabled: true, note: `Ordena de la más básica a la más avanzada · +${MODULE_XP[step]} XP`, onPress: checkSort };
         return { label: 'Continuar →', enabled: true, onPress: next };
       case 20: return null; // botón dentro de la pantalla final
       default: return null;
@@ -995,6 +1019,8 @@ const styles = StyleSheet.create({
   sortText: { flex: 1, fontSize: 12, color: C.text, lineHeight: 17 },
   sortArrows: { flexDirection: 'column', marginLeft: 8 },
   sortArrow: { fontSize: 14, color: C.tealLight, paddingVertical: 2, paddingHorizontal: 4 },
+  revealBox: { backgroundColor: C.card2, borderRadius: 12, borderWidth: 1, borderColor: C.border, padding: 14, marginTop: 10 },
+  revealLine: { fontSize: 12, color: C.muted, lineHeight: 22 },
 
   // Botones
   btn: { backgroundColor: C.teal, padding: 14, borderRadius: 10, alignItems: 'center', marginTop: 12 },
