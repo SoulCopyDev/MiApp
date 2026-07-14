@@ -64,6 +64,7 @@ Refactor completo de numeración continua N1–N43. Ver propuesta en `/Descargas
 | AUDIT-N13 | ✅ Resuelto | Level13 fiel a nivel-13.html (tema oscuro M3, 19 módulos/260 XP reales, D&D real, fix XP infinito/duplicado) |
 | AUDIT-N14 | ✅ Resuelto | Level14 reconstruido vs nivel-14.html (tema oscuro TEAL propio, 19 módulos/265 XP reales, quiz shuffle+longitud, fix reset de quiz entre pasos y sprint bloqueado, validación de builders, sort con flash rojo) |
 | AUDIT-N15 | ✅ Resuelto | Level15 reconstruido vs nivel-15.html (tema oscuro DORADO propio, 19 módulos/265 XP reales, fix nav que saltaba actividades, quiz shuffle+longitud, D&D con flash rojo + porqué, sprint con entrega anticipada, validación de builders/reflexiones) |
+| AUDIT-N16 | ✅ Resuelto | Level16 reconstruido vs nivel-16.html (tema oscuro LIMA propio, 19 módulos/255 XP reales, fix XP duplicado (addXP al store durante el nivel), fix D&D que premiaba aunque fallaras y sort atascado sin reintento, ✕ de salida, quiz shuffle+longitud, sprint con entrega anticipada, validación de builders) |
 
 ## Scripts disponibles
 

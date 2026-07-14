@@ -1,1120 +1,1083 @@
-import { exitLevel } from '../utils/exitLevel';
-// src/levels/World3/Level4.tsx
-import { router } from 'expo-router';
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef, type ReactNode } from 'react';
 import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
-  StyleSheet,
-  Vibration,
-  Platform,
+  View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet,
+  Alert, BackHandler, Vibration, Platform,
 } from 'react-native';
+import { router } from 'expo-router';
 import { useGameStore } from '../store/gameStore';
 import { typography } from '../theme';
+import { exitLevel } from '../utils/exitLevel';
 import XPToast from '../components/XPToast';
 
-// ─── TIPOS DE MÓDULO ──────────────────────────────────────
-interface BaseModule {
-  type: 'theory' | 'quiz' | 'matching' | 'builder' | 'sort' | 'dragdrop' | 'sprint' | 'vf' | 'completion';
-  title: string;
-  xp: number;
+// ===================== PALETA (hex exactos del HTML nivel-16, tema oscuro lima M3) =====================
+const C = {
+  bg: '#040d00', surface: '#071500', card: '#0d1f00', card2: '#142800',
+  text: '#f0fde4', muted: '#86a85a', border: '#1e3a00',
+  lime: '#84cc16', limeLight: '#bef264', green: '#16a34a', emerald: '#059669', limeDark: '#65a30d',
+  green2: '#22c55e', okBg: '#052e16', okBorder: '#16a34a', okText: '#86efac',
+  red: '#ef4444', failBg: '#2d0707', failBorder: '#dc2626', failText: '#fca5a5',
+  yellow: '#f59e0b',
+  placeholder: '#4a6a2a',
+  codeBg: '#000000', codeText: '#a8ff78',
+};
+
+// ===================== HELPERS =====================
+const normalize = (s: string) =>
+  s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+
+function looksRandom(text: string): boolean {
+  const words = normalize(text).split(/\s+/).filter(w => w.length > 0);
+  if (words.length === 0) return true;
+  const noVowels = words.filter(w => w.length >= 4 && !/[aeiou]/.test(w));
+  if (noVowels.length >= Math.max(1, Math.floor(words.length / 2))) return true;
+  if (words.length >= 4) {
+    const unique = new Set(words);
+    if (unique.size / words.length < 0.5) return true;
+  }
+  return false;
 }
 
-interface TheoryModule extends BaseModule {
-  type: 'theory';
-  render: () => React.ReactElement;
+function containsTopic(text: string, terms: string[]): boolean {
+  const t = normalize(text);
+  return terms.some(term =>
+    term.length <= 3 ? new RegExp(`\\b${term}\\b`).test(t) : t.includes(term)
+  );
 }
 
-interface QuizModule extends BaseModule {
-  type: 'quiz';
-  question: string;
-  options: string[];
-  correct: number;
-  feedback: string;
+const APP_TERMS = ['app', 'aplicacion', 'web', 'sitio', 'usuario', 'usuarios', 'pantalla', 'pantallas', 'boton', 'botones', 'color', 'colores', 'estilo', 'diseño', 'diseno', 'funcion', 'sirve', 'guarda', 'muestra', 'formulario', 'fondo', 'movil', 'moderno', 'minimalista', 'menu', 'lista', 'registro', 'inicio'];
+const REFLECT_TERMS = ['app', 'aplicacion', 'web', 'construir', 'crear', 'idea', 'util', 'ia', 'programar', 'codigo', 'proyecto', 'resolver', 'problema', 'ayudar', 'persona', 'personas', 'sirve', 'usuario'];
+
+function shuffle<T>(arr: T[]): T[] {
+  const a = arr.slice();
+  for (let j = a.length - 1; j > 0; j--) {
+    const k = Math.floor(Math.random() * (j + 1));
+    [a[j], a[k]] = [a[k], a[j]];
+  }
+  return a;
+}
+function shuffleOpts<T extends { options: string[]; correct: number }>(q: T): T {
+  const paired = q.options.map((opt, i) => ({ opt, isCorrect: i === q.correct }));
+  const sh = shuffle(paired);
+  return { ...q, options: sh.map(p => p.opt), correct: sh.findIndex(p => p.isCorrect) };
 }
 
-interface MatchingModule extends BaseModule {
-  type: 'matching';
-  pairs: { left: string; right: string }[];
-}
+// ===================== DATOS (fieles al HTML nivel-16) =====================
+type QuizMod = { title: string; question: string; options: string[]; correct: number; feedback: string };
 
-interface BuilderModule extends BaseModule {
-  type: 'builder';
-  placeholder: string;
-  contentText?: string;
-  render?: () => React.ReactElement; // algunos builders tienen contenido adicional
-}
-
-interface SortModule extends BaseModule {
-  type: 'sort';
-  instruction: string;
-  correctOrder: string[];
-}
-
-interface DragDropModule extends BaseModule {
-  type: 'dragdrop';
-  instruction: string;
-  zones: string[];
-  items: { id: string; text: string }[];
-  correct: Record<string, number>; // id -> zone index
-}
-
-interface SprintModule extends BaseModule {
-  type: 'sprint';
-  duration: number;
-  instruction: string;
-  placeholder: string;
-}
-
-interface VFModule extends BaseModule {
-  type: 'vf';
-  statements: { text: string; correct: boolean; feedback: string }[];
-}
-
-type Module = TheoryModule | QuizModule | MatchingModule | BuilderModule | SortModule | DragDropModule | SprintModule | VFModule | { type: 'completion'; title: string; xp: number };
-
-// ─── MÓDULOS (datos) ──────────────────────────────────────
-const MODULES: Module[] = [
-  // 0 INTRO (theory)
-  {
-    type: 'theory', title: 'Introducción', xp: 0,
-    render: () => (
-      <>
-        <ModuleType icon="💻" label="Introducción" />
-        <ModuleTitle>De usuario a constructor</ModuleTitle>
-        <BodyText>
-          ¿Sabías que muchas de las apps y sitios web que usas hoy fueron construidos por personas que empezaron exactamente como tú? La diferencia es que ahora tienes algo que ellos no tenían: <Bold>inteligencia artificial que escribe código por ti</Bold>.
-        </BodyText>
-        <BodyText>
-          Con herramientas como <Bold>Lovable</Bold>, <Bold>Bolt</Bold> o <Bold>Bubble</Bold>, puedes describir en español lo que quieres construir y la IA lo convierte en una aplicación funcional en minutos. No necesitas saber programar.
-        </BodyText>
-        <InfoBox>
-          <Bold>¿Qué vas a aprender hoy?</Bold>{'\n'}
-          🔨 Qué son las herramientas no-code e IA-code{'\n'}
-          🌐 Cómo funciona una página web por dentro (lo básico){'\n'}
-          ✏️ Cómo describir tu app con palabras para que la IA la construya{'\n'}
-          🚀 Cómo publican sus apps jóvenes como tú en todo el mundo
-        </InfoBox>
-      </>
-    ),
-  },
-  // 1 THEORY
-  {
-    type: 'theory', title: 'Herramientas no-code', xp: 10,
-    render: () => (
-      <>
-        <ModuleType icon="🧠" label="Teoría" />
-        <ModuleTitle>No-code, low-code y full-code</ModuleTitle>
-        <BodyText>Existen tres formas de construir aplicaciones web hoy:</BodyText>
-        <InfoBox>
-          <Bold>No-code:</Bold> Describes lo que quieres con palabras o arrastras elementos visuales. La IA o la plataforma genera todo el código. Ejemplos: Lovable, Bubble, Framer.{'\n'}
-          <Bold>Low-code:</Bold> Usas bloques visuales pero también escribes algo de código para personalizar. Requiere conocimientos básicos de programación.{'\n'}
-          <Bold>Full-code:</Bold> Escribes todo el código tú mismo en lenguajes como HTML, CSS, JavaScript o Python. Máximo control, máximo aprendizaje requerido.
-        </InfoBox>
-        <InfoBox>
-          <Bold>La tendencia en 2025:</Bold> Las empresas más innovadoras usan las tres. Un fundador no-técnico usa no-code para prototipar rápido, y cuando la app crece, un programador la mejora con full-code. La IA está haciendo que la línea entre las tres sea cada vez más difusa.
-        </InfoBox>
-      </>
-    ),
-  },
-  // 2 MATCHING
-  {
-    type: 'matching', title: 'Herramientas no-code', xp: 15,
-    pairs: [
-      { left: '🔨 Lovable', right: 'Describe tu app en texto y genera React + código completo' },
-      { left: '⚡ Bolt (StackBlitz)', right: 'Crea apps web en el navegador con IA en tiempo real' },
-      { left: '🫧 Bubble', right: 'Constructor visual con base de datos integrada, sin código' },
-      { left: '🎨 Framer', right: 'Diseño web profesional con animaciones y IA para copy' },
-    ],
-  },
-  // 3 BUILDER (descripción de app)
-  {
-    type: 'builder', title: 'Describe tu app', xp: 15,
-    placeholder: 'Describe tu app ideal aquí...',
-    contentText: 'El primer paso para construir cualquier app es saber exactamente qué hace. Responde estas preguntas en tu descripción:\n\n¿Qué hace tu app? ¿Para qué sirve exactamente?\n¿Para quién es? ¿Qué tipo de persona la usaría?\n¿Cómo se ve? Colores, estilo, si es seria o divertida\n¿Qué acción principal realiza? ¿Guardar algo, mostrar info, conectar personas?\n\nEjemplo: "Una app para estudiantes de secundaria en México que permite guardar frases motivadoras, compartirlas con amigos y votar cuál es la mejor. Diseño colorido y juvenil, fondo oscuro con acentos neón."',
-  },
-  // 4 THEORY: HTML básico
-  {
-    type: 'theory', title: '¿Qué es HTML?', xp: 10,
-    render: () => (
-      <>
-        <ModuleType icon="🌐" label="Teoría" />
-        <ModuleTitle>Lo mínimo que debes saber de una web</ModuleTitle>
-        <BodyText>Toda página web está hecha de tres ingredientes básicos:</BodyText>
-        <InfoBox>
-          <Bold>HTML:</Bold> La estructura. Como el esqueleto del cuerpo — define qué elementos existen (títulos, párrafos, botones, imágenes).{'\n'}
-          <Bold>CSS:</Bold> El estilo. Como la ropa — decide colores, tamaños, fuentes y cómo se ve todo.{'\n'}
-          <Bold>JavaScript:</Bold> El comportamiento. Como los músculos — hace que las cosas se muevan, respondan a clicks y funcionen.
-        </InfoBox>
-        <CodeBlock>
-          {'<h1>Hola, soy un título</h1>\n<p>Soy un párrafo de texto.</p>\n<button style="color:green">¡Haz clic!</button>'}
-        </CodeBlock>
-        <BodyText>Cuando usas Lovable o Bolt, la IA genera este código por ti automáticamente. Pero entender qué hace cada parte te ayuda a pedir exactamente lo que quieres.</BodyText>
-      </>
-    ),
-  },
-  // 5 QUIZ
-  {
-    type: 'quiz', title: 'HTML, CSS y JavaScript', xp: 15,
-    question: 'Amir, un estudiante de Irán, quiere que el botón de su app cambie de color cuando alguien lo toca con el dedo. ¿Qué tecnología es la responsable de ese comportamiento interactivo?',
+// Quizzes con opciones balanceadas en longitud (la correcta no debe ser la más larga)
+const QUIZZES: Record<number, QuizMod> = {
+  5: {
+    title: 'HTML, CSS y JavaScript',
+    question: 'Amir, un estudiante de Irán, quiere que el botón de su app cambie de color cuando alguien lo toca. ¿Qué tecnología es la responsable de ese comportamiento interactivo?',
     options: [
-      'HTML (estructura la página)',
-      'CSS (da estilo visual)',
-      'JavaScript (maneja interacciones y comportamiento)',
+      'HTML — estructura y organiza la página',
+      'CSS — da el estilo visual y los colores',
+      'JavaScript — maneja las interacciones y el comportamiento',
       'El servidor donde está guardada la app',
     ],
     correct: 2,
-    feedback: '¡Correcto! JavaScript es el que hace que las cosas pasen: clics, animaciones, cambios en tiempo real. HTML es la estructura y CSS es el estilo.',
+    feedback: 'JavaScript es el que hace que las cosas pasen: clics, animaciones y cambios en tiempo real. HTML es la estructura y CSS es el estilo.',
   },
-  // 6 THEORY: Copilot y Cursor
-  {
-    type: 'theory', title: 'IA que escribe código', xp: 10,
-    render: () => (
-      <>
-        <ModuleType icon="🤖" label="Casos reales" />
-        <ModuleTitle>GitHub Copilot y Cursor</ModuleTitle>
-        <BodyText>Para quienes sí saben algo de programación, existen IAs que actúan como "co-pilotos" que completan el código automáticamente:</BodyText>
-        <InfoBox>
-          <Bold>🤖 GitHub Copilot:</Bold> Desarrollado por Microsoft y OpenAI. Predice la siguiente línea de código que vas a escribir y la completa en tiempo real. Es como el autocorrector del teléfono, pero para código.{'\n'}
-          <Bold>🎯 Cursor:</Bold> Un editor de código completo con IA integrada. Puedes decirle en español "añade un botón que guarde el formulario" y lo hace automáticamente.
-        </InfoBox>
-        <InfoBox>
-          <Bold>Dato real:</Bold> En 2024, GitHub reportó que el 55% del código de los proyectos que usan Copilot fue escrito por la IA, no por humanos. Los programadores ahora supervisan y dirigen más de lo que escriben manualmente.
-        </InfoBox>
-      </>
-    ),
-  },
-  // 7 THEORY: pasos para hacer una web
-  {
-    type: 'theory', title: 'Los 5 pasos', xp: 10,
-    render: () => (
-      <>
-        <ModuleType icon="📋" label="Teoría" />
-        <ModuleTitle>Cómo se construye una web con IA</ModuleTitle>
-        <BodyText>El proceso para crear una app con IA no-code tiene siempre estos pasos:</BodyText>
-        <InfoBox>
-          <Bold>1. 💡 Idea:</Bold> ¿Qué problema resuelve tu app?{'\n'}
-          <Bold>2. 📝 Wireframe:</Bold> Dibuja o describe las pantallas principales{'\n'}
-          <Bold>3. 🤖 Prompt:</Bold> Escríbele a la IA exactamente lo que quieres{'\n'}
-          <Bold>4. 🧪 Genera y prueba:</Bold> La IA construye, tú pruebas y corriges{'\n'}
-          <Bold>5. 🌐 Publica:</Bold> Con un clic, tu app está en internet para el mundo
-        </InfoBox>
-        <BodyText>Lo más importante: <Bold>el paso 3 es donde tu habilidad de prompting hace toda la diferencia</Bold>. Todo lo que aprendiste en M2 aplica directamente aquí.</BodyText>
-      </>
-    ),
-  },
-  // 8 SORT
-  {
-    type: 'sort', title: 'Ordena los pasos', xp: 15,
-    instruction: 'Toca un elemento para seleccionarlo, luego toca otro para intercambiarlos. Ordena correctamente los pasos:',
-    correctOrder: [
-      'Identificar el problema que va a resolver la app',
-      'Describir las pantallas y funciones principales (wireframe)',
-      'Escribir el prompt detallado para la IA',
-      'La IA genera el código; tú lo revisas y corriges',
-      'Publicar la app en internet con un dominio',
-    ],
-  },
-  // 9 BUILDER (estilo visual)
-  {
-    type: 'builder', title: 'El prompt de diseño', xp: 15,
-    placeholder: 'Describe el estilo visual de tu app ideal...',
-    contentText: 'El diseño visual es tan importante como la funcionalidad. La IA puede seguir instrucciones de estilo si las describes bien:\n\n🎨 Paleta: "Fondo oscuro navy, acentos azul eléctrico, texto blanco"\n✍️ Tipografía: "Fuente moderna sans-serif para títulos, clara para texto"\n📐 Estilo general: "Minimalista", "Colorido y juvenil", "Profesional y serio"\n📱 Dispositivo: "Primero para móvil" o "Diseñado para pantalla grande"\n\nEjemplo: "Fondo negro con gradiente púrpura oscuro, botones color coral, tipografía Poppins moderna, estilo juvenil y energético como las apps de música, optimizado para móvil."',
-  },
-  // 10 THEORY: debugging
-  {
-    type: 'theory', title: 'La IA como asistente de código', xp: 10,
-    render: () => (
-      <>
-        <ModuleType icon="🐛" label="Casos reales" />
-        <ModuleTitle>Cuando algo no funciona, la IA lo arregla</ModuleTitle>
-        <BodyText>
-          Uno de los superpoderes de usar IA para construir apps es que también puede encontrar y corregir errores. A esto se le llama <Bold>debugging</Bold>.
-        </BodyText>
-        <InfoBox>
-          <Bold>Flujo de trabajo real:</Bold>{'\n'}
-          1. Describes el bug en lenguaje normal{'\n'}
-          2. La IA analiza el código y encuentra la causa{'\n'}
-          3. Propone la corrección y explica por qué ocurrió{'\n'}
-          4. Tú apruebas el cambio y el error desaparece
-        </InfoBox>
-        <BodyText>Este flujo reduce horas de trabajo a minutos. Por eso los programadores junior que saben usar IA son ahora tan productivos como seniors que no la usan.</BodyText>
-      </>
-    ),
-  },
-  // 11 QUIZ
-  {
-    type: 'quiz', title: 'No-code vs low-code', xp: 15,
-    question: 'Valentina quiere crear una app para su colegio en Chile que permita a los estudiantes reportar si hay basura en el patio y que un administrador la vea en tiempo real. No sabe programar nada. ¿Cuál es la mejor opción para ella?',
+  11: {
+    title: 'No-code vs low-code',
+    question: 'Valentina quiere una app para su colegio en Chile donde los estudiantes reporten si hay basura en el patio y un administrador lo vea en tiempo real. No sabe programar. ¿Cuál es su mejor opción?',
     options: [
-      'Aprender Python durante 2 años antes de empezar',
-      'Usar Lovable o Bubble — describen la app con palabras y la IA genera todo el código',
-      'Contratar a un programador profesional',
-      'Las apps de este tipo solo pueden hacerlas empresas grandes',
+      'Aprender a programar en Python durante unos dos años antes de empezar el proyecto',
+      'Usar Lovable o Bubble: describe la app con palabras y la IA genera el código',
+      'Contratar a un programador profesional para que construya toda la app por ella',
+      'Este tipo de apps solo pueden crearlas las grandes empresas de tecnología',
     ],
     correct: 1,
-    feedback: '¡Correcto! Herramientas como Lovable o Bubble son perfectas para este caso. Valentina puede tener una versión funcional en horas, no años, y luego mejorarla sin saber programar.',
+    feedback: 'Herramientas como Lovable o Bubble son perfectas para este caso. Valentina puede tener una versión funcional en horas, no años, y luego mejorarla sin saber programar.',
   },
-  // 12 SPRINT
-  {
-    type: 'sprint', title: 'Sprint: describe tu app', xp: 20,
-    duration: 60,
-    instruction: '⚡ ¡60 segundos! Describe tu app perfecta: qué hace + para quién es + cómo se ve + acción principal.',
-    placeholder: 'Mi app se llama... Sirve para... La usarían... Se ve... La acción principal es...',
-  },
-  // 13 THEORY: apps de jóvenes
-  {
-    type: 'theory', title: 'Apps hechas por jóvenes', xp: 10,
-    render: () => (
-      <>
-        <ModuleType icon="🌍" label="Casos reales" />
-        <ModuleTitle>Jóvenes que ya construyeron con IA</ModuleTitle>
-        <BodyText>
-          🇺🇸 <Bold>Caleb Jhay (17 años, EE.UU.):</Bold> Construyó una app de estudio con IA que genera tarjetas de memoria desde apuntes. La publicó en Product Hunt y consiguió 2,000 usuarios en su primera semana.{'\n\n'}
-          🇳🇬 <Bold>Amaka Obi (16 años, Nigeria):</Bold> Creó un directorio web de negocios locales de su barrio usando Bubble. El ayuntamiento la contactó para expandir el proyecto.{'\n\n'}
-          🇧🇷 <Bold>Pedro Alves (15 años, Brasil):</Bold> Hizo un bot de Telegram para su colegio que responde preguntas del reglamento escolar. Lo construyó en un fin de semana con ChatGPT y Python básico.
-        </BodyText>
-        <InfoBox>
-          <Bold>Lo que tienen en común:</Bold> Ninguno esperó a ser "experto" para empezar. Identificaron un problema real, lo describieron bien y usaron las herramientas disponibles. <Bold>Tú puedes hacer lo mismo hoy.</Bold>
-        </InfoBox>
-      </>
-    ),
-  },
-  // 14 THEORY: no-code vs low-code decisión
-  {
-    type: 'theory', title: '¿Cuándo uso cada cosa?', xp: 10,
-    render: () => (
-      <>
-        <ModuleType icon="🗺️" label="Teoría" />
-        <ModuleTitle>Elige la herramienta correcta</ModuleTitle>
-        <BodyText>No todas las situaciones requieren el mismo enfoque. Aquí está la guía rápida:</BodyText>
-        <InfoBox>
-          <Bold>Usa no-code (Lovable, Bubble) cuando:</Bold>{'\n'}
-          → Quieres un prototipo rápido en horas{'\n'}
-          → El proyecto es relativamente simple{'\n'}
-          → No tienes tiempo de aprender a programar ahora{'\n\n'}
-          <Bold>Usa low-code (con algo de JS/Python) cuando:</Bold>{'\n'}
-          → Necesitas funcionalidades muy específicas{'\n'}
-          → Quieres tener más control sobre cómo funciona{'\n\n'}
-          <Bold>Aprende full-code cuando:</Bold>{'\n'}
-          → Quieres construir cosas muy complejas o escalables{'\n'}
-          → Quieres trabajar profesionalmente en tecnología
-        </InfoBox>
-      </>
-    ),
-  },
-  // 15 DRAG DROP
-  {
-    type: 'dragdrop', title: '¿Qué herramienta uso?', xp: 15,
-    instruction: 'Clasifica cada proyecto en la herramienta más adecuada:',
-    zones: ['🔨 No-code (Lovable/Bubble)', '🐍 Requiere programación real'],
-    items: [
-      { id: 'a', text: 'Un sitio web sencillo para mostrar tu portafolio personal' },
-      { id: 'b', text: 'Un sistema bancario que maneja millones de transacciones por día' },
-      { id: 'c', text: 'Una app para reservar canchas deportivas en tu barrio' },
-      { id: 'd', text: 'Un sistema operativo nuevo para computadoras' },
-      { id: 'e', text: 'Una encuesta digital para tu proyecto de ciencias' },
-      { id: 'f', text: 'Un motor de IA que aprende con millones de datos en tiempo real' },
-    ],
-    correct: { a: 0, b: 1, c: 0, d: 1, e: 0, f: 1 },
-  },
-  // 16 QUIZ: necesidad de programar
-  {
-    type: 'quiz', title: 'El debate: ¿necesito programar?', xp: 15,
+  16: {
+    title: 'El debate: ¿necesito programar?',
     question: 'Si la IA ya escribe código por mí, ¿para qué aprendería a programar? ¿Cuál es la respuesta más inteligente?',
     options: [
-      'No necesito programar para nada — la IA lo hace todo mejor',
-      'Debo aprender todo el código posible porque la IA nunca lo reemplazará',
-      'Entender los fundamentos de programación me ayuda a dar mejores instrucciones a la IA, detectar errores y construir cosas más complejas — es una ventaja, no una obligación',
-      'Solo los genios pueden programar; el resto debemos conformarnos con no-code',
+      'No necesito programar nada, porque la IA de código ya lo hace todo mucho mejor que yo',
+      'Debo aprender todo el código posible, porque la IA jamás podrá reemplazar a un humano',
+      'Entender lo básico de programación te ayuda a guiar a la IA y detectar sus errores',
+      'Solo los genios pueden programar, así que mejor me conformo con las herramientas no-code',
     ],
     correct: 2,
-    feedback: '¡Exacto! La programación y la IA no son opuestos. Quien entiende cómo funciona el código puede sacarle mucho más provecho a las IAs de programación. Es como cocinar: no necesitas ser chef para comer bien, pero entender ingredientes te hace mejor.',
+    feedback: 'La programación y la IA no son opuestos. Quien entiende cómo funciona el código le saca mucho más provecho a las IA de programación: da mejores instrucciones, detecta errores y construye cosas más complejas.',
   },
-  // 17 VF
-  {
-    type: 'vf', title: 'Verdadero o Falso', xp: 15,
-    statements: [
-      { text: 'Con Lovable puedes publicar una app funcional en internet sin tocar ni una línea de código.', correct: true, feedback: 'VERDADERO. Lovable genera el código y tiene integración directa con servicios de publicación. Con un clic tu app está online.' },
-      { text: 'Las apps hechas con herramientas no-code nunca pueden crecer para tener miles de usuarios.', correct: false, feedback: 'FALSO. Apps como Notion, Webflow y muchas otras startups exitosas empezaron con herramientas no-code o low-code. Cuando crecen, migran gradualmente a código más personalizado.' },
-      { text: 'GitHub Copilot puede escribir código en más de 10 lenguajes de programación diferentes.', correct: true, feedback: 'VERDADERO. Copilot funciona en Python, JavaScript, TypeScript, Ruby, Go, Java, C++, PHP, y más. Aprende los patrones de millones de proyectos de código abierto.' },
-    ],
-  },
-  // 18 BUILDER (wireframe con palabras)
-  {
-    type: 'builder', title: 'Las 3 pantallas de tu app', xp: 15,
-    placeholder: 'Describe las 3 pantallas principales de tu app...',
-    contentText: 'Antes de pedirle a la IA que construya tu app, es útil describir las pantallas principales. Esto se llama wireframe textual.\n\nPantalla 1 — Inicio: Lo primero que ve el usuario\nPantalla 2 — Acción principal: Lo que hace el usuario en la app\nPantalla 3 — Resultado: Lo que ve después de completar la acción\n\nEjemplo: "Pantalla 1: Bienvenida con logo y botón Empezar. Pantalla 2: Formulario donde el estudiante escribe su meta del día. Pantalla 3: Tarjeta motivacional generada por IA con su meta y un emoji aleatorio."',
-  },
-  // 19 REFLEXIÓN (builder)
-  {
-    type: 'builder', title: 'Reflexión final', xp: 15,
-    placeholder: 'Describe tu primera app y por qué sería útil para alguien...',
-    contentText: 'Tú eres el arquitecto, la IA es el constructor\n\nHay una frase que resume muy bien el futuro del desarrollo de software con IA:\n\n"La IA escribe el código, pero tú decides qué construir, para quién y por qué. La creatividad, la empatía y la visión siguen siendo 100% tuyas."\n\n¿Qué app construirías primero si tuvieras una hora libre ahora mismo? ¿Por qué esa y no otra?',
-  },
-  // 20 COMPLETION
-  { type: 'completion', title: '¡Completado!', xp: 0 },
+};
+
+// Módulo 2 · Matching
+const MATCH_PAIRS = [
+  { left: '🔨 Lovable', right: 'Describe tu app en texto y genera React + código completo' },
+  { left: '⚡ Bolt (StackBlitz)', right: 'Crea apps web en el navegador con IA en tiempo real' },
+  { left: '🫧 Bubble', right: 'Constructor visual con base de datos integrada, sin código' },
+  { left: '🎨 Framer', right: 'Diseño web profesional con animaciones y IA para el texto' },
 ];
 
-const MAX_XP = 240;
+// Módulo 8 · Sort (proceso de crear una web con IA). Índice = posición correcta.
+const SORT_ITEMS = [
+  'Identificar el problema que va a resolver la app',
+  'Describir las pantallas y funciones principales (wireframe)',
+  'Escribir el prompt detallado para la IA',
+  'La IA genera el código; tú lo revisas y corriges',
+  'Publicar la app en internet con un dominio',
+];
 
-// ─── COMPONENTES AUXILIARES ────────────────────────────────
-const ModuleType = ({ icon, label }: { icon: string; label: string }) => (
-  <View style={styles.moduleType}>
-    <Text>{icon}</Text>
-    <Text style={styles.moduleTypeText}>{label}</Text>
-  </View>
-);
-const ModuleTitle = ({ children }: { children: string }) => (
-  <Text style={styles.moduleTitle}>{children}</Text>
-);
-const BodyText = ({ children, style }: any) => (
-  <Text style={[styles.bodyText, style]}>{children}</Text>
-);
-const Bold = ({ children }: { children: string }) => (
-  <Text style={styles.bold}>{children}</Text>
-);
-const InfoBox = ({ children }: { children: any }) => (
-  <View style={styles.infoBox}>
-    <Text style={styles.infoBoxText}>{children}</Text>
-  </View>
-);
-const CodeBlock = ({ children }: { children: string }) => (
-  <View style={styles.codeBlock}>
-    <Text style={styles.codeText}>{children}</Text>
-  </View>
-);
+// Módulo 15 · Drag & drop. zone 0 = no-code, 1 = requiere programación real.
+const DD_ITEMS: { text: string; zone: 0 | 1; why: string }[] = [
+  { text: 'Un sitio web sencillo para mostrar tu portafolio personal', zone: 0, why: 'Un portafolio simple se hace fácil y rápido con no-code.' },
+  { text: 'Un sistema bancario que maneja millones de transacciones por día', zone: 1, why: 'Un banco necesita programación real, seguridad y control total.' },
+  { text: 'Una app para reservar canchas deportivas en tu barrio', zone: 0, why: 'Una app de reservas sencilla es ideal para no-code.' },
+  { text: 'Un sistema operativo nuevo para computadoras', zone: 1, why: 'Un sistema operativo requiere programación avanzada de bajo nivel.' },
+  { text: 'Una encuesta digital para tu proyecto de ciencias', zone: 0, why: 'Una encuesta simple se arma en minutos con no-code.' },
+  { text: 'Un motor de IA que aprende con millones de datos en tiempo real', zone: 1, why: 'Un motor de IA necesita programación y mucho cómputo especializado.' },
+];
+const DD_ZONES = ['🔨 No-code (Lovable/Bubble)', '🐍 Requiere programación real'];
 
-// ─── COMPONENTE PRINCIPAL ──────────────────────────────────
-export default function World3Level4() {
-  const completeLevel = useGameStore((s) => s.completeLevel);
-  const addXPToStore = useGameStore((s) => s.addXP);
+// Módulo 17 · Verdadero/Falso
+const VF_ITEMS = [
+  { text: 'Con Lovable puedes publicar una app funcional en internet sin tocar ni una línea de código.', correct: true, feedback: 'VERDADERO. Lovable genera el código y tiene integración directa con servicios de publicación. Con un clic tu app está online.' },
+  { text: 'Las apps hechas con herramientas no-code nunca pueden crecer para tener miles de usuarios.', correct: false, feedback: 'FALSO. Apps como Notion y muchas startups exitosas empezaron con no-code o low-code. Cuando crecen, migran gradualmente a código más personalizado.' },
+  { text: 'GitHub Copilot puede escribir código en más de 10 lenguajes de programación diferentes.', correct: true, feedback: 'VERDADERO. Copilot funciona en Python, JavaScript, TypeScript, Ruby, Go, Java, C++, PHP y más. Aprende de millones de proyectos de código abierto.' },
+];
+
+// Builders y reflexión
+const BUILDERS: Record<number, { icon: string; label: string; title: string; intro: string; box: string; example?: string; placeholder: string; fb: string; terms: string[]; topicMsg: string }> = {
+  3: {
+    icon: '✏️', label: 'Constructor', title: 'Describe tu web con palabras',
+    intro: 'El primer paso para construir cualquier app es saber exactamente qué hace. Responde estas preguntas en tu descripción:',
+    box: '❓ ¿Qué hace tu app? ¿Para qué sirve exactamente?\n👤 ¿Para quién es? ¿Qué tipo de persona la usaría?\n🎨 ¿Cómo se ve? Colores, estilo, si es seria o divertida\n⚡ ¿Cuál es su acción principal? ¿Guardar algo, mostrar info, conectar personas?',
+    example: '"Una app para estudiantes de secundaria en México que permite guardar frases motivadoras, compartirlas con amigos y votar cuál es la mejor. Diseño colorido y juvenil, fondo oscuro con acentos neón."',
+    placeholder: 'Describe tu app ideal aquí: qué hace, para quién, cómo se ve y su acción principal...',
+    fb: '💻 ¡Esa descripción es suficiente para que Lovable o Bolt generen una primera versión funcional en minutos!',
+    terms: APP_TERMS, topicMsg: 'Describe tu app: qué hace, para quién es, cómo se ve o su acción principal.',
+  },
+  9: {
+    icon: '🎨', label: 'Constructor', title: 'Describe el estilo visual de tu app',
+    intro: 'El diseño visual es tan importante como la funcionalidad. La IA puede seguir instrucciones de estilo si las describes bien:',
+    box: '🎨 Paleta: "Fondo oscuro navy, acentos azul eléctrico, texto blanco"\n✍️ Tipografía: "Fuente moderna sans-serif para títulos"\n📐 Estilo general: "Minimalista", "Colorido y juvenil", "Profesional"\n📱 Dispositivo: "Primero para móvil" o "Para pantalla grande"',
+    example: '"Fondo negro con gradiente púrpura oscuro, botones color coral, tipografía moderna, estilo juvenil y energético como las apps de música, optimizado para móvil."',
+    placeholder: 'Describe el estilo visual de tu app: paleta, tipografía, estilo, dispositivo...',
+    fb: '🎨 ¡Con esa descripción de estilo la IA generaría una app con identidad visual clara!',
+    terms: APP_TERMS, topicMsg: 'Describe el estilo: colores, tipografía, estilo general o dispositivo.',
+  },
+  18: {
+    icon: '📱', label: 'Constructor', title: 'Diseña tu app en palabras',
+    intro: 'Antes de pedirle a la IA que construya tu app, describe las pantallas principales. Esto se llama wireframe textual.',
+    box: '🏠 Pantalla 1 — Inicio: lo primero que ve el usuario\n⚡ Pantalla 2 — Acción principal: lo que hace el usuario\n✅ Pantalla 3 — Resultado: lo que ve al completar la acción',
+    example: '"Pantalla 1: bienvenida con logo y botón Empezar. Pantalla 2: formulario donde el estudiante escribe su meta del día. Pantalla 3: tarjeta motivacional generada por IA con su meta y un emoji."',
+    placeholder: 'Describe las 3 pantallas principales de tu app: inicio, acción y resultado...',
+    fb: '📱 ¡Wireframe listo! Con esa descripción, una IA como Lovable podría generar las 3 pantallas funcionando en minutos.',
+    terms: APP_TERMS, topicMsg: 'Describe las pantallas de tu app: inicio, acción principal y resultado.',
+  },
+  19: {
+    icon: '💭', label: 'Reflexión', title: 'Tú eres el arquitecto, la IA es el constructor',
+    intro: 'Hay una frase que resume el futuro del desarrollo con IA: "La IA escribe el código, pero tú decides qué construir, para quién y por qué. La creatividad, la empatía y la visión siguen siendo 100% tuyas."',
+    box: '💡 ¿Qué app construirías primero si tuvieras una hora libre ahora mismo?\n🤔 ¿Por qué esa y no otra?\n👥 ¿A quién le serviría?',
+    placeholder: 'Describe tu primera app y por qué sería útil para alguien...',
+    fb: '💻 ¡Esa idea tiene potencial real! El próximo paso es abrir Lovable y empezar a construirla.',
+    terms: REFLECT_TERMS, topicMsg: 'Cuenta qué app construirías, para quién y por qué sería útil.',
+  },
+};
+
+// XP por módulo (campo xp real del HTML). Suma real = 255 (el header del HTML decía 240 — el conteo real manda)
+const MODULE_XP: number[] = [0, 10, 15, 15, 10, 15, 10, 10, 15, 15, 10, 15, 20, 10, 10, 15, 15, 15, 15, 15, 0];
+const MAX_XP = MODULE_XP.reduce((a, b) => a + b, 0); // 255
+const TOTAL_STEPS = 21;   // 0=intro … 20=completado
+const CONTENT_STEPS = 19; // módulos de contenido (1..19)
+const SPRINT_DURATION = 60;
+
+export default function Level16() {
+  const completeLevel = useGameStore(s => s.completeLevel);
+  const devMode = useGameStore(s => s.devMode);
 
   const [step, setStep] = useState(0);
   const [xp, setXp] = useState(0);
   const [xpToast, setXpToast] = useState<{ amount: number; id: number } | null>(null);
   const [correctCount, setCorrectCount] = useState(0);
-  // Estados para quizzes
-  const [quizAnswered, setQuizAnswered] = useState(false);
-  const [selectedOption, setSelectedOption] = useState<number | null>(null);
-  const [quizResult, setQuizResult] = useState<'correct' | 'wrong' | null>(null);
+  const awardedSteps = useRef<Set<number>>(new Set());
+
+  // Quizzes con opciones barajadas (la correcta no debe tener posición fija)
+  const [quizzes] = useState<Record<number, QuizMod>>(() => {
+    const out: Record<number, QuizMod> = {};
+    Object.entries(QUIZZES).forEach(([k, q]) => { out[Number(k)] = shuffleOpts(q); });
+    return out;
+  });
+  const [quizSel, setQuizSel] = useState<number | null>(null);
 
   // Matching
   const [selectedLeft, setSelectedLeft] = useState<number | null>(null);
-  const [matchedPairs, setMatchedPairs] = useState<Set<string>>(new Set());
-  const [shuffledRight, setShuffledRight] = useState<{ idx: number; text: string }[]>([]);
+  const [matched, setMatched] = useState<Set<number>>(new Set());
+  const [wrongFlash, setWrongFlash] = useState<{ left: number; right: number } | null>(null);
+  const [shuffledRight] = useState(() => shuffle(MATCH_PAIRS.map((p, i) => ({ idx: i, text: p.right }))));
 
-  // Builder
+  // Builders (dos fases: confirmar → continuar)
   const [builderText, setBuilderText] = useState('');
   const [builderDone, setBuilderDone] = useState(false);
+  const [builderError, setBuilderError] = useState<string | null>(null);
 
-  // Sort
-  const [sortOrder, setSortOrder] = useState<string[]>([]);
-  const [sortSelectedIdx, setSortSelectedIdx] = useState<number | null>(null);
-  const [sortChecked, setSortChecked] = useState(false);
-
-  // DragDrop
-  const [classifications, setClassifications] = useState<Record<string, number | null>>({});
+  // VF (17)
+  const [vfAnswers, setVfAnswers] = useState<Record<number, boolean>>({});
 
   // Sprint
-  const [sprintActive, setSprintActive] = useState(false);
-  const [sprintTime, setSprintTime] = useState(0);
+  const [sprintPhase, setSprintPhase] = useState<'idle' | 'running' | 'done'>('idle');
+  const [sprintSec, setSprintSec] = useState(SPRINT_DURATION);
   const [sprintText, setSprintText] = useState('');
-  const sprintInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [sprintValid, setSprintValid] = useState(false);
 
-  // VF
-  const [vfAnswers, setVFAnswers] = useState<Record<number, boolean | null>>({});
+  // Sort (reordenar con flechas; resaltar mal ubicados al verificar)
+  const [sortOrder, setSortOrder] = useState<number[]>(() => shuffle([0, 1, 2, 3, 4]));
+  const [sortSolved, setSortSolved] = useState(false);
+  const [sortWrong, setSortWrong] = useState<Set<number>>(new Set());
 
-  const THEORY_STEPS = new Set([0, 1, 4, 7, 10, 14]);
-  const showBackButton = THEORY_STEPS.has(step);
+  // Drag & drop (array fijo + mapa placed con índice ORIGINAL)
+  const [ddPlaced, setDdPlaced] = useState<{ [idx: number]: 0 | 1 }>({});
+  const [ddSel, setDdSel] = useState<number | null>(null);
+  const [ddOverZone, setDdOverZone] = useState<0 | 1 | null>(null);
+  const [ddChecked, setDdChecked] = useState(false);
+  const [ddSolved, setDdSolved] = useState(false);
+  const ddPlacedRef = useRef(ddPlaced);
+  useEffect(() => { ddPlacedRef.current = ddPlaced; }, [ddPlaced]);
+  const ddIdxRef = useRef<number | null>(null);
+  const ddAllPlaced = DD_ITEMS.every((_, i) => ddPlaced[i] !== undefined);
 
-  // Resetear estados al cambiar de módulo
+  const addXP = (amount: number) => {
+    if (amount <= 0) return;
+    setXp(p => p + amount);
+    setXpToast(prev => ({ amount, id: (prev?.id ?? 0) + 1 }));
+  };
+  // XP del módulo actual, una sola vez (evita re-otorgar al volver con "Volver")
+  const awardStep = (amount: number, countCorrect = true) => {
+    if (awardedSteps.current.has(step)) return;
+    awardedSteps.current.add(step);
+    addXP(amount);
+    if (countCorrect) setCorrectCount(c => c + 1);
+  };
+
+  // Reset de estados por módulo
   useEffect(() => {
-    const mod = MODULES[step];
-    setQuizAnswered(false);
-    setSelectedOption(null);
-    setQuizResult(null);
+    setQuizSel(null);
     setSelectedLeft(null);
-    setMatchedPairs(new Set());
+    setWrongFlash(null);
     setBuilderText('');
     setBuilderDone(false);
-    setSortOrder([]);
-    setSortSelectedIdx(null);
-    setSortChecked(false);
-    setClassifications({});
-    setSprintActive(false);
-    setSprintTime(0);
+    setBuilderError(null);
+    setVfAnswers({});
+    setSprintPhase('idle');
+    setSprintSec(SPRINT_DURATION);
     setSprintText('');
-    setVFAnswers({});
-
-    if (mod.type === 'matching') {
-      const shuffled = mod.pairs.map((p, i) => ({ idx: i, text: p.right })).sort(() => Math.random() - 0.5);
-      setShuffledRight(shuffled);
-    }
-    if (mod.type === 'sort') {
-      const initial = [...mod.correctOrder].sort(() => Math.random() - 0.5);
-      setSortOrder(initial);
-    }
-    return () => {
-      if (sprintInterval.current) clearInterval(sprintInterval.current);
-    };
+    setSortWrong(new Set());
   }, [step]);
 
-  const addXP = useCallback((amount: number) => {
-    setXp(prev => prev + amount);
-    addXPToStore(amount);
-    if (amount > 0) setXpToast((prev) => ({ amount, id: (prev?.id ?? 0) + 1 }));
-  }, [addXPToStore]);
+  // Sprint timer
+  useEffect(() => {
+    if (sprintPhase !== 'running') return;
+    if (sprintSec <= 0) {
+      const valid = sprintText.trim().length > 20 && !looksRandom(sprintText);
+      setSprintValid(valid);
+      setSprintPhase('done');
+      if (valid) awardStep(MODULE_XP[12]);
+      return;
+    }
+    const t = setTimeout(() => setSprintSec(s => s - 1), 1000);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sprintPhase, sprintSec]);
 
-  const handleNext = () => {
-    if (step >= MODULES.length - 1) return;
-    const mod = MODULES[step];
-    let canAdvance = true;
-    if (mod.type === 'quiz' && !quizAnswered) canAdvance = false;
-    if (mod.type === 'matching' && matchedPairs.size < mod.pairs.length) canAdvance = false;
-    if (mod.type === 'builder' && !builderDone) canAdvance = false;
-    if (mod.type === 'sort' && !sortChecked) canAdvance = false;
-    if (mod.type === 'dragdrop' && Object.keys(classifications).length !== mod.items.length) canAdvance = false;
-    if (mod.type === 'sprint' && sprintActive) canAdvance = false;
-    if (mod.type === 'vf' && Object.keys(vfAnswers).length !== mod.statements.length) canAdvance = false;
-    if (canAdvance) setStep(s => s + 1);
-  };
+  // Módulos puramente informativos (clasificación propia — el THEORY_STEPS del HTML omite módulos de teoría reales)
+  const theorySteps = new Set([1, 4, 6, 7, 10, 13, 14]);
+  const showBack = theorySteps.has(step);
 
-  const handlePrev = () => {
-    if (step > 0) setStep(s => s - 1);
-  };
+  // Hardware back (Android)
+  useEffect(() => {
+    const onBack = () => {
+      if (showBack && step > 0) { setStep(s => s - 1); return true; }
+      if (step > 0 && step < TOTAL_STEPS - 1) {
+        Alert.alert('Módulo en curso', 'No puedes regresar durante esta actividad.', [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Salir', style: 'destructive', onPress: () => exitLevel({ confirm: false }) },
+        ]);
+        return true;
+      }
+      return false;
+    };
+    const h = BackHandler.addEventListener('hardwareBackPress', onBack);
+    return () => h.remove();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, showBack]);
+
+  // Drag & drop web — soltar en CUALQUIER zona; validar solo al pulsar Verificar
+  useEffect(() => {
+    if (Platform.OS !== 'web' || step !== 15 || ddSolved) return;
+    const cleanups: (() => void)[] = [];
+    const setup = () => {
+      DD_ITEMS.forEach((_, idx) => {
+        if (ddPlacedRef.current[idx] !== undefined) return;
+        const el = document.getElementById(`dd16-chip-${idx}`);
+        if (!el) return;
+        el.setAttribute('draggable', 'true');
+        (el as HTMLElement).style.cursor = 'grab';
+        const onDragStart = (e: DragEvent) => { ddIdxRef.current = idx; setDdSel(null); if (e.dataTransfer) { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(idx)); } };
+        const onDragEnd = () => { ddIdxRef.current = null; setDdOverZone(null); };
+        el.addEventListener('dragstart', onDragStart);
+        el.addEventListener('dragend', onDragEnd);
+        cleanups.push(() => { el.removeEventListener('dragstart', onDragStart); el.removeEventListener('dragend', onDragEnd); });
+      });
+      ([0, 1] as const).forEach(zone => {
+        const el = document.getElementById(`dd16-zone-${zone}`);
+        if (!el) return;
+        const onOver = (e: Event) => { e.preventDefault(); setDdOverZone(zone); };
+        const onLeave = (e: DragEvent) => { if (!el.contains(e.relatedTarget as Node)) setDdOverZone(null); };
+        const onDrop = (e: Event) => { e.preventDefault(); setDdOverZone(null); const idx = ddIdxRef.current; if (idx === null || ddPlacedRef.current[idx] !== undefined) return; setDdPlaced(p => ({ ...p, [idx]: zone })); ddIdxRef.current = null; };
+        el.addEventListener('dragover', onOver);
+        el.addEventListener('dragleave', onLeave);
+        el.addEventListener('drop', onDrop);
+        cleanups.push(() => { el.removeEventListener('dragover', onOver); el.removeEventListener('dragleave', onLeave); el.removeEventListener('drop', onDrop); });
+      });
+    };
+    const t = setTimeout(setup, 50);
+    return () => { clearTimeout(t); cleanups.forEach(fn => fn()); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, ddPlaced, ddSolved]);
+
+  const next = () => { if (step < TOTAL_STEPS - 1) setStep(s => s + 1); };
+  const prev = () => { if (step > 0) setStep(s => s - 1); };
 
   const finishLevel = () => {
-    let stars = 1;
-    if (xp >= 220) stars = 3;
-    else if (xp >= 160) stars = 2;
+    const stars = xp >= 180 ? 3 : xp >= 115 ? 2 : 1;
     completeLevel(16, stars, xp);
-    exitLevel({ confirm: false });
+    router.replace('/level/17');
   };
 
-  // ── RENDERIZADORES POR TIPO ──────────────────────────────
-
-  const renderTheory = (mod: TheoryModule) => mod.render();
-
-  const renderQuiz = (mod: QuizModule) => (
-    <>
-      <ModuleType icon="❓" label="Quiz" />
-      <ModuleTitle>{mod.title}</ModuleTitle>
-      <BodyText style={{ marginBottom: 16 }}>{mod.question}</BodyText>
-      {mod.options.map((opt, i) => (
-        <TouchableOpacity
-          key={i}
-          style={[
-            styles.option,
-            selectedOption === i && i === mod.correct && styles.optionCorrect,
-            selectedOption === i && i !== mod.correct && styles.optionWrong,
-            selectedOption !== null && i === mod.correct && styles.optionCorrect,
-          ]}
-          disabled={quizAnswered}
-          onPress={() => {
-            if (quizAnswered) return;
-            setSelectedOption(i);
-            setQuizAnswered(true);
-            if (i === mod.correct) {
-              setQuizResult('correct');
-              addXP(mod.xp);
-              setCorrectCount(c => c + 1);
-            } else {
-              setQuizResult('wrong');
-            }
-            if (Platform.OS === 'android') Vibration.vibrate(100);
-          }}
-        >
-          <Text style={styles.optionIcon}>{['🅐', '🅑', '🅒', '🅓'][i]}</Text>
-          <Text style={styles.optionText}>{opt}</Text>
-        </TouchableOpacity>
-      ))}
-      {quizAnswered && (
-        <View style={[styles.feedback, quizResult === 'correct' ? styles.feedbackOk : styles.feedbackFail]}>
-          <Text style={styles.feedbackText}>
-            {quizResult === 'correct' ? '✅ ¡Correcto! ' : '❌ Incorrecto. '}
-            {mod.feedback}
-          </Text>
-        </View>
-      )}
-    </>
-  );
-
-  const renderMatching = (mod: MatchingModule) => (
-    <>
-      <ModuleType icon="🔗" label="Matching" />
-      <ModuleTitle>{mod.title}</ModuleTitle>
-      <BodyText style={{ marginBottom: 12 }}>Conecta cada herramienta con su descripción. Toca una de la izquierda y luego la correcta de la derecha.</BodyText>
-      <View style={styles.matchGrid}>
-        <View style={styles.matchCol}>
-          {mod.pairs.map((pair, i) => (
-            <TouchableOpacity
-              key={`l${i}`}
-              style={[
-                styles.matchItem,
-                selectedLeft === i && styles.matchItemSelected,
-                matchedPairs.has(`l${i}`) && styles.matchItemMatched,
-              ]}
-              disabled={matchedPairs.has(`l${i}`)}
-              onPress={() => setSelectedLeft(i)}
-            >
-              <Text>{pair.left}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-        <View style={styles.matchCol}>
-          {shuffledRight.map((item, i) => {
-            const correctIdx = mod.pairs.findIndex(p => p.right === item.text);
-            const isMatched = matchedPairs.has(`l${correctIdx}`);
-            return (
-              <TouchableOpacity
-                key={`r${i}`}
-                style={[
-                  styles.matchItem,
-                  selectedLeft !== null && !isMatched && styles.matchItemSelectable,
-                  isMatched && styles.matchItemMatched,
-                ]}
-                disabled={isMatched || selectedLeft === null}
-                onPress={() => {
-                  if (selectedLeft === null) return;
-                  if (selectedLeft === correctIdx) {
-                    const newMatched = new Set(matchedPairs);
-                    newMatched.add(`l${correctIdx}`);
-                    setMatchedPairs(newMatched);
-                    setSelectedLeft(null);
-                    if (newMatched.size === mod.pairs.length) {
-                      addXP(mod.xp);
-                      setCorrectCount(c => c + 1);
-                    }
-                  } else {
-                    setSelectedLeft(null);
-                  }
-                }}
-              >
-                <Text>{item.text}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
-      {matchedPairs.size === mod.pairs.length && (
-        <View style={[styles.feedback, styles.feedbackOk]}>
-          <Text style={styles.feedbackText}>✅ ¡Todos los pares conectados!</Text>
-        </View>
-      )}
-    </>
-  );
-
-  const renderBuilder = (mod: BuilderModule) => (
-    <>
-      <ModuleType icon="✏️" label="Constructor" />
-      <ModuleTitle>{mod.title}</ModuleTitle>
-      {mod.contentText && <BodyText>{mod.contentText}</BodyText>}
-      <TextInput
-        style={styles.builderInput}
-        placeholder={mod.placeholder}
-        multiline
-        numberOfLines={4}
-        value={builderText}
-        onChangeText={setBuilderText}
-      />
-      {!builderDone && builderText.trim().length > 15 && (
-        <TouchableOpacity
-          style={styles.btn}
-          onPress={() => {
-            setBuilderDone(true);
-            addXP(mod.xp);
-            setCorrectCount(c => c + 1);
-          }}
-        >
-          <Text style={styles.btnText}>Confirmar</Text>
-        </TouchableOpacity>
-      )}
-      {builderDone && (
-        <View style={[styles.feedback, styles.feedbackOk]}>
-          <Text style={styles.feedbackText}>💻 ¡Esa descripción es suficiente para que Lovable o Bolt generen una primera versión funcional!</Text>
-        </View>
-      )}
-    </>
-  );
-
-  const renderSort = (mod: SortModule) => {
-    const handleSortPress = (index: number) => {
-      if (sortChecked) return;
-      if (sortSelectedIdx === null) {
-        setSortSelectedIdx(index);
-      } else {
-        // Intercambiar posiciones
-        const newOrder = [...sortOrder];
-        const temp = newOrder[sortSelectedIdx];
-        newOrder[sortSelectedIdx] = newOrder[index];
-        newOrder[index] = temp;
-        setSortOrder(newOrder);
-        setSortSelectedIdx(null);
-      }
-    };
-
-    const handleCheckSort = () => {
-      const isCorrect = sortOrder.every((item, idx) => item === mod.correctOrder[idx]);
-      setSortChecked(true);
-      if (isCorrect) {
-        addXP(mod.xp);
-        setCorrectCount(c => c + 1);
-      }
-    };
-
-    return (
-      <>
-        <ModuleType icon="📋" label="Ordena" />
-        <ModuleTitle>{mod.title}</ModuleTitle>
-        <BodyText style={{ marginBottom: 12 }}>{mod.instruction}</BodyText>
-        {sortOrder.map((item, idx) => (
-          <TouchableOpacity
-            key={idx}
-            style={[
-              styles.sortItem,
-              sortSelectedIdx === idx && styles.sortItemSelected,
-              sortChecked && item === mod.correctOrder[idx] && styles.sortItemCorrect,
-              sortChecked && item !== mod.correctOrder[idx] && styles.sortItemWrong,
-            ]}
-            onPress={() => handleSortPress(idx)}
-          >
-            <Text style={styles.sortHandle}>⠿</Text>
-            <Text style={styles.sortItemText}>{item}</Text>
-          </TouchableOpacity>
-        ))}
-        {!sortChecked && (
-          <TouchableOpacity style={styles.btn} onPress={handleCheckSort}>
-            <Text style={styles.btnText}>Verificar orden</Text>
-          </TouchableOpacity>
-        )}
-        {sortChecked && (
-          <View style={[styles.feedback, sortOrder.every((it, i) => it === mod.correctOrder[i]) ? styles.feedbackOk : styles.feedbackFail]}>
-            <Text style={styles.feedbackText}>
-              {sortOrder.every((it, i) => it === mod.correctOrder[i])
-                ? '✅ ¡Orden correcto! Conoces bien el proceso de construir una web con IA.'
-                : '❌ Algunos pasos no están en el orden correcto. ¡Intenta de nuevo!'}
-            </Text>
-          </View>
-        )}
-      </>
-    );
+  // ---------- Acciones ----------
+  const answerQuiz = (i: number) => {
+    if (quizSel !== null) return;
+    const q = quizzes[step];
+    setQuizSel(i);
+    if (i === q.correct) awardStep(MODULE_XP[step]);
+    if (Platform.OS === 'android') Vibration.vibrate(100);
   };
 
-  const renderDragDrop = (mod: DragDropModule) => {
-    const allClassified = Object.keys(classifications).length === mod.items.length;
-    return (
-      <>
-        <ModuleType icon="↕️" label="Clasifica" />
-        <ModuleTitle>{mod.title}</ModuleTitle>
-        <BodyText>{mod.instruction}</BodyText>
-        {mod.items.map(item => (
-          <View key={item.id} style={styles.classifyRow}>
-            <Text style={styles.classifyText}>{item.text}</Text>
-            <View style={styles.classifyButtons}>
-              {mod.zones.map((zone, zi) => (
-                <TouchableOpacity
-                  key={zi}
-                  style={[
-                    styles.classifyBtn,
-                    classifications[item.id] === zi && styles.classifyBtnSelected,
-                  ]}
-                  onPress={() => setClassifications(prev => ({ ...prev, [item.id]: zi }))}
-                >
-                  <Text style={styles.classifyBtnText}>{zone.split(' ')[0]}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        ))}
-        {allClassified && (
-          <TouchableOpacity
-            style={styles.btn}
-            onPress={() => {
-              const allCorrect = mod.items.every(item => classifications[item.id] === mod.correct[item.id]);
-              addXP(mod.xp);
-              if (allCorrect) setCorrectCount(c => c + 1);
-            }}
-          >
-            <Text style={styles.btnText}>Verificar</Text>
-          </TouchableOpacity>
-        )}
-      </>
-    );
+  const pressRight = (correctIdx: number, rightPos: number) => {
+    if (selectedLeft === null) return;
+    if (selectedLeft === correctIdx) {
+      const n = new Set(matched);
+      n.add(selectedLeft);
+      setMatched(n);
+      setSelectedLeft(null);
+      if (n.size === MATCH_PAIRS.length) awardStep(MODULE_XP[2]);
+    } else {
+      const l = selectedLeft;
+      setWrongFlash({ left: l, right: rightPos });
+      setTimeout(() => { setWrongFlash(null); setSelectedLeft(null); }, 600);
+    }
   };
 
-  const renderSprint = (mod: SprintModule) => {
-    const startSprint = () => {
-      setSprintActive(true);
-      setSprintTime(mod.duration);
-      sprintInterval.current = setInterval(() => {
-        setSprintTime(prev => {
-          if (prev <= 1) {
-            clearInterval(sprintInterval.current!);
-            setSprintActive(false);
-            addXP(mod.xp);
-            setCorrectCount(c => c + 1);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    };
-
-    const minutes = Math.floor(sprintTime / 60);
-    const seconds = sprintTime % 60;
-
-    return (
-      <>
-        <ModuleType icon="⚡" label="Sprint" />
-        <ModuleTitle>{mod.title}</ModuleTitle>
-        <View style={styles.sprintBox}>
-          <Text style={styles.sprintInstruction}>{mod.instruction}</Text>
-          <Text style={[styles.timerText, sprintTime <= 15 && styles.timerDanger, sprintTime <= 30 && sprintTime > 15 && styles.timerWarning]}>
-            {sprintActive ? `${minutes}:${seconds.toString().padStart(2, '0')}` : '0:00'}
-          </Text>
-          {!sprintActive && (
-            <TouchableOpacity style={styles.btn} onPress={startSprint}>
-              <Text style={styles.btnText}>▶ Iniciar Sprint</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-        {sprintActive && (
-          <TextInput
-            style={styles.builderInput}
-            placeholder={mod.placeholder}
-            multiline
-            numberOfLines={5}
-            value={sprintText}
-            onChangeText={setSprintText}
-          />
-        )}
-        {!sprintActive && sprintTime === 0 && sprintTime !== undefined && (
-          <View style={[styles.feedback, styles.feedbackOk]}>
-            <Text style={styles.feedbackText}>⚡ ¡Sprint terminado!</Text>
-          </View>
-        )}
-      </>
-    );
+  const confirmBuilder = () => {
+    const b = BUILDERS[step];
+    const t = builderText.trim();
+    if (t.length <= 15) { setBuilderError('Escribe un poco más — al menos 16 caracteres.'); return; }
+    if (looksRandom(t)) { setBuilderError('Tu texto parece escrito al azar. Escríbelo con tus propias palabras.'); return; }
+    if (!containsTopic(t, b.terms)) { setBuilderError('⚠️ ' + b.topicMsg); return; }
+    setBuilderError(null);
+    setBuilderDone(true);
+    awardStep(MODULE_XP[step]);
   };
 
-  const renderVF = (mod: VFModule) => (
-    <>
-      <ModuleType icon="✔️" label="Verdadero o Falso" />
-      <ModuleTitle>{mod.title}</ModuleTitle>
-      {mod.statements.map((item, idx) => (
-        <View key={idx} style={styles.vfItem}>
-          <Text style={styles.vfStatement}>"{item.text}"</Text>
-          <View style={styles.vfButtons}>
-            <TouchableOpacity
-              style={[styles.vfBtn, vfAnswers[idx] === true && (item.correct ? styles.vfBtnCorrect : styles.vfBtnWrong)]}
-              disabled={vfAnswers[idx] !== undefined}
-              onPress={() => setVFAnswers(prev => ({ ...prev, [idx]: true }))}
-            >
-              <Text style={styles.vfBtnText}>✅ Verdadero</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.vfBtn, vfAnswers[idx] === false && (!item.correct ? styles.vfBtnCorrect : styles.vfBtnWrong)]}
-              disabled={vfAnswers[idx] !== undefined}
-              onPress={() => setVFAnswers(prev => ({ ...prev, [idx]: false }))}
-            >
-              <Text style={styles.vfBtnText}>❌ Falso</Text>
-            </TouchableOpacity>
-          </View>
-          {vfAnswers[idx] !== undefined && (
-            <View style={[styles.feedback, vfAnswers[idx] === item.correct ? styles.feedbackOk : styles.feedbackFail]}>
-              <Text style={styles.feedbackText}>{item.feedback}</Text>
-            </View>
-          )}
-        </View>
-      ))}
-      {Object.keys(vfAnswers).length === mod.statements.length && (
-        <TouchableOpacity
-          style={styles.btn}
-          onPress={() => {
-            addXP(mod.xp);
-            setCorrectCount(c => c + 1);
-          }}
-        >
-          <Text style={styles.btnText}>Continuar</Text>
-        </TouchableOpacity>
-      )}
-    </>
+  const answerVf = (idx: number, ans: boolean) => {
+    if (vfAnswers[idx] !== undefined) return;
+    const n = { ...vfAnswers, [idx]: ans };
+    setVfAnswers(n);
+    if (Object.keys(n).length === VF_ITEMS.length) awardStep(MODULE_XP[17]);
+  };
+
+  const submitSprint = () => {
+    if (sprintPhase !== 'running') return;
+    const valid = sprintText.trim().length > 20 && !looksRandom(sprintText);
+    setSprintValid(valid);
+    setSprintPhase('done');
+    if (valid) awardStep(MODULE_XP[12]);
+  };
+
+  const moveSort = (pos: number, dir: number) => {
+    if (sortSolved) return;
+    const newPos = pos + dir;
+    if (newPos < 0 || newPos >= sortOrder.length) return;
+    const n = [...sortOrder];
+    [n[pos], n[newPos]] = [n[newPos], n[pos]];
+    setSortOrder(n);
+    setSortWrong(new Set());
+  };
+  const checkSort = () => {
+    const isOk = sortOrder.every((v, i) => v === i);
+    if (isOk) {
+      setSortSolved(true);
+      awardStep(MODULE_XP[8]);
+    } else {
+      const wrong = new Set(sortOrder.reduce<number[]>((acc, v, i) => { if (v !== i) acc.push(i); return acc; }, []));
+      setSortWrong(wrong);
+      setTimeout(() => setSortWrong(new Set()), 3000);
+    }
+  };
+
+  const ddPlace = (zone: 0 | 1) => {
+    if (ddSel === null || ddPlaced[ddSel] !== undefined || ddSolved) return;
+    setDdPlaced(p => ({ ...p, [ddSel]: zone }));
+    setDdSel(null);
+  };
+  const ddReturn = (idx: number) => {
+    if (ddSolved) return;
+    setDdChecked(false);
+    setDdPlaced(p => { const n = { ...p }; delete n[idx]; return n; });
+  };
+  const ddAllCorrect = DD_ITEMS.every((it, i) => ddPlaced[i] === it.zone);
+  const verifyDd = () => {
+    setDdChecked(true);
+    if (DD_ITEMS.every((it, i) => ddPlaced[i] === it.zone)) {
+      setDdSolved(true);
+      awardStep(MODULE_XP[15]);
+    }
+  };
+
+  // ---------- Bloques auxiliares ----------
+  const ModuleType = ({ icon, label }: { icon: string; label: string }) => (
+    <View style={styles.moduleType}>
+      <Text style={{ fontSize: 15 }}>{icon}</Text>
+      <Text style={styles.moduleTypeText}>{label}</Text>
+    </View>
   );
-
-  const renderCompletion = () => (
-    <View style={styles.completionScreen}>
-      <Text style={styles.completionIcon}>💻</Text>
-      <Text style={styles.completionTitle}>¡Badge desbloqueado!</Text>
-      <Text style={styles.completionBadge}>🏅 Web Builder</Text>
-      <Text style={styles.levelIndicator}>Nivel 16 de 36</Text>
-      <Text style={styles.completionText}>
-        ¡Nivel 16 completado! Ahora sabes cómo construir apps web con IA, conoces las herramientas no-code y entiendes cómo describir tus ideas para que la IA las construya.
-      </Text>
-      <Text style={styles.xpGained}>+{xp} XP</Text>
-      <View style={styles.statsRow}>
-        <View style={styles.statItem}>
-          <Text style={styles.statNum}>{correctCount}</Text>
-          <Text style={styles.statLbl}>Correctas</Text>
-        </View>
-        <View style={styles.statItem}>
-          <Text style={styles.statNum}>21</Text>
-          <Text style={styles.statLbl}>Módulos</Text>
-        </View>
-        <View style={styles.statItem}>
-          <Text style={styles.statNum}>N17</Text>
-          <Text style={styles.statLbl}>Próximo</Text>
-        </View>
-      </View>
-      <View style={{ backgroundColor: '#f8fafc', borderRadius: 10, padding: 11, marginBottom: 14, borderWidth: 1, borderColor: '#e2e8f0', width: '100%' }}>
-        <Text style={{ fontSize: 12, color: '#334155', lineHeight: 20 }}>
-          📊 <Text style={{ fontWeight: '700' }}>Nivel 17: IA y Datos{'\n\n'}</Text>
-          Ahora que sabes construir apps, vas a aprender a analizar datos con IA: NotebookLM, gráficas, detectar cuando los datos te quieren engañar. La habilidad más pedida en el mundo laboral.
-        </Text>
-      </View>
-      <TouchableOpacity style={styles.btn} onPress={finishLevel}>
-        <Text style={styles.btnText}>Terminar nivel</Text>
-      </TouchableOpacity>
+  const Title = ({ children }: { children: ReactNode }) => <Text style={styles.moduleTitle}>{children}</Text>;
+  const Body = ({ children, style }: { children: ReactNode; style?: object }) => <Text style={[styles.bodyText, style]}>{children}</Text>;
+  const B = ({ children }: { children: ReactNode }) => <Text style={styles.bold}>{children}</Text>;
+  const InfoBox = ({ children }: { children: ReactNode }) => (
+    <View style={styles.infoBox}><Text style={styles.infoBoxText}>{children}</Text></View>
+  );
+  const Fb = ({ ok, children }: { ok: boolean; children: ReactNode }) => (
+    <View style={[styles.feedback, ok ? styles.feedbackOk : styles.feedbackFail]}>
+      <Text style={[styles.feedbackText, { color: ok ? C.okText : C.failText }]}>{children}</Text>
     </View>
   );
 
-  const currentMod = MODULES[step];
-  if (!currentMod) return null;
+  // ---------- Render de módulos ----------
+  const renderBuilder = () => {
+    const b = BUILDERS[step];
+    return (
+      <>
+        <ModuleType icon={b.icon} label={b.label} />
+        <Title>{b.title}</Title>
+        <Body>{b.intro}</Body>
+        <InfoBox>{b.box}</InfoBox>
+        {b.example && (
+          <View style={styles.builderExample}>
+            <Text style={styles.builderExampleText}><Text style={styles.builderExampleLabel}>Ejemplo: </Text>{b.example}</Text>
+          </View>
+        )}
+        <TextInput
+          style={styles.builderInput}
+          placeholder={b.placeholder}
+          placeholderTextColor={C.placeholder}
+          multiline
+          value={builderText}
+          onChangeText={t => { setBuilderText(t); setBuilderError(null); }}
+          editable={!builderDone}
+        />
+        {builderError && <Fb ok={false}>{builderError}</Fb>}
+        {builderDone && <Fb ok>{b.fb}</Fb>}
+      </>
+    );
+  };
 
-  const progress = Math.round((step / (MODULES.length - 1)) * 100);
+  const renderQuiz = () => {
+    const q = quizzes[step];
+    return (
+      <>
+        <ModuleType icon="❓" label="Quiz" />
+        <Title>{q.title}</Title>
+        <Body style={{ marginBottom: 16 }}><B>{q.question}</B></Body>
+        {q.options.map((opt, i) => (
+          <TouchableOpacity
+            key={i}
+            style={[
+              styles.option,
+              quizSel !== null && i === q.correct && styles.optionCorrect,
+              quizSel === i && i !== q.correct && styles.optionWrong,
+            ]}
+            disabled={quizSel !== null}
+            onPress={() => answerQuiz(i)}
+          >
+            <Text style={styles.optionIcon}>{['🅐', '🅑', '🅒', '🅓'][i]}</Text>
+            <Text style={[styles.optionText, quizSel !== null && i === q.correct && { color: C.okText }, quizSel === i && i !== q.correct && { color: C.failText }]}>{opt}</Text>
+          </TouchableOpacity>
+        ))}
+        {quizSel !== null && (
+          <Fb ok={quizSel === q.correct}>{quizSel === q.correct ? '✅ ' : '❌ Casi. '}{q.feedback}</Fb>
+        )}
+      </>
+    );
+  };
+
+  const renderStep = (): ReactNode => {
+    switch (step) {
+      // ===== 0 · INTRO =====
+      case 0: return (
+        <>
+          <ModuleType icon="💻" label="Introducción" />
+          <Title>De usuario a constructor</Title>
+          <Body>¿Sabías que muchas de las apps y sitios web que usas hoy fueron construidos por personas que empezaron exactamente como tú? La diferencia es que ahora tienes algo que ellos no tenían: <B>inteligencia artificial que escribe código por ti</B>.</Body>
+          <Body>Con herramientas como <B>Lovable</B>, <B>Bolt</B> o <B>Bubble</B>, puedes describir en español lo que quieres construir y la IA lo convierte en una aplicación funcional en minutos. No necesitas saber programar.</Body>
+          <InfoBox>
+            <B>¿Qué vas a aprender hoy?</B>{'\n'}
+            🔨 Qué son las herramientas no-code e IA-code{'\n'}
+            🌐 Cómo funciona una página web por dentro (lo básico){'\n'}
+            ✏️ Cómo describir tu app con palabras para que la IA la construya{'\n'}
+            🚀 Cómo publican sus apps jóvenes como tú en todo el mundo
+          </InfoBox>
+        </>
+      );
+
+      // ===== 1 · TEORÍA: no-code / low-code / full-code =====
+      case 1: return (
+        <>
+          <ModuleType icon="🧠" label="Teoría" />
+          <Title>No-code, low-code y full-code</Title>
+          <Body>Existen tres formas de construir aplicaciones web hoy:</Body>
+          <Body><B>No-code:</B> describes lo que quieres con palabras o arrastras elementos visuales. La IA o la plataforma genera todo el código. Ejemplos: Lovable, Bubble, Framer.</Body>
+          <Body><B>Low-code:</B> usas bloques visuales pero también escribes algo de código para personalizar. Requiere conocimientos básicos de programación.</Body>
+          <Body><B>Full-code:</B> escribes todo el código tú mismo (HTML, CSS, JavaScript, Python...). Máximo control, máximo aprendizaje requerido.</Body>
+          <InfoBox><B>La tendencia en 2025:</B> las empresas más innovadoras usan las tres. Un fundador no-técnico usa no-code para prototipar rápido, y cuando la app crece, un programador la mejora con full-code. La IA hace que la línea entre las tres sea cada vez más difusa.</InfoBox>
+        </>
+      );
+
+      // ===== 2 · MATCHING =====
+      case 2: return (
+        <>
+          <ModuleType icon="🔗" label="Matching" />
+          <Title>Herramientas no-code</Title>
+          <Body style={{ marginBottom: 16 }}>Conecta cada herramienta con su descripción. Toca una del lado izquierdo, luego la correcta del lado derecho.</Body>
+          <View style={styles.matchGrid}>
+            <View style={styles.matchCol}>
+              {MATCH_PAIRS.map((pair, i) => (
+                <TouchableOpacity
+                  key={`l${i}`}
+                  style={[styles.matchItem, selectedLeft === i && styles.matchItemSelected, matched.has(i) && styles.matchItemMatched, wrongFlash?.left === i && styles.matchItemWrong]}
+                  disabled={matched.has(i)}
+                  onPress={() => setSelectedLeft(i)}
+                >
+                  <Text style={[styles.matchItemText, selectedLeft === i && { color: C.limeLight }, matched.has(i) && { color: C.okText }, wrongFlash?.left === i && { color: C.failText }]}>{pair.left}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <View style={styles.matchCol}>
+              {shuffledRight.map((item, pos) => {
+                const isMatched = matched.has(item.idx);
+                return (
+                  <TouchableOpacity
+                    key={`r${pos}`}
+                    style={[styles.matchItem, isMatched && styles.matchItemMatched, wrongFlash?.right === pos && styles.matchItemWrong]}
+                    disabled={isMatched || selectedLeft === null}
+                    onPress={() => pressRight(item.idx, pos)}
+                  >
+                    <Text style={[styles.matchItemText, isMatched && { color: C.okText }, wrongFlash?.right === pos && { color: C.failText }]}>{item.text}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+          {matched.size === MATCH_PAIRS.length && <Fb ok>✅ ¡Todos los pares conectados! Conoces bien las herramientas no-code.</Fb>}
+        </>
+      );
+
+      // ===== 3, 9, 18 · CONSTRUCTOR · 19 · REFLEXIÓN =====
+      case 3: case 9: case 18: case 19: return renderBuilder();
+
+      // ===== 4 · TEORÍA: HTML/CSS/JS =====
+      case 4: return (
+        <>
+          <ModuleType icon="🌐" label="Teoría" />
+          <Title>Lo mínimo que debes saber de una web</Title>
+          <Body>Toda página web está hecha de tres ingredientes básicos:</Body>
+          <Body><B>HTML:</B> la estructura. Como el esqueleto — define qué elementos existen (títulos, párrafos, botones, imágenes).</Body>
+          <Body><B>CSS:</B> el estilo. Como la ropa — decide colores, tamaños, fuentes y cómo se ve todo.</Body>
+          <Body><B>JavaScript:</B> el comportamiento. Como los músculos — hace que las cosas se muevan y respondan a los clics.</Body>
+          <View style={styles.codeBlock}>
+            <Text style={styles.codeText}>{'<h1>'}Hola, soy un título{'</h1>'}</Text>
+            <Text style={styles.codeText}>{'<p>'}Soy un párrafo de texto.{'</p>'}</Text>
+            <Text style={styles.codeText}>{'<button style="color:green">'}¡Haz clic!{'</button>'}</Text>
+          </View>
+          <Body>Cuando usas Lovable o Bolt, la IA genera este código por ti. Pero entender qué hace cada parte te ayuda a pedir exactamente lo que quieres.</Body>
+        </>
+      );
+
+      // ===== 5, 11, 16 · QUIZ =====
+      case 5: case 11: case 16: return renderQuiz();
+
+      // ===== 6 · TEORÍA: Copilot / Cursor =====
+      case 6: return (
+        <>
+          <ModuleType icon="🤖" label="Casos reales" />
+          <Title>GitHub Copilot y Cursor</Title>
+          <Body>Para quienes sí saben algo de programación, existen IA que actúan como "co-pilotos" que completan el código automáticamente:</Body>
+          <Body><B>🤖 GitHub Copilot:</B> desarrollado por Microsoft y OpenAI. Predice la siguiente línea que vas a escribir y la completa en tiempo real. Es como el autocorrector del teléfono, pero para código.</Body>
+          <Body><B>🎯 Cursor:</B> un editor de código con IA integrada. Puedes decirle en español "añade un botón que guarde el formulario" y lo hace automáticamente.</Body>
+          <InfoBox><B>Dato real:</B> en 2024, GitHub reportó que el 55% del código de los proyectos que usan Copilot fue escrito por la IA, no por humanos. Los programadores ahora supervisan y dirigen más de lo que escriben a mano.</InfoBox>
+        </>
+      );
+
+      // ===== 7 · TEORÍA: los 5 pasos =====
+      case 7: return (
+        <>
+          <ModuleType icon="📋" label="Teoría" />
+          <Title>Cómo se construye una web con IA</Title>
+          <Body>El proceso para crear una app con IA no-code tiene siempre estos pasos:</Body>
+          <InfoBox>
+            <B>1. 💡 Idea:</B> ¿qué problema resuelve tu app?{'\n'}
+            <B>2. 📝 Wireframe:</B> dibuja o describe las pantallas principales{'\n'}
+            <B>3. 🤖 Prompt:</B> escríbele a la IA exactamente lo que quieres{'\n'}
+            <B>4. 🧪 Genera y prueba:</B> la IA construye, tú pruebas y corriges{'\n'}
+            <B>5. 🌐 Publica:</B> con un clic, tu app está en internet
+          </InfoBox>
+          <Body>Lo más importante: <B>el paso 3 es donde tu habilidad de prompting hace toda la diferencia</B>. Todo lo que aprendiste en el Mundo 2 aplica directamente aquí.</Body>
+        </>
+      );
+
+      // ===== 8 · SORT =====
+      case 8: return (
+        <>
+          <ModuleType icon="📋" label="Ordena" />
+          <Title>Ordena los pasos</Title>
+          <Body style={{ marginBottom: 12 }}>Ordena correctamente los pasos de crear una web con IA, del primero al último. Usa las flechas para mover cada uno.</Body>
+          {sortOrder.map((origIdx, pos) => (
+            <View key={pos} style={[styles.sortRow, sortWrong.has(pos) && styles.sortRowWrong, sortSolved && styles.sortRowOk]}>
+              <Text style={styles.sortNum}>{pos + 1}</Text>
+              <Text style={styles.sortText}>{SORT_ITEMS[origIdx]}</Text>
+              <View style={styles.sortArrows}>
+                <TouchableOpacity onPress={() => moveSort(pos, -1)} disabled={pos === 0 || sortSolved}>
+                  <Text style={[styles.sortArrow, (pos === 0 || sortSolved) && { opacity: 0.25 }]}>▲</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => moveSort(pos, 1)} disabled={pos === sortOrder.length - 1 || sortSolved}>
+                  <Text style={[styles.sortArrow, (pos === sortOrder.length - 1 || sortSolved) && { opacity: 0.25 }]}>▼</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))}
+          {sortSolved && <Fb ok>✅ ¡Orden correcto! Conoces bien el proceso de construir una web con IA.</Fb>}
+          {!sortSolved && sortWrong.size > 0 && <Fb ok={false}>❌ Los pasos en rojo aún no están en el orden correcto. Piensa qué va primero: ¿la idea o el código?</Fb>}
+        </>
+      );
+
+      // ===== 10 · TEORÍA: debugging =====
+      case 10: return (
+        <>
+          <ModuleType icon="🐛" label="Casos reales" />
+          <Title>Cuando algo no funciona, la IA lo arregla</Title>
+          <Body>Uno de los superpoderes de usar IA para construir apps es que también puede encontrar y corregir errores. A esto se le llama <B>debugging</B>.</Body>
+          <Body>En lugar de buscar el error a mano entre miles de líneas, puedes decirle a la IA: "el botón de guardar no funciona cuando el nombre tiene más de 20 letras" — y ella encuentra y arregla el problema.</Body>
+          <InfoBox>
+            <B>Flujo de trabajo real:</B>{'\n'}
+            1. Describes el bug en lenguaje normal{'\n'}
+            2. La IA analiza el código y encuentra la causa{'\n'}
+            3. Propone la corrección y explica por qué ocurrió{'\n'}
+            4. Tú apruebas el cambio y el error desaparece
+          </InfoBox>
+          <Body>Este flujo reduce horas de trabajo a minutos. Por eso los programadores junior que saben usar IA son ahora tan productivos como seniors que no la usan.</Body>
+        </>
+      );
+
+      // ===== 12 · SPRINT =====
+      case 12: {
+        const minutes = Math.floor(sprintSec / 60);
+        const seconds = String(sprintSec % 60).padStart(2, '0');
+        return (
+          <>
+            <ModuleType icon="⚡" label="Sprint" />
+            <Title>Sprint: describe tu app</Title>
+            <View style={styles.sprintBox}>
+              <Text style={styles.sprintInstruction}>⚡ ¡60 segundos! Describe tu app perfecta: qué hace + para quién es + cómo se ve + acción principal.</Text>
+              <Text style={[styles.timerText, sprintPhase === 'running' && sprintSec <= 15 ? styles.timerDanger : sprintPhase === 'running' && sprintSec <= 30 ? styles.timerWarning : null]}>
+                {sprintPhase === 'done' ? '0:00' : `${minutes}:${seconds}`}
+              </Text>
+              {sprintPhase === 'idle' && (
+                <TouchableOpacity style={styles.btn} onPress={() => setSprintPhase('running')}>
+                  <Text style={styles.btnText}>▶ Iniciar Sprint</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            <TextInput
+              style={styles.builderInput}
+              placeholder={'Mi app se llama... Sirve para... La usarían... Se ve... La acción principal es...'}
+              placeholderTextColor={C.placeholder}
+              multiline
+              value={sprintText}
+              onChangeText={setSprintText}
+              editable={sprintPhase === 'running'}
+            />
+            {sprintPhase === 'running' && (
+              <TouchableOpacity style={[styles.btn, sprintText.trim().length <= 20 && styles.mainBtnDisabled]} onPress={submitSprint} disabled={sprintText.trim().length <= 20}>
+                <Text style={styles.btnText}>Entregar ✓</Text>
+              </TouchableOpacity>
+            )}
+            {sprintPhase === 'done' && (
+              <Fb ok={sprintValid}>⚡ ¡Sprint terminado! {sprintValid ? 'Esa app ya puede construirse hoy con Lovable o Bolt.' : 'La próxima vez intenta incluir todos los detalles.'}</Fb>
+            )}
+          </>
+        );
+      }
+
+      // ===== 13 · TEORÍA: apps de jóvenes =====
+      case 13: return (
+        <>
+          <ModuleType icon="🌍" label="Casos reales" />
+          <Title>Jóvenes que ya construyeron con IA</Title>
+          <Body><B>🇺🇸 Caleb (17 años, EE.UU.):</B> construyó una app de estudio con IA que genera tarjetas de memoria desde apuntes. La publicó y consiguió 2,000 usuarios en su primera semana.</Body>
+          <Body><B>🇳🇬 Amaka (16 años, Nigeria):</B> creó un directorio web de negocios locales de su barrio usando Bubble. El ayuntamiento la contactó para expandir el proyecto.</Body>
+          <Body><B>🇧🇷 Pedro (15 años, Brasil):</B> hizo un bot de Telegram que responde preguntas del reglamento de su colegio. Lo construyó en un fin de semana con ChatGPT y Python básico.</Body>
+          <InfoBox><B>Lo que tienen en común:</B> ninguno esperó a ser "experto" para empezar. Identificaron un problema real, lo describieron bien y usaron las herramientas disponibles. <B>Tú puedes hacer lo mismo hoy.</B></InfoBox>
+        </>
+      );
+
+      // ===== 14 · TEORÍA: elige la herramienta =====
+      case 14: return (
+        <>
+          <ModuleType icon="🗺️" label="Teoría" />
+          <Title>Elige la herramienta correcta</Title>
+          <Body>No todas las situaciones requieren el mismo enfoque. Esta es la guía rápida:</Body>
+          <InfoBox>
+            <B>Usa no-code (Lovable, Bubble) cuando:</B>{'\n'}
+            → quieres un prototipo rápido en horas{'\n'}
+            → el proyecto es relativamente simple{'\n'}
+            → no tienes tiempo de aprender a programar ahora
+          </InfoBox>
+          <InfoBox>
+            <B>Usa low-code (con algo de JS/Python) cuando:</B>{'\n'}
+            → necesitas funcionalidades muy específicas{'\n'}
+            → quieres más control sobre cómo funciona
+          </InfoBox>
+          <InfoBox>
+            <B>Aprende full-code cuando:</B>{'\n'}
+            → quieres construir cosas complejas o escalables{'\n'}
+            → quieres trabajar profesionalmente en tecnología
+          </InfoBox>
+        </>
+      );
+
+      // ===== 15 · DRAG & DROP =====
+      case 15: return (
+        <>
+          <ModuleType icon="↕️" label="Clasifica" />
+          <Title>¿Qué herramienta uso?</Title>
+          <Body>Clasifica cada proyecto según la herramienta más adecuada. Toca uno y luego su zona (o arrástralo).</Body>
+          <View style={styles.dragPool}>
+            {DD_ITEMS.map((item, idx) => ddPlaced[idx] === undefined ? (
+              <TouchableOpacity key={idx} id={`dd16-chip-${idx}`} style={[styles.dragItem, ddSel === idx && styles.dragItemSel]} disabled={ddSolved} onPress={() => setDdSel(ddSel === idx ? null : idx)}>
+                <Text style={styles.dragItemText}>{item.text}</Text>
+              </TouchableOpacity>
+            ) : null)}
+            {ddAllPlaced && <Text style={{ color: C.placeholder, fontSize: 12 }}>Todos los proyectos clasificados ✓</Text>}
+          </View>
+          {([0, 1] as const).map(zone => (
+            <View key={zone}>
+              <Text style={styles.dropZoneLabel}>{DD_ZONES[zone]}</Text>
+              <TouchableOpacity id={`dd16-zone-${zone}`} activeOpacity={0.8} style={[styles.dropZone, ddOverZone === zone && styles.dropZoneOver]} disabled={ddSolved} onPress={() => ddPlace(zone)}>
+                {DD_ITEMS.map((item, idx) => ddPlaced[idx] === zone ? (
+                  <TouchableOpacity key={idx} disabled={ddSolved} onPress={() => ddReturn(idx)}
+                    style={[styles.dragItem, ddChecked && (item.zone === zone ? styles.dragItemOk : styles.dragItemBad)]}>
+                    <Text style={[styles.dragItemText, ddChecked && { color: item.zone === zone ? C.okText : C.failText }]}>
+                      {ddChecked ? (item.zone === zone ? '✓ ' : '✕ ') : ''}{item.text}
+                    </Text>
+                  </TouchableOpacity>
+                ) : null)}
+              </TouchableOpacity>
+            </View>
+          ))}
+          {ddChecked && ddSolved && <Fb ok>✅ ¡Clasificación perfecta! Sabes cuándo usar no-code y cuándo hace falta programar.</Fb>}
+          {ddChecked && !ddSolved && (
+            <>
+              <Fb ok={false}>❌ Algunos no están bien. Toca los marcados con ✕ para devolverlos y vuelve a intentarlo.</Fb>
+              {DD_ITEMS.map((item, idx) => ddPlaced[idx] !== undefined && ddPlaced[idx] !== item.zone ? (
+                <Fb key={idx} ok={false}>✕ "{item.text}" va en <Text style={{ fontWeight: '700' }}>{DD_ZONES[item.zone]}</Text>. {item.why}</Fb>
+              ) : null)}
+            </>
+          )}
+        </>
+      );
+
+      // ===== 17 · VF =====
+      case 17: return (
+        <>
+          <ModuleType icon="✔️" label="Verdadero o Falso" />
+          <Title>Verdadero o Falso</Title>
+          {VF_ITEMS.map((item, idx) => {
+            const ans = vfAnswers[idx];
+            return (
+              <View key={idx} style={styles.vfItem}>
+                <Text style={styles.vfStatement}>"{item.text}"</Text>
+                <View style={styles.vfButtons}>
+                  <TouchableOpacity
+                    style={[styles.vfBtn, ans === true && (item.correct ? styles.vfBtnCorrect : styles.vfBtnWrong)]}
+                    disabled={ans !== undefined}
+                    onPress={() => answerVf(idx, true)}
+                  >
+                    <Text style={[styles.vfBtnText, ans === true && { color: item.correct ? C.okText : C.failText }]}>✅ Verdadero</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.vfBtn, ans === false && (!item.correct ? styles.vfBtnCorrect : styles.vfBtnWrong)]}
+                    disabled={ans !== undefined}
+                    onPress={() => answerVf(idx, false)}
+                  >
+                    <Text style={[styles.vfBtnText, ans === false && { color: !item.correct ? C.okText : C.failText }]}>❌ Falso</Text>
+                  </TouchableOpacity>
+                </View>
+                {ans !== undefined && <Fb ok={ans === item.correct}>{ans === item.correct ? '✅ ' : '❌ Incorrecto. '}{item.feedback}</Fb>}
+              </View>
+            );
+          })}
+        </>
+      );
+
+      // ===== 20 · COMPLETADO =====
+      case 20: return (
+        <View style={styles.completionScreen}>
+          <Text style={styles.completionIcon}>💻</Text>
+          <Text style={styles.completionTitle}>¡Badge desbloqueado!</Text>
+          <Text style={styles.completionBadge}>🏅 Web Builder</Text>
+          <Text style={styles.completionText}>
+            ¡Nivel 16 completado! Ahora sabes cómo construir apps web con IA, conoces las herramientas no-code y entiendes cómo describir tus ideas para que la IA las construya.
+          </Text>
+          <Text style={styles.xpGained}>+<Text style={{ color: C.limeLight }}>{xp}</Text> XP</Text>
+          <View style={styles.statsRow}>
+            <View style={styles.statItem}>
+              <Text style={styles.statNum}>{correctCount}</Text>
+              <Text style={styles.statLbl}>Correctas</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Text style={styles.statNum}>{CONTENT_STEPS}</Text>
+              <Text style={styles.statLbl}>Módulos</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Text style={styles.statNum}>N17</Text>
+              <Text style={styles.statLbl}>Próximo nivel</Text>
+            </View>
+          </View>
+          <View style={styles.nextLevelBox}>
+            <Text style={styles.nextLevelText}>
+              📊 <Text style={{ fontWeight: '700', color: C.text }}>Nivel 17: Descubre Secretos en los Datos{'\n\n'}</Text>
+              Ahora que sabes construir apps, vas a analizar datos con IA: NotebookLM, gráficas y cómo detectar cuando los datos te quieren engañar.
+            </Text>
+          </View>
+          <TouchableOpacity style={[styles.btn, { width: '100%' }]} onPress={finishLevel}>
+            <Text style={styles.btnText}>Siguiente nivel →</Text>
+          </TouchableOpacity>
+        </View>
+      );
+
+      default: return null;
+    }
+  };
+
+  // ---------- Botón principal ----------
+  const getBtn = (): { label: string; enabled: boolean; note?: string; onPress: () => void } | null => {
+    switch (step) {
+      case 0: return { label: '¡Empezar! →', enabled: true, onPress: next };
+      case 1: case 4: case 6: case 7: case 10: case 13: case 14:
+        return { label: 'Continuar →', enabled: true, onPress: () => { awardStep(MODULE_XP[step]); next(); } };
+      case 5: case 11: case 16:
+        return { label: 'Continuar →', enabled: quizSel !== null || devMode, note: quizSel === null ? `Responde para continuar · +${MODULE_XP[step]} XP` : undefined, onPress: next };
+      case 3: case 9: case 18: case 19: {
+        const isReflect = step === 19;
+        if (!builderDone) return { label: isReflect ? 'Enviar reflexión →' : 'Confirmar →', enabled: builderText.trim().length > 15 || devMode, note: `Escribe al menos 16 caracteres · +${MODULE_XP[step]} XP`, onPress: confirmBuilder };
+        return { label: step === 19 ? 'Completar nivel →' : 'Continuar →', enabled: true, onPress: next };
+      }
+      case 2: return { label: 'Continuar →', enabled: matched.size === MATCH_PAIRS.length || devMode, note: matched.size < MATCH_PAIRS.length ? `Conecta los ${MATCH_PAIRS.length} pares · +${MODULE_XP[step]} XP` : undefined, onPress: next };
+      case 8:
+        if (!sortSolved) return { label: 'Verificar orden →', enabled: true, note: `Ordena del primer paso al último · +${MODULE_XP[step]} XP`, onPress: checkSort };
+        return { label: 'Continuar →', enabled: true, onPress: next };
+      case 12: return { label: 'Continuar →', enabled: sprintPhase === 'done' || devMode, note: sprintPhase !== 'done' ? 'Describe tu app y pulsa "Entregar" · +20 XP' : undefined, onPress: next };
+      case 15:
+        if (!ddChecked || (!ddSolved && !ddAllCorrect)) return { label: 'Verificar →', enabled: ddAllPlaced || devMode, note: `Clasifica los ${DD_ITEMS.length} proyectos · +${MODULE_XP[step]} XP`, onPress: verifyDd };
+        return { label: 'Continuar →', enabled: true, onPress: next };
+      case 17: return { label: 'Continuar →', enabled: Object.keys(vfAnswers).length === VF_ITEMS.length || devMode, note: `Responde las ${VF_ITEMS.length} afirmaciones · +${MODULE_XP[step]} XP`, onPress: next };
+      case 20: return null; // botón dentro de la pantalla final
+      default: return null;
+    }
+  };
+
+  const btn = getBtn();
+  const progress = Math.round((step / (TOTAL_STEPS - 1)) * 100);
 
   return (
     <View style={styles.screen}>
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.levelBadge}>Nivel 16 · 20 módulos</Text>
-        <Text style={styles.levelTitle}>
-          Haz tu Primera <Text style={{ color: '#84cc16' }}>Web con IA</Text>
-        </Text>
-        <Text style={styles.subtitle}>De usuario a constructor: crea sin programar</Text>
-        <View style={styles.progressBar}>
-          <View style={[styles.progressFill, { width: `${progress}%` }]} />
+      {/* Barra superior: salida + XP */}
+      <View style={styles.topBar}>
+        <TouchableOpacity onPress={() => exitLevel()} style={styles.closeBtn}><Text style={styles.closeBtnText}>✕</Text></TouchableOpacity>
+        <View style={{ flex: 1 }} />
+        <View style={styles.xpChip}><Text style={styles.xpChipText}>{xp} XP</Text></View>
+      </View>
+
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.container}>
+        {/* Header del nivel (como el HTML) */}
+        <View style={styles.header}>
+          <View style={styles.levelBadge}><Text style={styles.levelBadgeText}>💻 MUNDO 3 · NIVEL 16</Text></View>
+          <Text style={styles.levelTitle}>Haz tu Primera <Text style={{ color: C.limeLight }}>Web con IA</Text></Text>
+          <Text style={styles.subtitle}>De usuario a constructor: crea sin programar</Text>
+          <View style={styles.progressBar}><View style={[styles.progressFill, { width: `${progress}%` }]} /></View>
+          <View style={styles.progressLabelRow}>
+            <Text style={styles.progressLabel}>{step === 0 ? 'Introducción' : step < TOTAL_STEPS - 1 ? `Módulo ${step} de ${CONTENT_STEPS}` : '¡Nivel completado!'}</Text>
+            <Text style={styles.progressLabel}>{xp} / {MAX_XP} XP</Text>
+          </View>
         </View>
-        <Text style={styles.progressLabel}>
-          Módulo {step} de {MODULES.length - 1} · {xp} / {MAX_XP} XP
-        </Text>
-      </View>
 
-      <View style={styles.moduleCard}>
-        {currentMod.type === 'theory' && renderTheory(currentMod)}
-        {currentMod.type === 'quiz' && renderQuiz(currentMod)}
-        {currentMod.type === 'matching' && renderMatching(currentMod)}
-        {currentMod.type === 'builder' && renderBuilder(currentMod)}
-        {currentMod.type === 'sort' && renderSort(currentMod)}
-        {currentMod.type === 'dragdrop' && renderDragDrop(currentMod)}
-        {currentMod.type === 'sprint' && renderSprint(currentMod)}
-        {currentMod.type === 'vf' && renderVF(currentMod)}
-        {currentMod.type === 'completion' && renderCompletion()}
-      </View>
+        {/* Tarjeta del módulo */}
+        <View style={styles.moduleCard}>
+          <View style={styles.moduleCardAccent} />
+          {MODULE_XP[step] > 0 && (
+            <View style={styles.moduleXpBadge}><Text style={styles.moduleXpBadgeText}>+{MODULE_XP[step]} XP</Text></View>
+          )}
+          {renderStep()}
+        </View>
+      </ScrollView>
 
-      {currentMod.type !== 'completion' && (
-        <View style={styles.navButtons}>
-          <TouchableOpacity
-            style={[styles.navBtn, !showBackButton && styles.navBtnHidden]}
-            onPress={handlePrev}
-            disabled={!showBackButton}
-          >
-            <Text style={styles.navBtnText}>← Anterior</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.navBtn} onPress={handleNext}>
-            <Text style={styles.navBtnText}>Siguiente →</Text>
-          </TouchableOpacity>
+      {/* Footer */}
+      {btn && (
+        <View style={styles.btnRow}>
+          <View style={styles.btnRowInner}>
+            {showBack && <TouchableOpacity style={styles.backBtn} onPress={prev}><Text style={styles.backBtnText}>← Volver</Text></TouchableOpacity>}
+            <TouchableOpacity style={[styles.mainBtn, { flex: 1 }, !btn.enabled && styles.mainBtnDisabled]} onPress={btn.onPress} disabled={!btn.enabled}>
+              <Text style={styles.btnText}>{btn.label}</Text>
+            </TouchableOpacity>
+          </View>
+          {btn.note ? <Text style={styles.btnNote}>{btn.note}</Text> : null}
         </View>
       )}
-    </ScrollView>
-    {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} />}
+
+      {xpToast && <XPToast key={xpToast.id} amount={xpToast.amount} onHide={() => setXpToast(null)} bgColor={C.lime} textColor="#04220a" />}
     </View>
   );
 }
 
-// ─── ESTILOS (paleta verde lima) ───────────────────────────
+// ===================== ESTILOS (paleta oscura lima del HTML nivel-16) =====================
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#040d00' },
-  container: { padding: 16, paddingBottom: 40 },
-  header: { marginBottom: 24, alignItems: 'center' },
-  levelBadge: { ...typography.bold, fontSize: 13, color: '#84cc16', marginBottom: 8 },
-  levelTitle: { ...typography.heading1, fontSize: 28, color: '#f0fde4', textAlign: 'center' },
-  subtitle: { ...typography.body, color: '#86a85a', marginTop: 4, marginBottom: 16 },
-  progressBar: { width: '100%', height: 6, backgroundColor: '#1e3a00', borderRadius: 3, overflow: 'hidden' },
-  progressFill: { height: '100%', backgroundColor: '#84cc16', borderRadius: 3 },
-  progressLabel: { ...typography.caption, color: '#86a85a', marginTop: 6 },
-  moduleCard: {
-    backgroundColor: '#0d1f00',
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#1e3a00',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    elevation: 3,
-  },
-  moduleType: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  moduleTypeText: { ...typography.bold, fontSize: 11, textTransform: 'uppercase', letterSpacing: 1, color: '#84cc16', marginLeft: 6 },
-  moduleTitle: { ...typography.heading3, fontSize: 20, color: '#f0fde4', marginBottom: 16 },
-  bodyText: { ...typography.body, fontSize: 15, lineHeight: 24, color: '#86a85a', marginBottom: 12 },
-  bold: { fontWeight: '700', color: '#f0fde4' },
-  infoBox: {
-    backgroundColor: '#142800',
-    borderLeftWidth: 4,
-    borderLeftColor: '#84cc16',
-    borderRadius: 8,
-    padding: 14,
-    marginBottom: 16,
-  },
-  infoBoxText: { ...typography.body, fontSize: 14, lineHeight: 22, color: '#86a85a' },
-  codeBlock: {
-    backgroundColor: '#000',
-    borderWidth: 1,
-    borderColor: '#1e3a00',
-    borderRadius: 10,
-    padding: 16,
-    marginVertical: 12,
-  },
-  codeText: { fontFamily: 'monospace', fontSize: 13, color: '#a8ff78', lineHeight: 24 },
+  screen: { flex: 1, backgroundColor: C.bg },
+
+  topBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 13, paddingTop: 11, paddingBottom: 8, backgroundColor: C.bg, borderBottomWidth: 1, borderBottomColor: C.border },
+  closeBtn: { minWidth: 42, minHeight: 42, borderRadius: 10, backgroundColor: C.card, borderWidth: 1, borderColor: C.border, alignItems: 'center', justifyContent: 'center' },
+  closeBtnText: { fontSize: 12, color: C.limeLight, fontWeight: '800' },
+  xpChip: { paddingHorizontal: 11, paddingVertical: 4, borderRadius: 12, backgroundColor: C.card2, borderWidth: 1, borderColor: C.border },
+  xpChipText: { fontSize: 12, color: C.limeLight, fontWeight: '700' },
+
+  container: { padding: 16, paddingBottom: 28 },
+
+  // Header del nivel
+  header: { marginBottom: 20 },
+  levelBadge: { alignSelf: 'flex-start', backgroundColor: C.green, borderRadius: 99, paddingHorizontal: 16, paddingVertical: 6, marginBottom: 12 },
+  levelBadgeText: { ...typography.bold, fontSize: 12, color: '#fff', letterSpacing: 0.6 },
+  levelTitle: { ...typography.extraBold, fontSize: 28, color: C.text, lineHeight: 34 },
+  subtitle: { ...typography.regular, fontSize: 13, color: C.muted, marginTop: 4, marginBottom: 14 },
+  progressBar: { width: '100%', height: 8, backgroundColor: C.border, borderRadius: 99, overflow: 'hidden' },
+  progressFill: { height: '100%', backgroundColor: C.lime, borderRadius: 99 },
+  progressLabelRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 },
+  progressLabel: { fontSize: 11, color: C.muted, fontWeight: '500' },
+
+  // Tarjeta del módulo
+  moduleCard: { backgroundColor: C.card, borderRadius: 16, padding: 22, borderWidth: 1, borderColor: C.border, overflow: 'hidden' },
+  moduleCardAccent: { position: 'absolute', top: 0, left: 0, right: 0, height: 3, backgroundColor: C.lime },
+  moduleXpBadge: { position: 'absolute', top: 14, right: 14, backgroundColor: C.card2, borderWidth: 1, borderColor: C.border, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
+  moduleXpBadgeText: { fontSize: 11, fontWeight: '700', color: C.limeLight },
+  moduleType: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
+  moduleTypeText: { ...typography.bold, fontSize: 11, textTransform: 'uppercase', letterSpacing: 1, color: C.limeLight },
+  moduleTitle: { ...typography.extraBold, fontSize: 19, color: C.text, marginBottom: 14, lineHeight: 25 },
+  bodyText: { ...typography.regular, fontSize: 14, lineHeight: 23, color: C.muted, marginBottom: 12 },
+  bold: { fontWeight: '700', color: C.text },
+  infoBox: { backgroundColor: C.card2, borderLeftWidth: 4, borderLeftColor: C.lime, borderTopRightRadius: 12, borderBottomRightRadius: 12, paddingHorizontal: 16, paddingVertical: 13, marginBottom: 14 },
+  infoBoxText: { ...typography.regular, fontSize: 13, lineHeight: 24, color: C.muted },
+  codeBlock: { backgroundColor: C.codeBg, borderWidth: 1, borderColor: C.border, borderRadius: 10, padding: 14, marginBottom: 14 },
+  codeText: { fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', fontSize: 12, color: C.codeText, lineHeight: 22 },
+
   // Quiz
-  option: {
-    flexDirection: 'row',
-    backgroundColor: '#142800',
-    padding: 14,
-    borderRadius: 12,
-    marginBottom: 10,
-    borderWidth: 2,
-    borderColor: '#1e3a00',
-    alignItems: 'center',
-  },
+  option: { flexDirection: 'row', backgroundColor: C.card2, paddingHorizontal: 16, paddingVertical: 13, borderRadius: 12, marginBottom: 10, borderWidth: 2, borderColor: C.border, alignItems: 'center' },
+  optionCorrect: { borderColor: C.green2, backgroundColor: C.okBg },
+  optionWrong: { borderColor: C.red, backgroundColor: C.failBg },
   optionIcon: { marginRight: 10, fontSize: 16 },
-  optionText: { flex: 1, ...typography.body, color: '#f0fde4' },
-  optionCorrect: { borderColor: '#22c55e', backgroundColor: '#052e16' },
-  optionWrong: { borderColor: '#ef4444', backgroundColor: '#2d0707' },
-  feedback: { marginTop: 14, padding: 14, borderRadius: 12 },
-  feedbackOk: { backgroundColor: '#052e16', borderWidth: 1, borderColor: '#16a34a' },
-  feedbackFail: { backgroundColor: '#2d0707', borderWidth: 1, borderColor: '#dc2626' },
-  feedbackText: { ...typography.body, fontSize: 14, color: '#f0fde4' },
+  optionText: { flex: 1, fontSize: 13, lineHeight: 19, color: C.text, fontWeight: '500' },
+
+  // Feedback
+  feedback: { marginTop: 12, paddingHorizontal: 16, paddingVertical: 13, borderRadius: 12, borderWidth: 1 },
+  feedbackOk: { backgroundColor: C.okBg, borderColor: C.okBorder },
+  feedbackFail: { backgroundColor: C.failBg, borderColor: C.failBorder },
+  feedbackText: { fontSize: 13, lineHeight: 20, fontWeight: '500' },
+
   // Matching
-  matchGrid: { flexDirection: 'row', justifyContent: 'space-between' },
-  matchCol: { flex: 1, marginHorizontal: 4 },
-  matchItem: {
-    backgroundColor: '#142800',
-    padding: 12,
-    borderRadius: 10,
-    marginBottom: 8,
-    borderWidth: 2,
-    borderColor: '#1e3a00',
-    alignItems: 'center',
-  },
-  matchItemSelected: { borderColor: '#84cc16', backgroundColor: '#1a3500' },
-  matchItemMatched: { borderColor: '#22c55e', backgroundColor: '#052e16' },
-  matchItemSelectable: { borderColor: '#84cc16' },
+  matchGrid: { flexDirection: 'row', gap: 10 },
+  matchCol: { flex: 1, gap: 8 },
+  matchItem: { backgroundColor: C.card2, paddingHorizontal: 10, paddingVertical: 12, borderRadius: 10, borderWidth: 2, borderColor: C.border, alignItems: 'center', justifyContent: 'center', minHeight: 64 },
+  matchItemSelected: { borderColor: C.limeLight, backgroundColor: '#1a3500' },
+  matchItemMatched: { borderColor: C.green2, backgroundColor: C.okBg },
+  matchItemWrong: { borderColor: C.red, backgroundColor: C.failBg },
+  matchItemText: { fontSize: 12, color: C.text, textAlign: 'center', lineHeight: 17, fontWeight: '500' },
+
   // Builder
-  builderInput: {
-    backgroundColor: '#071500',
-    borderWidth: 2,
-    borderColor: '#1e3a00',
-    borderRadius: 12,
-    padding: 14,
-    fontSize: 15,
-    color: '#f0fde4',
-    minHeight: 100,
-    marginVertical: 10,
-    textAlignVertical: 'top',
-  },
-  btn: {
-    backgroundColor: '#84cc16',
-    padding: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 12,
-  },
-  btnText: { ...typography.bold, color: '#fff', fontSize: 15 },
-  // Sort
-  sortItem: {
-    flexDirection: 'row',
-    backgroundColor: '#142800',
-    padding: 14,
-    borderRadius: 10,
-    marginBottom: 8,
-    borderWidth: 2,
-    borderColor: '#1e3a00',
-    alignItems: 'center',
-  },
-  sortItemSelected: { borderColor: '#84cc16', backgroundColor: '#1a3500' },
-  sortItemCorrect: { borderColor: '#22c55e', backgroundColor: '#052e16' },
-  sortItemWrong: { borderColor: '#ef4444', backgroundColor: '#2d0707' },
-  sortHandle: { marginRight: 10, fontSize: 18, color: '#86a85a' },
-  sortItemText: { fontSize: 14, color: '#f0fde4', flex: 1 },
-  // DragDrop
-  classifyRow: { marginBottom: 10 },
-  classifyText: { ...typography.body, color: '#f0fde4', marginBottom: 6 },
-  classifyButtons: { flexDirection: 'row', gap: 8 },
-  classifyBtn: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: '#1e3a00',
-    backgroundColor: '#142800',
-  },
-  classifyBtnSelected: { borderColor: '#84cc16' },
-  classifyBtnText: { ...typography.bold, fontSize: 12, color: '#86a85a' },
+  builderInput: { backgroundColor: C.surface, borderWidth: 2, borderColor: C.border, borderRadius: 12, padding: 14, fontSize: 14, lineHeight: 21, color: C.text, minHeight: 100, marginVertical: 10, textAlignVertical: 'top' },
+  builderExample: { backgroundColor: C.card2, borderLeftWidth: 3, borderLeftColor: C.limeLight, borderTopRightRadius: 10, borderBottomRightRadius: 10, paddingHorizontal: 16, paddingVertical: 12, marginBottom: 12 },
+  builderExampleText: { fontSize: 13, color: C.muted, lineHeight: 20, fontStyle: 'italic' },
+  builderExampleLabel: { color: C.limeLight, fontWeight: '700', fontStyle: 'normal' },
+
   // Sprint
-  sprintBox: {
-    backgroundColor: '#0d2200',
-    borderRadius: 16,
-    padding: 20,
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  sprintInstruction: { textAlign: 'center', marginBottom: 10, color: '#86a85a' },
-  timerText: { fontSize: 36, fontWeight: '800', color: '#84cc16', marginBottom: 12 },
-  timerWarning: { color: '#f59e0b' },
-  timerDanger: { color: '#ef4444' },
+  sprintBox: { backgroundColor: '#0d2200', borderWidth: 2, borderColor: C.lime, borderRadius: 16, padding: 22, alignItems: 'center', marginBottom: 12 },
+  sprintInstruction: { textAlign: 'center', marginBottom: 6, fontSize: 13, lineHeight: 20, color: C.muted },
+  timerText: { fontSize: 44, fontWeight: '800', color: C.limeLight, fontVariant: ['tabular-nums'], marginVertical: 8 },
+  timerWarning: { color: C.yellow },
+  timerDanger: { color: C.red },
+
   // VF
-  vfItem: { marginBottom: 16, backgroundColor: '#142800', borderRadius: 12, padding: 14 },
-  vfStatement: { ...typography.body, fontWeight: '600', color: '#f0fde4', marginBottom: 10 },
+  vfItem: { marginBottom: 12, backgroundColor: C.card2, borderWidth: 1, borderColor: C.border, borderRadius: 12, padding: 16 },
+  vfStatement: { fontSize: 13, fontWeight: '600', marginBottom: 12, color: C.text, lineHeight: 20 },
   vfButtons: { flexDirection: 'row', gap: 8 },
-  vfBtn: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: '#1e3a00',
-    alignItems: 'center',
-    backgroundColor: '#071500',
-  },
-  vfBtnCorrect: { borderColor: '#22c55e', backgroundColor: '#052e16' },
-  vfBtnWrong: { borderColor: '#ef4444', backgroundColor: '#2d0707' },
-  vfBtnText: { ...typography.bold, fontSize: 13, color: '#86a85a' },
-  // Completion
-  completionScreen: { alignItems: 'center', paddingVertical: 30 },
-  completionIcon: { fontSize: 60, marginBottom: 10 },
-  completionTitle: { ...typography.heading1, fontSize: 26, color: '#84cc16', textAlign: 'center' },
-  completionBadge: { ...typography.heading3, fontSize: 22, color: '#f59e0b', marginVertical: 6 },
-  levelIndicator: { ...typography.bold, fontSize: 13, color: '#86a85a', marginBottom: 8, opacity: 0.8 },
-  completionText: { ...typography.body, textAlign: 'center', marginBottom: 20, color: '#86a85a' },
-  xpGained: { ...typography.heading2, fontSize: 30, color: '#f0fde4', marginBottom: 20 },
-  statsRow: { flexDirection: 'row', justifyContent: 'space-around', width: '100%', marginBottom: 20 },
-  statItem: { alignItems: 'center', backgroundColor: '#0d1f00', borderRadius: 12, padding: 12, flex: 1, marginHorizontal: 4 },
-  statNum: { ...typography.heading3, fontSize: 20, color: '#84cc16' },
-  statLbl: { ...typography.caption, color: '#86a85a' },
-  navButtons: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 20 },
-  navBtn: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    backgroundColor: '#142800',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#1e3a00',
-  },
-  navBtnHidden: { opacity: 0 },
-  navBtnText: { ...typography.bold, color: '#f0fde4' },
-  thanksText: { ...typography.heading2, textAlign: 'center', marginTop: 40, color: '#f0fde4' },
+  vfBtn: { flex: 1, paddingVertical: 10, borderRadius: 8, borderWidth: 2, borderColor: C.border, alignItems: 'center', backgroundColor: 'transparent' },
+  vfBtnCorrect: { borderColor: C.green2, backgroundColor: C.okBg },
+  vfBtnWrong: { borderColor: C.red, backgroundColor: C.failBg },
+  vfBtnText: { ...typography.bold, fontSize: 12, color: C.muted },
+
+  // Sort
+  sortRow: { flexDirection: 'row', alignItems: 'center', padding: 10, backgroundColor: C.card2, borderRadius: 10, borderWidth: 2, borderColor: C.border, marginBottom: 8 },
+  sortRowWrong: { borderColor: C.red, backgroundColor: C.failBg },
+  sortRowOk: { borderColor: C.green2, backgroundColor: C.okBg },
+  sortNum: { width: 26, height: 26, borderRadius: 13, backgroundColor: C.lime, color: '#04220a', textAlign: 'center', lineHeight: 26, fontWeight: '800', fontSize: 12, marginRight: 10, overflow: 'hidden' },
+  sortText: { flex: 1, fontSize: 12, color: C.text, lineHeight: 17 },
+  sortArrows: { flexDirection: 'column', marginLeft: 8 },
+  sortArrow: { fontSize: 14, color: C.limeLight, paddingVertical: 2, paddingHorizontal: 4 },
+
+  // Drag & drop
+  dragPool: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, padding: 14, backgroundColor: C.card2, borderWidth: 2, borderStyle: 'dashed', borderColor: C.border, borderRadius: 12, minHeight: 70, marginBottom: 12, alignItems: 'center' },
+  dragItem: { backgroundColor: C.surface, borderWidth: 2, borderColor: C.border, borderRadius: 8, paddingVertical: 8, paddingHorizontal: 12 },
+  dragItemSel: { borderColor: C.lime, backgroundColor: '#1a3500' },
+  dragItemOk: { borderColor: C.green2, backgroundColor: C.okBg },
+  dragItemBad: { borderColor: C.red, backgroundColor: C.failBg },
+  dragItemText: { fontSize: 12, color: C.text, lineHeight: 17 },
+  dropZoneLabel: { fontSize: 12, fontWeight: '700', color: C.limeLight, marginBottom: 6 },
+  dropZone: { minHeight: 70, padding: 12, borderWidth: 2, borderStyle: 'dashed', borderColor: C.border, borderRadius: 12, backgroundColor: C.card2, marginBottom: 10, flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'flex-start' },
+  dropZoneOver: { borderColor: C.lime, backgroundColor: '#1a3500' },
+
+  // Botones
+  btn: { backgroundColor: C.lime, padding: 14, borderRadius: 10, alignItems: 'center', marginTop: 12 },
+  btnText: { ...typography.bold, color: '#04220a', fontSize: 14 },
+
+  // Completado
+  completionScreen: { alignItems: 'center', paddingVertical: 20 },
+  completionIcon: { fontSize: 64, marginBottom: 12 },
+  completionTitle: { ...typography.extraBold, fontSize: 26, color: C.limeLight, textAlign: 'center', marginBottom: 4 },
+  completionBadge: { ...typography.extraBold, fontSize: 20, color: C.limeLight, marginVertical: 8 },
+  completionText: { ...typography.regular, fontSize: 14, lineHeight: 22, textAlign: 'center', marginBottom: 16, color: C.muted },
+  xpGained: { ...typography.extraBold, fontSize: 34, color: C.text, marginBottom: 16 },
+  statsRow: { flexDirection: 'row', width: '100%', gap: 8, marginBottom: 16 },
+  statItem: { flex: 1, alignItems: 'center', backgroundColor: C.card, borderWidth: 1, borderColor: C.border, borderRadius: 12, paddingVertical: 14, paddingHorizontal: 8 },
+  statNum: { ...typography.extraBold, fontSize: 20, color: C.limeLight },
+  statLbl: { fontSize: 10, color: C.muted, marginTop: 2, textAlign: 'center' },
+  nextLevelBox: { backgroundColor: C.card2, borderRadius: 10, padding: 13, marginBottom: 16, borderWidth: 1, borderColor: C.border, width: '100%' },
+  nextLevelText: { fontSize: 12, color: C.muted, lineHeight: 20 },
+
+  // Footer
+  btnRow: { paddingHorizontal: 13, paddingVertical: 12, borderTopWidth: 1, borderTopColor: C.border, backgroundColor: C.surface },
+  btnRowInner: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+  backBtn: { paddingHorizontal: 16, paddingVertical: 13, borderRadius: 10, backgroundColor: C.card2, borderWidth: 1, borderColor: C.border, minHeight: 48, justifyContent: 'center' },
+  backBtnText: { fontSize: 14, fontWeight: '700', color: C.muted },
+  mainBtn: { padding: 13, borderRadius: 10, backgroundColor: C.lime, alignItems: 'center', minHeight: 48, justifyContent: 'center' },
+  mainBtnDisabled: { opacity: 0.35 },
+  btnNote: { fontSize: 11, color: C.placeholder, textAlign: 'center', marginTop: 5, minHeight: 15 },
 });
