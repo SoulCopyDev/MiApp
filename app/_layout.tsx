@@ -3,6 +3,7 @@ import { View, Platform, StyleSheet } from 'react-native';
 import { Stack, SplashScreen } from 'expo-router';
 import useCustomFonts from '../src/hooks/useCustomFonts';
 import DownloadBanner from '../src/components/DownloadBanner';
+import { installTouchDragShim } from '../src/utils/touchDragShim';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -14,6 +15,11 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded]);
+
+  // Web: arrastre táctil inmediato en los drag & drop (sin long-press). Ver src/utils/touchDragShim.ts
+  useEffect(() => {
+    if (Platform.OS === 'web') installTouchDragShim();
+  }, []);
 
   if (!fontsLoaded) return null;
 
