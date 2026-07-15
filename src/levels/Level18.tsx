@@ -353,7 +353,7 @@ export default function Level18() {
   const finishLevel = () => {
     const stars = xp >= 185 ? 3 : xp >= 120 ? 2 : 1;
     completeLevel(18, stars, xp);
-    router.replace('/level/19');
+    router.replace('/eval/3');
   };
 
   // ---------- Acciones ----------
@@ -853,18 +853,18 @@ export default function Level18() {
               <Text style={styles.statLbl}>Módulos</Text>
             </View>
             <View style={styles.statItem}>
-              <Text style={styles.statNum}>M4</Text>
-              <Text style={styles.statLbl}>Próximo mundo</Text>
+              <Text style={styles.statNum}>🏆</Text>
+              <Text style={styles.statLbl}>Evaluación M3</Text>
             </View>
           </View>
           <View style={styles.nextLevelBox}>
             <Text style={styles.nextLevelText}>
-              🏆 <Text style={{ fontWeight: '700', color: C.text }}>Mundo 4: El Gran Torneo de Herramientas{'\n\n'}</Text>
-              Empiezas un mundo nuevo comparando y dominando las herramientas de IA más poderosas del ecosistema.
+              🏆 <Text style={{ fontWeight: '700', color: C.text }}>Evaluación del Mundo 3{'\n\n'}</Text>
+              Pon a prueba todo lo que aprendiste en los 6 niveles. Supera la evaluación para desbloquear el Mundo 4: El Gran Torneo de Herramientas.
             </Text>
           </View>
           <TouchableOpacity style={[styles.btn, { width: '100%' }]} onPress={finishLevel}>
-            <Text style={styles.btnText}>Siguiente mundo →</Text>
+            <Text style={styles.btnText}>Ir a la evaluación →</Text>
           </TouchableOpacity>
         </View>
       );
