@@ -72,7 +72,7 @@ interface PromptCompareStep {
   type: 'promptcompare';
   title: string;
   xp: number;
-  tasks: { task: string; bad: string; good: string; explain: string }[];
+  tasks: { task: string; bad: string; good: string; explain: string; flip: boolean }[];
 }
 
 interface ReflectStep {
@@ -105,6 +105,17 @@ type Step =
 const pickRandom = <T,>(arr: T[], count: number): T[] => {
   const shuffled = [...arr].sort(() => Math.random() - 0.5);
   return shuffled.slice(0, count);
+};
+
+// Baraja las opciones de una MCQ y remapea el índice correcto (evita que la
+// correcta caiga siempre en la misma posición — estándar v2.2 §5/§27).
+const shuffleOpts = <T extends { opts: string[]; correct: number }>(item: T): T => {
+  const paired = item.opts.map((opt, i) => ({ opt, isCorrect: i === item.correct }));
+  for (let j = paired.length - 1; j > 0; j--) {
+    const k = Math.floor(Math.random() * (j + 1));
+    [paired[j], paired[k]] = [paired[k], paired[j]];
+  }
+  return { ...item, opts: paired.map((p) => p.opt), correct: paired.findIndex((p) => p.isCorrect) };
 };
 
 const DRAG_POOL = [
@@ -354,7 +365,7 @@ const buildSteps = (): Step[] => {
     // 10 QUIZ
     {
       type: 'quiz', title: '¿Claude o ChatGPT?', xp: 32,
-      questions: pickRandom(QUIZ_POOL, 4).map((q) => ({
+      questions: pickRandom(QUIZ_POOL, 4).map(shuffleOpts).map((q) => ({
         question: q.q,
         options: q.opts,
         correct: q.correct,
@@ -410,7 +421,7 @@ const buildSteps = (): Step[] => {
     // 14 FILL BLANKS
     {
       type: 'fillblanks', title: 'Vocabulario de Claude', xp: 24,
-      items: pickRandom(FILL_POOL, 3).map(s => ({
+      items: pickRandom(FILL_POOL, 3).map(shuffleOpts).map(s => ({
         sentence: (blank: string) => s.sentence(blank),
         options: s.opts,
         correct: s.correct,
@@ -452,6 +463,7 @@ const buildSteps = (): Step[] => {
         bad: p.bad,
         good: p.good,
         explain: p.explain,
+        flip: Math.random() < 0.5, // aleatoriza si el bueno se muestra como A o B (§5)
       })),
     },
     // 18 BONUS: futuro
@@ -626,7 +638,6 @@ const PromptExampleCard = ({ title, bad, good }: { title: string; bad: string; g
 // ─── Componente principal del nivel ───────────────────────
 export default function World4Level2() {
   const completeLevel = useGameStore(s => s.completeLevel);
-  const addXPToStore = useGameStore(s => s.addXP);
 
   const steps = useRef(buildSteps()).current;
   const [step, setStep] = useState(0);
@@ -688,11 +699,12 @@ export default function World4Level2() {
     }
   }, [step]);
 
+  // Solo acumula XP local (display + toast). El store se actualiza UNA vez en
+  // completeLevel al final — nunca addXP al store durante el nivel (§26, evita XP doble).
   const addXP = useCallback((amount: number) => {
     setXp(prev => prev + amount);
-    addXPToStore(amount);
     if (amount > 0) setXpToast((prev) => ({ amount, id: (prev?.id ?? 0) + 1 }));
-  }, [addXPToStore]);
+  }, []);
 
   const handleNext = () => {
     if (step >= steps.length - 1) return;
@@ -735,6 +747,7 @@ export default function World4Level2() {
       let correct = 0;
       quiz.questions.forEach((q, qi) => { if (qAnswers[qi] === q.correct) correct++; });
       addXP(correct * 8);
+      return; // muestra feedback inline; el siguiente clic avanza (§16/§29)
     }
     if (current.type === 'vf' && !vfChecked) {
       if (Object.keys(vfAnswers).length < (current as VFStep).statements.length) return;
@@ -743,6 +756,7 @@ export default function World4Level2() {
       let correct = 0;
       vf.statements.forEach((s, qi) => { if (vfAnswers[qi] === s.correct) correct++; });
       addXP(correct * 6);
+      return; // muestra feedback inline; el siguiente clic avanza (§16/§29)
     }
     if (current.type === 'fillblanks' && !fChecked) {
       if (Object.keys(fAnswers).length < (current as FillBlanksStep).items.length) return;
@@ -751,6 +765,7 @@ export default function World4Level2() {
       let correct = 0;
       fill.items.forEach((item, qi) => { if (fAnswers[qi] === item.correct) correct++; });
       addXP(correct * 8);
+      return; // muestra feedback inline; el siguiente clic avanza (§16/§29)
     }
     if (current.type === 'promptcompare' && !pChecked) {
       if (Object.keys(pPicks).length < (current as PromptCompareStep).tasks.length) return;
@@ -759,6 +774,7 @@ export default function World4Level2() {
       let correct = 0;
       prompt.tasks.forEach((_, qi) => { if (pPicks[qi] === 'good') correct++; });
       addXP(correct * 10);
+      return; // muestra feedback inline; el siguiente clic avanza (§16/§29)
     }
     if (current.type === 'reflect') {
       const refl = current as ReflectStep;
@@ -769,15 +785,17 @@ export default function World4Level2() {
     setStep(s => s + 1);
   };
 
-  const THEORY_STEPS = new Set([0, 1, 2, 4, 6, 7, 8, 11, 15]);
+  // Módulos de solo-lectura (teoría/casos/bonus/desafío) — llevan "← Anterior". Incluye 13, 18, 19 (§19).
+  const THEORY_STEPS = new Set([0, 1, 2, 4, 6, 7, 8, 11, 13, 15, 18, 19]);
   const showBackButton = THEORY_STEPS.has(step);
 
   const handlePrev = () => { if (step > 0) setStep(s => s - 1); };
 
   const finishLevel = () => {
-    const stars = xp >= 160 ? 3 : xp >= 120 ? 2 : 1;
+    // Máx real ≈ 201 XP → 3⭐ ~70%, 2⭐ ~45%
+    const stars = xp >= 140 ? 3 : xp >= 90 ? 2 : 1;
     completeLevel(20, stars, xp);
-    exitLevel({ confirm: false });
+    router.replace('/level/21');
   };
 
   const current = steps[step];
@@ -785,6 +803,9 @@ export default function World4Level2() {
 
   return (
     <View style={styles.screen}>
+    <TouchableOpacity style={styles.closeBtn} onPress={() => exitLevel()} accessibilityLabel="Salir del nivel">
+      <Text style={styles.closeBtnText}>✕</Text>
+    </TouchableOpacity>
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.header}>
         <Text style={styles.levelBadge}>🌟 MUNDO 4 · NIVEL 2</Text>
@@ -793,7 +814,7 @@ export default function World4Level2() {
         <View style={styles.progressBar}>
           <View style={[styles.progressFill, { width: `${progress}%` }]} />
         </View>
-        <Text style={styles.progressLabel}>Módulo {step} de {steps.length - 1} · {xp} XP</Text>
+        <Text style={styles.progressLabel}>Módulo {step} de {steps.length - 2} · {xp} XP</Text>
       </View>
 
       <View style={styles.moduleCard}>
@@ -924,7 +945,7 @@ export default function World4Level2() {
             </View>
             <Text style={{ fontSize: 10, color: '#94a3b8', marginBottom: 8 }}>Nivel 20 de 36 completado · 56% del camino a IA Explorer</Text>
             <TouchableOpacity style={styles.finishBtn} onPress={finishLevel}>
-              <Text style={styles.finishBtnText}>Terminar nivel</Text>
+              <Text style={styles.finishBtnText}>Siguiente nivel →</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -960,11 +981,13 @@ const DragDropComponent = ({ mod, dPlaced, dSelected, onSelect, onDrop, onRemove
       ))}
     </View>
     <View style={styles.dropCols}>
-      {mod.zones.map((zone: string, zi: number) => (
-        <TouchableOpacity key={zi} style={[styles.dropCol, Object.values(dPlaced).includes(zone) && styles.dropColHasItem]} onPress={() => onDrop(zone)}>
+      {mod.zones.map((zone: string, zi: number) => {
+        const col = mod.colClass[zi]; // valor semántico ('fortaleza'/'cuidado'), no el texto de display
+        return (
+        <TouchableOpacity key={zi} style={[styles.dropCol, Object.values(dPlaced).includes(col) && styles.dropColHasItem]} onPress={() => onDrop(col)}>
           <Text style={[styles.dropHeader, { backgroundColor: zi === 0 ? '#eef2ff' : '#fef2f2', color: zi === 0 ? '#3730a3' : '#991b1b' }]}>{zone}</Text>
           <View style={styles.dropArea}>
-            {Object.entries(dPlaced).filter(([, z]) => z === zone).map(([id]) => {
+            {Object.entries(dPlaced).filter(([, z]) => z === col).map(([id]) => {
               const item = mod.items.find((i: any) => i.id === id);
               return (
                 <TouchableOpacity key={id} style={[styles.dropChip, { backgroundColor: zi === 0 ? '#eef2ff' : '#fef2f2' }]} onPress={() => onRemove(id)}>
@@ -974,7 +997,8 @@ const DragDropComponent = ({ mod, dPlaced, dSelected, onSelect, onDrop, onRemove
             })}
           </View>
         </TouchableOpacity>
-      ))}
+        );
+      })}
     </View>
     {dOk && <View style={styles.feedbackOk}><Text style={styles.feedbackText}>✅ ¡Clasificación correcta!</Text></View>}
   </View>
@@ -1148,39 +1172,47 @@ const PromptCompareComponent = ({ mod, pPicks, pChecked, onSelect }: any) => (
   <View>
     <StepTag color="#ecfdf5" textColor="#065f46" label="Comparar prompts" />
     <Text style={styles.lessonTitle}>{mod.title}</Text>
-    {mod.tasks.map((task: any, qi: number) => (
-      <View key={qi} style={{ marginBottom: 20 }}>
-        <Text style={styles.promptTaskTitle}>🎯 {task.task}</Text>
-        <TouchableOpacity
-          style={[styles.promptCard, pPicks[qi] === 'bad' && styles.promptCardSelectedBad, pChecked && styles.promptCardRevealBad]}
-          disabled={pChecked}
-          onPress={() => onSelect(qi, 'bad')}
-        >
-          <Text style={[styles.promptLabel, { color: '#ef4444' }]}>Prompt A:</Text>
-          <Text style={styles.promptText}>{task.bad}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.promptCard, pPicks[qi] === 'good' && styles.promptCardSelectedGood, pChecked && styles.promptCardRevealGood]}
-          disabled={pChecked}
-          onPress={() => onSelect(qi, 'good')}
-        >
-          <Text style={[styles.promptLabel, { color: '#16a34a' }]}>Prompt B:</Text>
-          <Text style={styles.promptText}>{task.good}</Text>
-        </TouchableOpacity>
-        {pChecked && (
-          <View style={[styles.feedback, pPicks[qi] === 'good' ? styles.feedbackOk : styles.feedbackFail]}>
-            <Text style={styles.feedbackText}>{task.explain}</Text>
-          </View>
-        )}
-      </View>
-    ))}
+    {mod.tasks.map((task: any, qi: number) => {
+      // orden A/B aleatorio por tarea — el bueno no siempre es "Prompt B" (§5)
+      const order: ('bad' | 'good')[] = task.flip ? ['good', 'bad'] : ['bad', 'good'];
+      return (
+        <View key={qi} style={{ marginBottom: 20 }}>
+          <Text style={styles.promptTaskTitle}>🎯 {task.task}</Text>
+          {order.map((which, pos) => {
+            const isGood = which === 'good';
+            const selStyle = pPicks[qi] === which && (isGood ? styles.promptCardSelectedGood : styles.promptCardSelectedBad);
+            const revealStyle = pChecked && (isGood ? styles.promptCardRevealGood : styles.promptCardRevealBad);
+            // etiqueta neutra hasta verificar: no revelar cuál es el bueno antes de responder (§7)
+            const labelColor = !pChecked ? '#64748b' : isGood ? '#16a34a' : '#ef4444';
+            return (
+              <TouchableOpacity
+                key={which}
+                style={[styles.promptCard, selStyle, revealStyle]}
+                disabled={pChecked}
+                onPress={() => onSelect(qi, which)}
+              >
+                <Text style={[styles.promptLabel, { color: labelColor }]}>Prompt {String.fromCharCode(65 + pos)}:</Text>
+                <Text style={styles.promptText}>{isGood ? task.good : task.bad}</Text>
+              </TouchableOpacity>
+            );
+          })}
+          {pChecked && (
+            <View style={[styles.feedback, pPicks[qi] === 'good' ? styles.feedbackOk : styles.feedbackFail]}>
+              <Text style={styles.feedbackText}>{pPicks[qi] === 'good' ? '✓ ¡Correcto! ' : '✗ El prompt más específico y completo era el mejor. '}{task.explain}</Text>
+            </View>
+          )}
+        </View>
+      );
+    })}
   </View>
 );
 
 // ─── Estilos ──────────────────────────────────────────────
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#fdf6f0' },
-  container: { padding: 16, paddingBottom: 40 },
+  closeBtn: { position: 'absolute', top: 10, left: 12, zIndex: 10, width: 40, height: 40, borderRadius: 10, backgroundColor: '#f3f4f6', borderWidth: 1, borderColor: '#e5e7eb', alignItems: 'center', justifyContent: 'center' },
+  closeBtnText: { fontSize: 15, fontWeight: '800', color: '#6b7280' },
+  container: { padding: 16, paddingBottom: 40, paddingTop: 20 },
   header: { marginBottom: 20, alignItems: 'center' },
   levelBadge: { ...typography.bold, fontSize: 14, color: '#da7756', marginBottom: 6 },
   levelTitle: { ...typography.heading1, fontSize: 28, color: '#111827', textAlign: 'center' },

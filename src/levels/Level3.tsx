@@ -86,6 +86,17 @@ const pickN = <T,>(arr: T[], n: number): T[] => {
   return shuffled.slice(0, n);
 };
 
+// Baraja las opciones de una MCQ y remapea el índice correcto (evita que la
+// respuesta correcta caiga siempre en la misma posición — estándar v2.2 §5/§27).
+const shuffleMCQ = <T extends { opts: string[]; correct: number }>(item: T): T => {
+  const paired = item.opts.map((opt, i) => ({ opt, isCorrect: i === item.correct }));
+  for (let j = paired.length - 1; j > 0; j--) {
+    const k = Math.floor(Math.random() * (j + 1));
+    [paired[j], paired[k]] = [paired[k], paired[j]];
+  }
+  return { ...item, opts: paired.map((p) => p.opt), correct: paired.findIndex((p) => p.isCorrect) };
+};
+
 // ===================== POOLS DE DATOS =====================
 
 // Módulo 5 — Diagnóstico: qué le falta al prompt (pool 8 → 4)
@@ -424,10 +435,10 @@ export default function World1Level3() {
   // Pools aleatorios
   const [diagItems] = useState(() => pickN(DIAG_POOL, 4));
   const [refineScenario] = useState(() => pickN(REFINE_SCENARIOS, 1)[0]);
-  const [roleItems] = useState(() => pickN(ROLE_POOL, 6));
+  const [roleItems] = useState(() => pickN(ROLE_POOL, 6).map(shuffleMCQ));
   const [ethicsItems] = useState(() => pickN(ETHICS_POOL, 5));
-  const [detectItems] = useState(() => pickN(DETECT_POOL, 4));
-  const [sprintItems] = useState(() => pickN(SPRINT_POOL, 5));
+  const [detectItems] = useState(() => pickN(DETECT_POOL, 4).map(shuffleMCQ));
+  const [sprintItems] = useState(() => pickN(SPRINT_POOL, 5).map(shuffleMCQ));
   const [tfItems] = useState(() => pickN(PROMPT_TF_POOL, 6));
 
   // Estados de módulos
@@ -797,7 +808,7 @@ export default function World1Level3() {
       if (earned > 0) addXP(earned);
       setSprintFb({ type: 'correct', msg: `⚡ ¡Correcto! ${bonus > 0 ? `+${earned} XP por velocidad` : ''}` });
     } else {
-      setSprintFb({ type: 'wrong', msg: '✗ El Prompt B siempre especifica rol, contexto, instrucción y formato.' });
+      setSprintFb({ type: 'wrong', msg: `✗ El prompt correcto es el que especifica rol, contexto, instrucción y formato: "${item.opts[item.correct]}"` });
     }
     setTimeout(() => advanceSprint(isOk), 1600);
   };
@@ -805,7 +816,8 @@ export default function World1Level3() {
   const handleSprintTimeout = () => {
     if (sprintAnswered || sprintDone) return;
     setSprintAnswered(true);
-    setSprintFb({ type: 'wrong', msg: '⏰ ¡Tiempo! La respuesta correcta era el Prompt B.' });
+    const item = sprintItems[sprintIdx];
+    setSprintFb({ type: 'wrong', msg: `⏰ ¡Tiempo! La respuesta correcta era el prompt más completo: "${item.opts[item.correct]}"` });
     setTimeout(() => advanceSprint(false), 1500);
   };
 
