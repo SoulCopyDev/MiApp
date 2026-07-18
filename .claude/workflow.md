@@ -53,12 +53,12 @@ Refactor completo de numeración continua N1–N43. Ver propuesta en `/Descargas
 |---|---|---|
 | GLOBAL-01 | ✅ Resuelto | Botón ← Volver en pasos teóricos (THEORY_STEPS) en N1–N6 |
 | GLOBAL-02 | ✅ Resuelto | resultBanner fuera de ScrollView, showResult sin andAdvance |
-| GLOBAL-03 | ⏳ Pendiente | Alert.alert → feedback inline en respuestas incorrectas (N1/N2/N4/N6) |
+| GLOBAL-03 | ✅ Resuelto | Feedback inline ya implementado en N1/N2/N4/N6 (resultBanner/stepResult en N1·N2; condicionales ✅/❌ en N4; estados tipoFb/sortFb en N6). Los `Alert.alert` que quedan son solo confirmaciones de salida/back en modo examen, y ya tienen guard web (`Platform.OS==='web'` → `window.confirm`). |
 | GLOBAL-04 | ✅ Resuelto | Toast "+N XP ✨" global — propagado a L1-L36 + Eval1-6 |
 | GLOBAL-06 | ✅ Resuelto | allowBack declarado correctamente en LevelScreen |
 | GLOBAL-07 | ✅ Resuelto | DevMode bypass en todas las funciones check de N1–N6 |
 | EVAL-M1-01 | ✅ Resuelto | Eval1.tsx — evaluación final Mundo 1 (ex World1/Level7) |
-| N3-01..11 | ⏳ Pendiente | Restauración de contenido — requiere HTML prototipos |
+| N3-01..11 | ✅ Resuelto | Auditoría de Level3 vs nivel-03.html (Mundo 1 · tema claro naranja, 18 módulos/hasta 200 XP). El nivel ya era un port fiel del HTML V2.0 (contenido, XP íntegro sin addXP al store + completeLevel al final, salida con exitLevel, feedback inline, flash de orden 2s, navega a /level/4). Fix v2.2: la correcta caía SIEMPRE en posición fija — DETECT_POOL y SPRINT_POOL todos con `correct:1`. Añadido `shuffleMCQ` (baraja opts + remapea índice) aplicado a detect/sprint/role; feedback del sprint sin referencia hardcodeada a "Prompt B" (usa el texto de la opción correcta). tsc limpio. |
 | AUDIT-N12 | ✅ Resuelto | Level12 reconstruido 1:1 vs nivel-12.html (18 módulos, paleta, D&D, validaciones) |
 | AUDIT-EVAL2 | ✅ Resuelto | Eval2 fiel a evaluacion-mundo-02.html (quiz completo+shuffle, builder 3 min, badge) |
 | AUDIT-N13 | ✅ Resuelto | Level13 fiel a nivel-13.html (tema oscuro M3, 19 módulos/260 XP reales, D&D real, fix XP infinito/duplicado) |
