@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { useGameStore } from '../../store/gameStore';
+import { useReportProgress } from '../../components/LevelProgress';
 import { typography } from '../../theme';
 import { exitLevel } from '../../utils/exitLevel';
 import XPToast from '../../components/XPToast';
@@ -118,6 +119,7 @@ export default function Eval3() {
   const devMode = useGameStore(s => s.devMode);
 
   const [part, setPart] = useState(1); // 1..5 partes, 6 = completado
+  useReportProgress(part - 1, 6);
   const [xp, setXp] = useState(0);
   const [xpToast, setXpToast] = useState<{ amount: number; id: number } | null>(null);
   const [totalCorrect, setTotalCorrect] = useState(0);

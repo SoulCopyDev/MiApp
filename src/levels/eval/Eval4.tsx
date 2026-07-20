@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { useState, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
 import { useGameStore } from '../../store/gameStore';
+import { useReportProgress } from '../../components/LevelProgress';
 import { typography } from '../../theme';
 import XPToast from '../../components/XPToast';
 
@@ -142,6 +143,7 @@ export default function World4Eval() {
   const completeLevel = useGameStore((s) => s.completeLevel);
 
   const [currentPart, setCurrentPart] = useState(1);
+  useReportProgress(currentPart - 1, 6);
   const [xp, setXp] = useState(0);
   const [xpToast, setXpToast] = useState<{ amount: number; id: number } | null>(null);
   const [totalCorrect, setTotalCorrect] = useState(0);

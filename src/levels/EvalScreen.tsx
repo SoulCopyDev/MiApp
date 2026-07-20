@@ -5,6 +5,7 @@ import { colors } from '../theme';
 import { useBreakpoint } from '../hooks/useBreakpoint';
 import WebSidebar from '../components/WebSidebar';
 import WebPhoneFrame from '../components/WebPhoneFrame';
+import { LevelProgressProvider, LevelChrome } from '../components/LevelProgress';
 
 import Eval1 from './eval/Eval1';
 import Eval2 from './eval/Eval2';
@@ -40,14 +41,20 @@ export default function EvalScreen() {
 
   if (isWebDesktop) {
     return (
-      <View style={{ flex: 1, flexDirection: 'row', backgroundColor: colors.background }}>
-        <WebSidebar />
-        <View style={{ flex: 1, overflow: 'hidden' }}>
-          <WebPhoneFrame><Component /></WebPhoneFrame>
+      <LevelProgressProvider>
+        <View style={{ flex: 1, flexDirection: 'row', backgroundColor: colors.background }}>
+          <WebSidebar />
+          <View style={{ flex: 1, overflow: 'hidden' }}>
+            <WebPhoneFrame><LevelChrome><Component /></LevelChrome></WebPhoneFrame>
+          </View>
         </View>
-      </View>
+      </LevelProgressProvider>
     );
   }
 
-  return <Component />;
+  return (
+    <LevelProgressProvider>
+      <LevelChrome><Component /></LevelChrome>
+    </LevelProgressProvider>
+  );
 }

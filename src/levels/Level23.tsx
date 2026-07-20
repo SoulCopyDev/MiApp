@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
 import { useGameStore } from '../store/gameStore';
+import { useReportProgress } from '../components/LevelProgress';
 import { typography } from '../theme';
 import XPToast from '../components/XPToast';
 
@@ -277,6 +278,7 @@ export default function World4Level5() {
   const steps = useRef(buildSteps()).current;
   const CONTENT_STEPS = steps.length - 1; // 19 (intro cuenta como módulo, completion no)
   const [step, setStep] = useState(0);
+  useReportProgress(step, steps.length);
   const [xp, setXp] = useState(0);
   const [xpToast, setXpToast] = useState<{ amount: number; id: number } | null>(null);
   const [correctCount, setCorrectCount] = useState(0);

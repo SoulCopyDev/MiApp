@@ -7,6 +7,7 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useGameStore } from '../store/gameStore';
+import { useReportProgress } from '../components/LevelProgress';
 import { colors, typography } from '../theme';
 import XPToast from '../components/XPToast';
 
@@ -304,6 +305,7 @@ export default function World2Level5() {
   const completeLevel = useGameStore((state) => state.completeLevel);
 
   const [step, setStep] = useState(0);
+  useReportProgress(step, TOTAL_STEPS);
   const [xp, setXp] = useState(0);
   const [xpToast, setXpToast] = useState<{ amount: number; id: number } | null>(null);
 
