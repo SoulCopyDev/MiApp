@@ -401,7 +401,7 @@ export default function World5Level7() {
   return (
     <View style={styles.screen}>
       <View style={styles.bar}>
-        <TouchableOpacity onPress={() => exitLevel({ confirm: false })}>
+        <TouchableOpacity onPress={() => exitLevel()} accessibilityLabel="Salir de la evaluación">
           <MaterialIcons name="close" size={24} color={colors.textSecondary} />
         </TouchableOpacity>
         <View style={styles.track}><View style={[styles.fill, { width: `${progressPercent}%` }]} /></View>
