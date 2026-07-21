@@ -250,7 +250,9 @@ Flujo típico: contenido/pregunta → interacción → feedback → resultado co
 
 ## Sistema de rangos
 
-8 tiers basados en `totalStars` (máx teórico 126 = 42 niveles × 3 estrellas):
+8 tiers basados en `totalStars` (máx teórico 126 = 42 niveles **puntuados** × 3 estrellas).
+
+> Completables hay 43. **N43 (Evaluación Final · Portafolio de Graduación) es un hito no puntuado:** se completa con `completeLevel(43, 0, 0)` y su premio es la insignia 15 «Campeón IA», no estrellas — es un documento de solo lectura y no mide desempeño. `isMilestoneLevel(worldId, levelId)` en `src/utils/trophies.ts` es la fuente de verdad; `BadgesScreen` y `WorldScreen` lo pintan como "🎓 Graduación" en vez de una fila de estrellas vacía.
 
 | Nivel | Nombre | Stars |
 |---|---|---|

@@ -11,6 +11,8 @@ export interface LevelTrophy {
   icon: string;
   unlocked: boolean;
   stars: number;
+  /** Hito no puntuado: se muestra como logro, sin fila de estrellas. Ver `isMilestoneLevel`. */
+  milestone: boolean;
 }
 
 export interface WorldTrophy {
@@ -51,6 +53,22 @@ const WORLD_COLORS: Record<number, TrophyColorScheme> = {
 
 const FALLBACK_COLOR: TrophyColorScheme = { accent: '#747779', bg: '#f5f7f9', light: '#aaaaaa' };
 
+/**
+ * ¿Es un hito de cierre y no un nivel puntuado?
+ *
+ * N43 (World6 / level 8, la Evaluación Final) es el Portafolio de Graduación: un
+ * documento de solo lectura, sin preguntas ni interacción. No mide desempeño, así
+ * que se completa con 0 estrellas y se premia con la insignia 15 «Campeón IA».
+ *
+ * Esto mantiene el invariante del sistema de rangos (42 niveles × 3 = 126 estrellas,
+ * ver `rankSystem.ts`): si otorgara estrellas, el máximo real sería 129 y el rango
+ * se inflaría sin desempeño. Las pantallas usan este predicado para pintarlo como
+ * logro en vez de mostrar «0 de 3 estrellas», que se leería como fracaso.
+ */
+export function isMilestoneLevel(worldId: number, levelId: number): boolean {
+  return worldId === 6 && levelId === 8;
+}
+
 export function getWorldColor(worldId: number): TrophyColorScheme {
   return WORLD_COLORS[worldId] ?? FALLBACK_COLOR;
 }
@@ -71,6 +89,7 @@ export function buildTrophyGroups(worlds: World[]): WorldTrophyGroup[] {
       icon: level.icon,
       unlocked: level.status === 'completed',
       stars: level.stars,
+      milestone: isMilestoneLevel(world.id, level.id),
     }));
 
     const worldTrophy: WorldTrophy = {

@@ -97,8 +97,11 @@ const WORLD_DATA = [
 export default function World6Level8() {
   const completeLevel = useGameStore((s) => s.completeLevel);
 
-  const handleClose = () => {
-    completeLevel(43, 3, 0);
+  // El portafolio es un hito, no una prueba: se completa con 0 estrellas y 0 XP.
+  // El premio es la insignia 15 «Campeón IA», que exige todos los niveles completados
+  // — por eso `completeLevel(43, …)` NO es opcional. Ver `isMilestoneLevel` en utils/trophies.
+  const handleGraduate = () => {
+    completeLevel(43, 0, 0);
     exitLevel({ confirm: false });
   };
 
@@ -106,7 +109,8 @@ export default function World6Level8() {
     <View style={styles.screen}>
       {/* Barra de progreso */}
       <View style={styles.bar}>
-        <TouchableOpacity onPress={handleClose} style={styles.closeBtn}>
+        {/* El ✕ solo sale: completar es un acto explícito del botón de abajo. */}
+        <TouchableOpacity onPress={() => exitLevel()} style={styles.closeBtn} accessibilityLabel="Salir del portafolio">
           <MaterialIcons name="close" size={24} color={colors.textSecondary} />
         </TouchableOpacity>
         <View style={styles.track}>
@@ -256,6 +260,10 @@ export default function World6Level8() {
             Este portafolio es la evidencia concreta del aprendizaje de su hijo/a. Cada elemento listado es algo real, demostrable, y útil. No es teoría — son competencias aplicadas que su hijo/a puede mostrar en universidades, becas o futuros empleos. El curso AI Expert prioriza producción real sobre consumo pasivo.
           </Text>
         </View>
+
+        <TouchableOpacity style={styles.graduateBtn} onPress={handleGraduate}>
+          <Text style={styles.graduateBtnText}>Cerrar mi graduación 🎓</Text>
+        </TouchableOpacity>
 
         <View style={{ height: 40 }} />
       </ScrollView>
@@ -546,6 +554,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#fef9c3',
     borderRadius: 14,
   },
+  graduateBtn: {
+    marginTop: 24,
+    padding: 16,
+    borderRadius: 14,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+  },
+  graduateBtnText: { ...typography.bold, fontSize: 15, color: colors.surface },
   parentsNoteText: {
     fontSize: 13,
     lineHeight: 22,

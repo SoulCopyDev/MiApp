@@ -6,6 +6,7 @@ import { useGameStore, coordsToGlobalN } from '../store/gameStore';
 import { colors, typography } from '../theme';
 import { useBreakpoint } from '../hooks/useBreakpoint';
 import WebSidebar from '../components/WebSidebar';
+import { isMilestoneLevel } from '../utils/trophies';
 
 export default function WorldScreen() {
   const { worldId: worldIdParam } = useLocalSearchParams<{ worldId: string }>();
@@ -162,7 +163,9 @@ export default function WorldScreen() {
                 </Text>
 
                 {/* Stars o estado */}
-                {isCompleted && renderStars(level.stars)}
+                {isCompleted && (isMilestoneLevel(world.id, level.id)
+                  ? <Text style={styles.milestoneLabel}>🎓 Graduación</Text>
+                  : renderStars(level.stars))}
                 {isCurrent && (
                   <View style={styles.currentPill}>
                     <Text style={styles.currentPillText}>JUGAR</Text>
@@ -234,7 +237,9 @@ export default function WorldScreen() {
             <Text style={styles.playNowText}>JUGAR</Text>
           </View>
         )}
-        {level.status === 'completed' && renderStars(level.stars)}
+        {level.status === 'completed' && (isMilestoneLevel(world.id, level.id)
+          ? <Text style={styles.milestoneLabel}>🎓 Graduación</Text>
+          : renderStars(level.stars))}
         <View style={styles.levelNameContainer}>
           <Text style={styles.levelName}>{level.name}{devMode && level.status === 'locked' ? ' 🔓' : ''}</Text>
           <TouchableOpacity onPress={() => handleEditLevelName(level)} style={styles.editButton}>
@@ -389,6 +394,7 @@ const styles = StyleSheet.create({
   levelCardName: { ...typography.bold, fontSize: 13, color: colors.textPrimary, textAlign: 'center', lineHeight: 18 },
   levelCardNameLocked: { color: colors.textDisabled },
   starsRow: { flexDirection: 'row', gap: 2 },
+  milestoneLabel: { ...typography.bold, fontSize: 11, color: colors.accent },
   currentPill: {
     backgroundColor: colors.primary,
     paddingHorizontal: 12,

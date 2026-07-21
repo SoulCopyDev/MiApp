@@ -54,9 +54,12 @@ function LevelTrophyRow({ trophy, accent }: { trophy: LevelTrophy; accent: strin
         >
           {trophy.name}
         </Text>
-        {trophy.unlocked
-          ? <StarRow stars={trophy.stars} />
-          : <Text style={innerStyles.lockedLabel}>Bloqueado</Text>
+        {!trophy.unlocked
+          ? <Text style={innerStyles.lockedLabel}>Bloqueado</Text>
+          : trophy.milestone
+            // Hito de cierre: no se puntúa, así que no se pinta la fila de estrellas.
+            ? <Text style={[innerStyles.milestoneLabel, { color: accent }]}>🎓 Graduación</Text>
+            : <StarRow stars={trophy.stars} />
         }
       </View>
 
@@ -306,6 +309,7 @@ const innerStyles = StyleSheet.create({
   dimText: { color: colors.textDisabled },
   starRow: { flexDirection: 'row', gap: 2 },
   lockedLabel: { ...typography.regular, fontSize: 11, color: colors.textDisabled },
+  milestoneLabel: { ...typography.bold, fontSize: 11 },
 
   // WorldTrophyCard
   worldTrophyCard: {
