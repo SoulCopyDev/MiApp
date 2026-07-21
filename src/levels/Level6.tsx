@@ -15,6 +15,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useGameStore } from '../store/gameStore';
+import { useReportProgress } from '../components/LevelProgress';
 import { colors, typography } from '../theme';
 import XPToast from '../components/XPToast';
 
@@ -257,6 +258,7 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
   const devMode = useGameStore((state) => state.devMode);
 
   const [step, setStep] = useState(0);
+  useReportProgress(step, TOTAL_STEPS);
   const [xp, setXp] = useState(0);
   const [xpToast, setXpToast] = useState<{ amount: number; id: number } | null>(null);
 

@@ -15,6 +15,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { router } from 'expo-router';
 import { useGameStore } from '../store/gameStore';
+import { useReportProgress } from '../components/LevelProgress';
 import { colors, typography } from '../theme';
 import XPToast from '../components/XPToast';
 
@@ -215,6 +216,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
   const navigation = propsNavigation || navigationFromHook;
 
   const [step, setStep] = useState(0);
+  useReportProgress(step, TOTAL_STEPS);
   const [xp, setXp] = useState(0);
   const completeLevel = useGameStore((state) => state.completeLevel);
   const devMode = useGameStore((state) => state.devMode);

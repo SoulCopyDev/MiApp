@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { useGameStore } from '../store/gameStore';
+import { useReportProgress } from '../components/LevelProgress';
 import { typography } from '../theme';
 import { exitLevel } from '../utils/exitLevel';
 import XPToast from '../components/XPToast';
@@ -230,6 +231,7 @@ export default function Level19() {
   const devMode = useGameStore(s => s.devMode);
 
   const [step, setStep] = useState(0);
+  useReportProgress(step, TOTAL_STEPS);
   const [xp, setXp] = useState(0);
   const [xpToast, setXpToast] = useState<{ amount: number; id: number } | null>(null);
   const awardedSteps = useRef<Set<number>>(new Set());

@@ -452,7 +452,7 @@ export const useGameStore = create<GameState>()(
     {
       name: 'ai-explorer-storage-v2',
       storage: createJSONStorage(() => AsyncStorage),
-      version: 20,
+      version: 21,
       migrate: (persistedState: any, version: number) => {
         if (persistedState?.worlds) {
           // Iterate over the template worlds to update/add
@@ -511,6 +511,21 @@ export const useGameStore = create<GameState>()(
           // Ensure worlds are sorted by ID
           persistedState.worlds.sort((a: World, b: World) => a.id - b.id);
           
+          // v21 — N43 (World6/level 8, Portafolio de Graduación) pasó a ser un hito no
+          // puntuado: antes otorgaba 3 estrellas fijas por abrir una pantalla de solo
+          // lectura, lo que rompía el invariante de rangos (42 × 3 = 126 → daba 129).
+          // Se ponen a 0 y se recalcula totalStars, que es suma pura de las estrellas
+          // de los niveles. Ver `isMilestoneLevel` en utils/trophies.
+          const world6 = persistedState.worlds.find((w: World) => w.id === 6);
+          const finalEval = world6?.levels.find((l: any) => l.id === 8);
+          if (finalEval && finalEval.stars > 0) {
+            finalEval.stars = 0;
+          }
+          persistedState.totalStars = persistedState.worlds.reduce(
+            (sum: number, w: World) => sum + w.levels.reduce((s: number, l: any) => s + l.stars, 0),
+            0
+          );
+
           // Auto-unlock: if all levels of world N are completed, unlock first level of world N+1
           for (let i = 0; i < persistedState.worlds.length - 1; i++) {
             const currentWorld = persistedState.worlds[i];

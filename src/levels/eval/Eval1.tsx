@@ -6,6 +6,7 @@ import {
   Alert, BackHandler, Platform,
 } from 'react-native';
 import { useGameStore } from '../../store/gameStore';
+import { useReportProgress } from '../../components/LevelProgress';
 import { typography } from '../../theme';
 import XPToast from '../../components/XPToast';
 
@@ -213,6 +214,7 @@ function PartDots({ done, active }: { done: number; active: number }) {
 
 export default function World1Eval() {
   const [step, setStep] = useState(0);
+  useReportProgress(step, TOTAL_STEPS);
   const [xp, setXp] = useState(0);
   const [xpToast, setXpToast] = useState<{ amount: number; id: number } | null>(null);
 

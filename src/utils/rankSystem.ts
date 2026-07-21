@@ -23,7 +23,10 @@ interface RankInfo {
   isMax: boolean;
 }
 
-// Máximo teórico alcanzable: 42 niveles × 3 estrellas = 126 estrellas.
+// Máximo teórico alcanzable: 42 niveles puntuados × 3 estrellas = 126 estrellas.
+// Completables hay 43, pero N43 (Portafolio de Graduación) es un hito no puntuado
+// que otorga 0 estrellas — si diera 3, el máximo real sería 129 y el rango se
+// inflaría sin desempeño. Ver `isMilestoneLevel` en utils/trophies.
 // Los umbrales están distribuidos para que cada rango represente un hito real.
 const RANK_TIERS: readonly RankTier[] = [
   { level: 1, name: 'Novato',     icon: 'school',            minStars: 0,   maxStars: 4,   color: '#747779', bgColor: '#f0f2f3' },

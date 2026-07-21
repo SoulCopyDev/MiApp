@@ -41,10 +41,12 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useGameStore } from '../store/gameStore';
+import { useReportProgress } from '../components/LevelProgress';
 import { colors, typography } from '../theme';
 ```
 
 Solo importar `Alert` si hay módulo tipo `quiz` con feedback alert (raro). Omitir imports no usados.
+El import de `useReportProgress` es **obligatorio** — alimenta la fila de step-dots global (ver Paso 2, estado base).
 
 ### Constantes de datos
 
@@ -101,6 +103,9 @@ export default function Level{N}() {
 
   const [step, setStep] = useState(0);
   const [xp,   setXp]   = useState(0);
+
+  // Alimenta la fila de step-dots global (StepDots vía LevelChrome). Total = MODULES.length.
+  useReportProgress(step, MODULES.length);
 ```
 
 #### Estado por tipo de módulo (solo declarar los necesarios según spec):
