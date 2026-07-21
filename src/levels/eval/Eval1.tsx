@@ -186,7 +186,16 @@ const HEADLINES: Headline[] = [
 ];
 
 // ---------- Helper ----------
-const pickN = <T,>(arr: T[], n: number): T[] => [...arr].sort(() => Math.random() - 0.5).slice(0, n);
+// Fisher-Yates: `.sort(() => Math.random() - 0.5)` no baraja de forma uniforme.
+const shuffle = <T,>(arr: T[]): T[] => {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+};
+const pickN = <T,>(arr: T[], n: number): T[] => shuffle(arr).slice(0, n);
 
 // Baraja las opciones de una pregunta y reubica el índice correcto (evita que la respuesta caiga siempre en la misma posición)
 function shuffleOpts<T extends { opts: string[]; correct: number }>(q: T): T {

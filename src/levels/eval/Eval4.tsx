@@ -29,7 +29,19 @@ type TourItem = { task: string; opts: { t: string; ok: boolean }[]; fb: string }
 type PCItem = { task: string; responses: { who: string; text: string }[]; q: string; opts: { t: string; ok: boolean }[]; fb: string };
 
 // ── Helpers ──
-const pickN = <T,>(arr: T[], n: number): T[] => [...arr].sort(() => Math.random() - 0.5).slice(0, n);
+// Fisher-Yates. `.sort(() => Math.random() - 0.5)` NO baraja de forma uniforme: el
+// comparador es inconsistente y V8 lo resuelve con insertion sort en arrays cortos.
+// Medido con 4 opciones, la correcta caía en A el 36% de las veces y en C el 15,5%
+// (uniforme = 25%) — un sesgo explotable por quien siempre marcara la primera.
+const shuffle = <T,>(arr: T[]): T[] => {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+};
+const pickN = <T,>(arr: T[], n: number): T[] => shuffle(arr).slice(0, n);
 
 // ── Validación de contenido (§14) ──
 const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
@@ -152,12 +164,12 @@ export default function World4Eval() {
   const quizData = useRef(
     pickN(QUIZ_POOL, 15).map((q) => {
       const correctText = q.opts[q.c];
-      const shuffled = [...q.opts].sort(() => Math.random() - 0.5);
+      const shuffled = shuffle(q.opts);
       return { ...q, opts: shuffled, c: shuffled.indexOf(correctText) };
     })
   ).current;
   const tourData = useRef(
-    pickN(TOUR_POOL, 10).map((t) => ({ ...t, opts: [...t.opts].sort(() => Math.random() - 0.5) }))
+    pickN(TOUR_POOL, 10).map((t) => ({ ...t, opts: shuffle(t.opts) }))
   ).current;
 
   const TOTAL_ITEMS = quizData.length + tourData.length + PC_DATA.length + 2; // +toolkit +reflexión

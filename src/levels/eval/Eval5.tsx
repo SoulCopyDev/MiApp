@@ -93,10 +93,16 @@ const ETHICS_POOL: EthicsItem[] = [
 const TOTAL_STEPS = 7; // 0:intro, 1:quiz, 2:builder, 3:pitch, 4:ethics, 5:reflection, 6:badge
 // Máx XP real = 200: quiz 10×8 + builder 35 + pitch 25 + ético 6×5 + reflexión 30.
 const MAX_XP = 200;
-const pickN = <T,>(arr: T[], n: number): T[] => {
-  const shuffled = [...arr].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, n);
+// Fisher-Yates: `.sort(() => Math.random() - 0.5)` no baraja de forma uniforme.
+const shuffle = <T,>(arr: T[]): T[] => {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
 };
+const pickN = <T,>(arr: T[], n: number): T[] => shuffle(arr).slice(0, n);
 // La pool trae correct:1 en las 18 preguntas — barajar es obligatorio (§5).
 const shuffleOpts = (q: QuizItem): QuizItem => {
   const paired = q.opts.map((opt, i) => ({ opt, isCorrect: i === q.correct }));
