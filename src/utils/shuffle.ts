@@ -30,3 +30,33 @@ export function shuffle<T>(arr: readonly T[]): T[] {
 export function pickN<T>(arr: readonly T[], n: number): T[] {
   return shuffle(arr).slice(0, n);
 }
+
+/**
+ * Baraja garantizando que el resultado NO sea el orden de entrada.
+ *
+ * Para usar SOLO donde el orden **es** el ejercicio: módulos de ordenar, la columna
+ * derecha de los de emparejar, y los rankers. En esos casos que salga el orden
+ * original significa que el ejercicio aparece ya resuelto y basta pulsar «Verificar»:
+ * el alumno no practica nada y además parece que la app está rota.
+ *
+ * Un barajado uniforme produce el orden original 1/n! de las veces, y con pocos
+ * elementos eso NO es raro:
+ *
+ *   3 elementos → 16,7%   ·   4 → 4,2%   ·   5 → 0,8%   ·   6 → 0,1%
+ *
+ * El ranker de Level7 usa 3 elementos: 1 de cada 6 intentos salía ya ordenado.
+ *
+ * NO usar donde el orden es mera presentación (opciones de un quiz, orden de
+ * escenarios, selección de pools): ahí el orden no revela la respuesta y forzar
+ * que cambie solo introduce un sesgo innecesario — usar `shuffle`.
+ */
+export function shuffleDistinct<T>(arr: readonly T[], maxAttempts = 20): T[] {
+  if (arr.length < 2) return [...arr];
+  for (let i = 0; i < maxAttempts; i++) {
+    const out = shuffle(arr);
+    if (out.some((v, idx) => v !== arr[idx])) return out;
+  }
+  // Sin salida: todos los elementos son equivalentes (p. ej. array de valores repetidos),
+  // así que no existe un orden distinto. Se devuelve un barajado normal en vez de colgarse.
+  return shuffle(arr);
+}

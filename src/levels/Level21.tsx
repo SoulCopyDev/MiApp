@@ -6,7 +6,7 @@ import { useGameStore } from '../store/gameStore';
 import { useReportProgress } from '../components/LevelProgress';
 import { typography } from '../theme';
 import XPToast from '../components/XPToast';
-import { shuffle, pickN as pickRandom } from '../utils/shuffle';
+import { pickN as pickRandom, shuffleDistinct } from '../utils/shuffle';
 
 // ═══════════════════════════════════════════════════════════
 // Nivel 21 · Gemini — La IA que vive en el ecosistema Google
@@ -571,8 +571,8 @@ export default function World4Level3() {
     setFAnswers({}); setFChecked(false);
     setPPicks({}); setPChecked(false);
     setReflectText('');
-    if (cur.type === 'sort') setSOrder(shuffle([...Array(5).keys()]));
-    if (cur.type === 'matching') setMRightOrder(shuffle((cur as MatchingStep).pairs.map(p => p.right)));
+    if (cur.type === 'sort') setSOrder(shuffleDistinct([...Array(5).keys()]));
+    if (cur.type === 'matching') setMRightOrder(shuffleDistinct((cur as MatchingStep).pairs.map(p => p.right)));
   }, [step]);
 
   // Solo XP local (display + toast). El store se actualiza UNA vez en completeLevel al final (§26).

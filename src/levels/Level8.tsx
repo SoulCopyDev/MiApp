@@ -10,7 +10,7 @@ import { useGameStore } from '../store/gameStore';
 import { useReportProgress } from '../components/LevelProgress';
 import { typography } from '../theme';
 import XPToast from '../components/XPToast';
-import { pickN, shuffle } from '../utils/shuffle';
+import { pickN, shuffleDistinct } from '../utils/shuffle';
 
 // ---------- Tipos ----------
 type TFItem = { stmt: string; correct: boolean; explain: string };
@@ -306,7 +306,7 @@ export default function World2Level2() {
   const [tfChecked, setTfChecked] = useState(false);
   // M10 match
   const [matchSel, setMatchSel] = useState<number | null>(null);
-  const [rightOrder] = useState(() => shuffle(matchPairs.map((p) => p.right)));
+  const [rightOrder] = useState(() => shuffleDistinct(matchPairs.map((p) => p.right)));
   const [matchedLeft, setMatchedLeft] = useState<Set<number>>(new Set());
   const [matchedRight, setMatchedRight] = useState<Set<number>>(new Set());
   const [matchWrong, setMatchWrong] = useState<{ l: number; r: number } | null>(null);

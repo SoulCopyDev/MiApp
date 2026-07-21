@@ -14,7 +14,7 @@ import { useGameStore } from '../store/gameStore';
 import { useReportProgress } from '../components/LevelProgress';
 import { typography } from '../theme';
 import XPToast from '../components/XPToast';
-import { shuffle, pickN as pickRandom } from '../utils/shuffle';
+import { pickN as pickRandom, shuffleDistinct } from '../utils/shuffle';
 
 // ─── Tipos de módulo ──────────────────────────────────────
 interface TheoryStep {
@@ -690,11 +690,11 @@ export default function World4Level2() {
     setReflectText('');
 
     if (current.type === 'sort') {
-      setSOrder(shuffle([...Array(5).keys()]));
+      setSOrder(shuffleDistinct([...Array(5).keys()]));
     }
     if (current.type === 'matching') {
       const pairs = (current as MatchingStep).pairs;
-      setMRightOrder(shuffle(pairs.map(p => p.right)));
+      setMRightOrder(shuffleDistinct(pairs.map(p => p.right)));
     }
   }, [step]);
 

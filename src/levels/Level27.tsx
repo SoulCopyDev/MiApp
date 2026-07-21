@@ -6,7 +6,7 @@ import { useGameStore } from '../store/gameStore';
 import { useReportProgress } from '../components/LevelProgress';
 import { typography } from '../theme';
 import XPToast from '../components/XPToast';
-import { pickN, shuffle } from '../utils/shuffle';
+import { pickN, shuffleDistinct } from '../utils/shuffle';
 
 // ═══════════════════════════════════════════════════════════
 // Nivel 27 · Tu Idea para Cambiar Algo
@@ -196,7 +196,7 @@ export default function World5Level3() {
   const matchPairs = useRef(pickN(MATCH_POOL, 4)).current;
   const mvpItems = useRef(pickN(MVP_POOL, 8)).current;
   const tfQ = useRef(pickN(TF_POOL, 5)).current;
-  const rightOrder = useRef(shuffle(matchPairs.map((p) => p.right))).current;
+  const rightOrder = useRef(shuffleDistinct(matchPairs.map((p) => p.right))).current;
 
   // Matching
   const [matchSel, setMatchSel] = useState<number | null>(null);
@@ -259,9 +259,7 @@ export default function World5Level3() {
   const awardOnce = (amount: number) => { if (!awarded.current.has(step)) { awarded.current.add(step); if (amount > 0) addXP(amount); } };
 
   function shuffledSort(): number[] {
-    let o = shuffle([0, 1, 2, 3, 4, 5]);
-    if (o.every((v, i) => v === i)) o = [1, 0, 2, 3, 4, 5];
-    return o;
+    return shuffleDistinct([0, 1, 2, 3, 4, 5]);
   }
 
   // Matching

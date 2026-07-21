@@ -6,7 +6,7 @@ import { useGameStore } from '../store/gameStore';
 import { useReportProgress } from '../components/LevelProgress';
 import { typography } from '../theme';
 import XPToast from '../components/XPToast';
-import { pickN, shuffle } from '../utils/shuffle';
+import { pickN, shuffle, shuffleDistinct } from '../utils/shuffle';
 
 // ═══════════════════════════════════════════════════════════
 // Nivel 29 · Comparte tu Creación con el Mundo
@@ -216,7 +216,7 @@ export default function World5Level5() {
   const commsQ = useRef(pickN(COMMS_POOL, 5).map(shuffleOpts)).current;
   const tfQ = useRef(pickN(TF_POOL, 5)).current;
   const matchPairs = useRef(pickN(MATCH_POOL, 5)).current;
-  const rightOrder = useRef(shuffle(matchPairs.map((p) => p.right))).current;
+  const rightOrder = useRef(shuffleDistinct(matchPairs.map((p) => p.right))).current;
   const privacyItems = useRef(pickN(PRIVACY_POOL, 8)).current;
   const scnOrder = useRef(shuffle(TRIBE_SCN.map((_, i) => i))).current;
 
@@ -307,9 +307,7 @@ export default function World5Level5() {
   const awardOnce = (amount: number) => { if (!awarded.current.has(step)) { awarded.current.add(step); if (amount > 0) addXP(amount); } };
 
   function shuffledSort(): number[] {
-    let o = shuffle([0, 1, 2, 3, 4, 5]);
-    if (o.every((v, i) => v === i)) o = [1, 0, 2, 3, 4, 5];
-    return o;
+    return shuffleDistinct([0, 1, 2, 3, 4, 5]);
   }
 
   // Sort

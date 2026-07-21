@@ -17,7 +17,7 @@ import { useGameStore } from '../store/gameStore';
 import { useReportProgress } from '../components/LevelProgress';
 import { colors, typography } from '../theme';
 import XPToast from '../components/XPToast';
-import { pickN, shuffle } from '../utils/shuffle';
+import { pickN, shuffleDistinct } from '../utils/shuffle';
 
 type DragItem = { text: string; correct: string };
 type MatchPair = { left: string; right: string };
@@ -210,7 +210,7 @@ export default function GameLevel1() {
 
   useEffect(() => {
     if (step === 5) {
-      setRightOrder(shuffle(matchPairs.map(p => p.right)));
+      setRightOrder(shuffleDistinct(matchPairs.map(p => p.right)));
       setMatchLeft(null); setMatchDone(0);
       setMatchedLeft(new Set()); setMatchedRight(new Set());
     }

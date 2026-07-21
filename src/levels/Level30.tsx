@@ -6,7 +6,7 @@ import { useGameStore } from '../store/gameStore';
 import { useReportProgress } from '../components/LevelProgress';
 import { typography } from '../theme';
 import XPToast from '../components/XPToast';
-import { pickN, shuffle } from '../utils/shuffle';
+import { pickN, shuffle, shuffleDistinct } from '../utils/shuffle';
 
 // ═══════════════════════════════════════════════════════════
 // Nivel 30 · Presenta tu Proyecto (cierre Mundo 5)
@@ -317,10 +317,7 @@ export default function World5Level6() {
   const awardOnce = (amount: number) => { if (!awarded.current.has(step)) { awarded.current.add(step); if (amount > 0) addXP(amount); } };
 
   function shuffledSort(n: number): number[] {
-    const base = Array.from({ length: n }, (_, i) => i);
-    let o = shuffle(base);
-    if (o.every((v, i) => v === i)) { [o[0], o[1]] = [o[1], o[0]]; }
-    return o;
+    return shuffleDistinct(Array.from({ length: n }, (_, i) => i));
   }
 
   // Sort

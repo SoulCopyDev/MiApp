@@ -6,7 +6,7 @@ import { useGameStore } from '../store/gameStore';
 import { useReportProgress } from '../components/LevelProgress';
 import { typography } from '../theme';
 import XPToast from '../components/XPToast';
-import { pickN, shuffle } from '../utils/shuffle';
+import { pickN, shuffleDistinct } from '../utils/shuffle';
 
 // ═══════════════════════════════════════════════════════════
 // Nivel 22 · Grok — La IA con personalidad propia
@@ -503,8 +503,8 @@ export default function World4Level4() {
     setScSel(null); setScChecked(false);
     setWbSel([]); setWbChecked(false);
     setReflectText('');
-    if (cur.type === 'sort') setSOrder(shuffle([...Array(5).keys()]));
-    if (cur.type === 'matching') setMRightOrder(shuffle((cur as MatchingStep).pairs.map(p => p.right)));
+    if (cur.type === 'sort') setSOrder(shuffleDistinct([...Array(5).keys()]));
+    if (cur.type === 'matching') setMRightOrder(shuffleDistinct((cur as MatchingStep).pairs.map(p => p.right)));
   }, [step]);
 
   const addXP = useCallback((amount: number) => {

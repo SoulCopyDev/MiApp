@@ -6,7 +6,7 @@ import { useGameStore } from '../store/gameStore';
 import { useReportProgress } from '../components/LevelProgress';
 import { typography } from '../theme';
 import XPToast from '../components/XPToast';
-import { pickN, shuffle } from '../utils/shuffle';
+import { pickN, shuffle, shuffleDistinct } from '../utils/shuffle';
 
 // ═══════════════════════════════════════════════════════════
 // Nivel 31 · AGI: ¿Qué Pasaría si la IA Pensara Sola? (Mundo 6, inicio)
@@ -208,7 +208,7 @@ export default function World6Level1() {
   const awarded = useRef<Set<number>>(new Set());
 
   const matchPairs = useRef(pickN(MATCH_POOL, 5)).current;
-  const rightOrder = useRef(shuffle(matchPairs.map((p) => p.right))).current;
+  const rightOrder = useRef(shuffleDistinct(matchPairs.map((p) => p.right))).current;
   const turingQ = useRef(pickN(TURING_POOL, 5).map(shuffleOpts)).current;
   const scientistsQ = useRef(pickN(SCIENTISTS_POOL, 5).map(shuffleOpts)).current;
   const consciousQ = useRef(pickN(CONSCIOUSNESS_POOL, 5).map(shuffleOpts)).current;

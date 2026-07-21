@@ -6,7 +6,7 @@ import { useGameStore } from '../store/gameStore';
 import { useReportProgress } from '../components/LevelProgress';
 import { typography } from '../theme';
 import XPToast from '../components/XPToast';
-import { pickN, shuffle } from '../utils/shuffle';
+import { pickN, shuffleDistinct } from '../utils/shuffle';
 
 // ═══════════════════════════════════════════════════════════
 // Nivel 36 · Tú y la IA: Tu Misión en el Mundo (Mundo 6 · cierre del curso)
@@ -254,7 +254,7 @@ export default function World6Level6() {
   const skillsItems = useRef(pickN(SKILLS_ITEMS, 8)).current;
   const learningQ = useRef(pickN(LEARNING_Q, 5).map(shuffleOpts)).current;
   const matchPairs = useRef(pickN(MATCH_PAIRS, 5)).current;
-  const rightOrder = useRef(shuffle(matchPairs.map((p) => p.right))).current;
+  const rightOrder = useRef(shuffleDistinct(matchPairs.map((p) => p.right))).current;
 
   // Reflexión
   const [reflectText, setReflectText] = useState('');

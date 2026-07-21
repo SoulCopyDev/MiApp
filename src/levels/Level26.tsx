@@ -6,7 +6,7 @@ import { useGameStore } from '../store/gameStore';
 import { useReportProgress } from '../components/LevelProgress';
 import { typography } from '../theme';
 import XPToast from '../components/XPToast';
-import { pickN, shuffle } from '../utils/shuffle';
+import { pickN, shuffle, shuffleDistinct } from '../utils/shuffle';
 
 // ═══════════════════════════════════════════════════════════
 // Nivel 26 · Haz que la IA Trabaje Sola
@@ -319,9 +319,7 @@ export default function World5Level2() {
   const awardOnce = (amount: number) => { if (!awarded.current.has(step)) { awarded.current.add(step); if (amount > 0) addXP(amount); } };
 
   function shuffledSort(): number[] {
-    let o = shuffle([0, 1, 2, 3, 4, 5]);
-    if (o.every((v, i) => v === i)) o = [1, 0, 2, 3, 4, 5];
-    return o;
+    return shuffleDistinct([0, 1, 2, 3, 4, 5]);
   }
 
   // ── Drag ──

@@ -9,6 +9,7 @@ import { useReportProgress } from '../components/LevelProgress';
 import { typography } from '../theme';
 import { exitLevel } from '../utils/exitLevel';
 import XPToast from '../components/XPToast';
+import { shuffleDistinct } from '../utils/shuffle';
 
 // ===================== PALETA (tema claro verde/lima, Mundo 4 "El Gran Torneo") =====================
 const C = {
@@ -244,7 +245,7 @@ export default function Level19() {
   const [ethicsItems] = useState(() => pickN(ETHICS_POOL, 5));
   const [sesSteps] = useState(() => SESION_STEPS.map(shuffleOpts));
   const [dragItems] = useState(() => pickN(DRAG_POOL, 6));
-  const [rightOrder] = useState(() => shuffle(matchPairs.map((p, i) => ({ idx: i, text: p.right }))));
+  const [rightOrder] = useState(() => shuffleDistinct(matchPairs.map((p, i) => ({ idx: i, text: p.right }))));
 
   // Detective
   const [detQ, setDetQ] = useState(0);
@@ -275,7 +276,7 @@ export default function Level19() {
   const [imgState, setImgState] = useState({ estilo: '', objeto: '', ambiente: '', emocion: '' });
 
   // Sort
-  const [sortOrder, setSortOrder] = useState<number[]>(() => shuffle([0, 1, 2, 3, 4, 5]));
+  const [sortOrder, setSortOrder] = useState<number[]>(() => shuffleDistinct([0, 1, 2, 3, 4, 5]));
   const [sortSolved, setSortSolved] = useState(false);
   const [sortWrong, setSortWrong] = useState<Set<number>>(new Set());
 

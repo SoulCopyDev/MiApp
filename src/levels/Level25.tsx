@@ -6,7 +6,7 @@ import { useGameStore } from '../store/gameStore';
 import { useReportProgress } from '../components/LevelProgress';
 import { typography } from '../theme';
 import XPToast from '../components/XPToast';
-import { pickN, shuffle } from '../utils/shuffle';
+import { pickN, shuffleDistinct } from '../utils/shuffle';
 
 // ═══════════════════════════════════════════════════════════
 // Nivel 25 · Crea tu Chatbot Personalizado
@@ -214,7 +214,7 @@ export default function World5Level1() {
   const errorsQ = useRef(pickN(ERRORS_POOL, 4).map(shuffleOpts)).current;
   const quizQ = useRef(pickN(QUIZ_POOL, 4).map(shuffleOpts)).current;
   const tfQ = useRef(pickN(TF_POOL, 5)).current;
-  const rightOrder = useRef(shuffle(matchPairs.map((p) => p.right))).current;
+  const rightOrder = useRef(shuffleDistinct(matchPairs.map((p) => p.right))).current;
   const compareFlip = useRef(Math.random() < 0.5).current; // true → respuesta cálida en A
 
   // Estado por-módulo

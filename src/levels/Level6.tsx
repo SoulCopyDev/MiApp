@@ -18,7 +18,7 @@ import { useGameStore } from '../store/gameStore';
 import { useReportProgress } from '../components/LevelProgress';
 import { colors, typography } from '../theme';
 import XPToast from '../components/XPToast';
-import { pickN, shuffle } from '../utils/shuffle';
+import { pickN, shuffleDistinct } from '../utils/shuffle';
 
 // ---------- Tipos ----------
 type TFItem = { stmt: string; correct: boolean; explain: string };
@@ -278,7 +278,7 @@ export default function World1Level6({ navigation: propsNavigation, setAllowBack
   const [tipoAttempts, setTipoAttempts] = useState(0);
   const [tipoFb, setTipoFb] = useState<{ type: 'correct' | 'wrong'; msg: string } | null>(null);
 
-  const [sortOrder, setSortOrder] = useState<number[]>(() => shuffle([0, 1, 2, 3, 4]));
+  const [sortOrder, setSortOrder] = useState<number[]>(() => shuffleDistinct([0, 1, 2, 3, 4]));
   const [sortOk, setSortOk] = useState(false);
   const [sortMarks, setSortMarks] = useState<Record<number, 'ok' | 'bad'>>({});
   const [sortFb, setSortFb] = useState<{ type: 'correct' | 'wrong'; msg: string } | null>(null);

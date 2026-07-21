@@ -18,7 +18,7 @@ import { useGameStore } from '../store/gameStore';
 import { useReportProgress } from '../components/LevelProgress';
 import { colors, typography } from '../theme';
 import XPToast from '../components/XPToast';
-import { pickN, shuffle } from '../utils/shuffle';
+import { pickN, shuffleDistinct } from '../utils/shuffle';
 
 // ---------- Tipos ----------
 type EthicsItem = { scenario: string; correct: 'safe' | 'doubt' | 'bad'; explain: string };
@@ -304,7 +304,7 @@ export default function World1Level5() {
     if (step === 7) { setTfAnswers({}); setTfChecked(false); }
     if (step === 9) setFakeAnswers({});
     if (step === 11) {
-      const order = shuffle([0, 1, 2, 3, 4]);
+      const order = shuffleDistinct([0, 1, 2, 3, 4]);
       setSortOrder(order);
       setSortOk(false);
       setSortMarks({});
