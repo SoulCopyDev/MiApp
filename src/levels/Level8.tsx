@@ -10,6 +10,7 @@ import { useGameStore } from '../store/gameStore';
 import { useReportProgress } from '../components/LevelProgress';
 import { typography } from '../theme';
 import XPToast from '../components/XPToast';
+import { pickN, shuffleDistinct } from '../utils/shuffle';
 
 // ---------- Tipos ----------
 type TFItem = { stmt: string; correct: boolean; explain: string };
@@ -181,7 +182,6 @@ const SESGO_ZONES = {
 const TOTAL_STEPS = 20;
 const CONTENT_STEPS = 18;
 
-const pickN = <T,>(arr: T[], n: number): T[] => [...arr].sort(() => Math.random() - 0.5).slice(0, n);
 
 const estimateTokens = (text: string): number => {
   if (!text.trim()) return 0;
@@ -306,7 +306,7 @@ export default function World2Level2() {
   const [tfChecked, setTfChecked] = useState(false);
   // M10 match
   const [matchSel, setMatchSel] = useState<number | null>(null);
-  const [rightOrder] = useState(() => matchPairs.map((p) => p.right).sort(() => Math.random() - 0.5));
+  const [rightOrder] = useState(() => shuffleDistinct(matchPairs.map((p) => p.right)));
   const [matchedLeft, setMatchedLeft] = useState<Set<number>>(new Set());
   const [matchedRight, setMatchedRight] = useState<Set<number>>(new Set());
   const [matchWrong, setMatchWrong] = useState<{ l: number; r: number } | null>(null);

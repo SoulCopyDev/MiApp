@@ -9,6 +9,7 @@ import { useReportProgress } from '../components/LevelProgress';
 import { typography } from '../theme';
 import { exitLevel } from '../utils/exitLevel';
 import XPToast from '../components/XPToast';
+import { shuffleDistinct } from '../utils/shuffle';
 
 // ===================== PALETA (hex exactos del HTML nivel-16, tema oscuro lima M3) =====================
 const C = {
@@ -209,7 +210,7 @@ export default function Level16() {
   const [selectedLeft, setSelectedLeft] = useState<number | null>(null);
   const [matched, setMatched] = useState<Set<number>>(new Set());
   const [wrongFlash, setWrongFlash] = useState<{ left: number; right: number } | null>(null);
-  const [shuffledRight] = useState(() => shuffle(MATCH_PAIRS.map((p, i) => ({ idx: i, text: p.right }))));
+  const [shuffledRight] = useState(() => shuffleDistinct(MATCH_PAIRS.map((p, i) => ({ idx: i, text: p.right }))));
 
   // Builders (dos fases: confirmar → continuar)
   const [builderText, setBuilderText] = useState('');
@@ -226,7 +227,7 @@ export default function Level16() {
   const [sprintValid, setSprintValid] = useState(false);
 
   // Sort (reordenar con flechas; resaltar mal ubicados al verificar)
-  const [sortOrder, setSortOrder] = useState<number[]>(() => shuffle([0, 1, 2, 3, 4]));
+  const [sortOrder, setSortOrder] = useState<number[]>(() => shuffleDistinct([0, 1, 2, 3, 4]));
   const [sortSolved, setSortSolved] = useState(false);
   const [sortWrong, setSortWrong] = useState<Set<number>>(new Set());
 

@@ -9,6 +9,7 @@ import { useReportProgress } from '../components/LevelProgress';
 import { typography } from '../theme';
 import { exitLevel } from '../utils/exitLevel';
 import XPToast from '../components/XPToast';
+import { shuffleDistinct } from '../utils/shuffle';
 
 // ===================== PALETA (hex exactos del HTML nivel-15, tema oscuro dorado M3) =====================
 const C = {
@@ -233,7 +234,7 @@ export default function Level15() {
   const [selectedLeft, setSelectedLeft] = useState<number | null>(null);
   const [matched, setMatched] = useState<Set<number>>(new Set());
   const [wrongFlash, setWrongFlash] = useState<{ left: number; right: number } | null>(null);
-  const [shuffledRight] = useState(() => shuffle(MATCH_PAIRS.map((p, i) => ({ idx: i, text: p.right }))));
+  const [shuffledRight] = useState(() => shuffleDistinct(MATCH_PAIRS.map((p, i) => ({ idx: i, text: p.right }))));
 
   // Builders (dos fases: confirmar → continuar)
   const [builderText, setBuilderText] = useState('');

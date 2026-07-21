@@ -6,6 +6,7 @@ import { useGameStore } from '../store/gameStore';
 import { useReportProgress } from '../components/LevelProgress';
 import { typography } from '../theme';
 import XPToast from '../components/XPToast';
+import { pickN, shuffleDistinct } from '../utils/shuffle';
 
 // ═══════════════════════════════════════════════════════════
 // Nivel 36 · Tú y la IA: Tu Misión en el Mundo (Mundo 6 · cierre del curso)
@@ -46,7 +47,6 @@ type PathChoice = { title: string; text: string; explain: string };
 type BuilderConfig = { xp: number; rows: { key: string; label: string; opts: string[] }[] };
 type ExCard = { emoji: string; name: string; how: React.ReactNode; fact: string };
 
-const pickN = <T,>(arr: T[], n: number): T[] => [...arr].sort(() => Math.random() - 0.5).slice(0, n);
 const shuffleOpts = (q: QuizQ): QuizQ => {
   const paired = q.opts.map((opt, i) => ({ opt, isCorrect: i === q.correct }));
   for (let j = paired.length - 1; j > 0; j--) { const k = Math.floor(Math.random() * (j + 1)); [paired[j], paired[k]] = [paired[k], paired[j]]; }
@@ -254,7 +254,7 @@ export default function World6Level6() {
   const skillsItems = useRef(pickN(SKILLS_ITEMS, 8)).current;
   const learningQ = useRef(pickN(LEARNING_Q, 5).map(shuffleOpts)).current;
   const matchPairs = useRef(pickN(MATCH_PAIRS, 5)).current;
-  const rightOrder = useRef(matchPairs.map((p) => p.right).sort(() => Math.random() - 0.5)).current;
+  const rightOrder = useRef(shuffleDistinct(matchPairs.map((p) => p.right))).current;
 
   // Reflexión
   const [reflectText, setReflectText] = useState('');

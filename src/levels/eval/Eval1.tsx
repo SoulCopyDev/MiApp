@@ -186,7 +186,50 @@ const HEADLINES: Headline[] = [
 ];
 
 // ---------- Helper ----------
-const pickN = <T,>(arr: T[], n: number): T[] => [...arr].sort(() => Math.random() - 0.5).slice(0, n);
+// Fisher-Yates: `.sort(() => Math.random() - 0.5)` no baraja de forma uniforme.
+const shuffle = <T,>(arr: T[]): T[] => {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+};
+const pickN = <T,>(arr: T[], n: number): T[] => shuffle(arr).slice(0, n);
+
+// ── Validación de contenido (§14) ──
+// Antes bastaba la longitud: el builder aceptaba 5 caracteres por campo y la
+// reflexión se sellaba con 80 caracteres cualesquiera, cobrando los 25 XP. Ahora
+// se valida que el texto sea real y esté en tema, como en Eval2–Eval6.
+const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+
+/** Campos cortos del builder (rol/tarea/contexto/formato): detecta relleno sin exigir frases largas. */
+const looksGibberish = (text: string): boolean => {
+  const n = normalize(text).trim();
+  if (!/[aeiou]/.test(n)) return true;                       // "xkzqp"
+  if (new Set(n.replace(/\s/g, '')).size <= 2) return true;  // "aaaaa", "ababab"
+  return !/[a-z]{3,}/.test(n);                               // ninguna palabra de 3+ letras
+};
+
+/** Texto largo (reflexión): además de no ser relleno, debe tener variedad léxica. */
+const looksRandom = (text: string): boolean => {
+  const words = normalize(text).split(/\s+/).filter(Boolean);
+  if (words.length < 8) return true;
+  if (new Set(words).size / words.length < 0.5) return true; // repetir la misma palabra
+  const noVowel = words.filter((w) => w.length >= 3 && !/[aeiou]/.test(w)).length;
+  return noVowel / words.length > 0.3;
+};
+
+// Vocabulario del Mundo 1 (¿Qué es la IA?) — la reflexión pregunta qué cambió en
+// cómo ves la tecnología, así que se acepta tanto el lenguaje del curso como los
+// ejemplos cotidianos que el propio enunciado sugiere (Spotify, Maps, autocorrector).
+const WORLD1_TERMS = ['ia', 'inteligencia artificial', 'tecnologia', 'algoritmo', 'dato', 'datos', 'sesgo', 'sesgos', 'entrena', 'entrenar', 'aprende', 'aprender', 'aprendizaje', 'modelo', 'prompt', 'chatgpt', 'claude', 'gemini', 'robot', 'automat', 'prediccion', 'predice', 'reconoc', 'recomienda', 'recomendacion', 'etica', 'privacidad', 'spotify', 'maps', 'netflix', 'autocorrector', 'traductor', 'filtro', 'camara', 'celular', 'app', 'aplicacion', 'internet', 'computador', 'computadora', 'maquina', 'humano', 'humanos', 'persona', 'personas', 'trabajo', 'colegio', 'estudiar', 'futuro', 'ciencia ficcion', 'pelicula', 'peliculas', 'sorprend', 'cambio', 'cambiar', 'antes', 'ahora', 'pensaba', 'creia', 'entender', 'entendi'];
+const containsTopic = (text: string): boolean => {
+  const n = normalize(text);
+  const words = n.split(/[^a-z0-9]+/).filter(Boolean);
+  // "ia" se busca como palabra completa: si no, "familia" o "materia" lo darían por bueno.
+  return WORLD1_TERMS.some((t) => (t.length <= 3 ? words.includes(t) : n.includes(t)));
+};
 
 // Baraja las opciones de una pregunta y reubica el índice correcto (evita que la respuesta caiga siempre en la misma posición)
 function shuffleOpts<T extends { opts: string[]; correct: number }>(q: T): T {
@@ -246,6 +289,8 @@ export default function World1Eval() {
 
   // Parte 4 — Builder
   const [p4, setP4] = useState({ rol: '', tarea: '', ctx: '', fmt: '' });
+  const [p4Fb, setP4Fb] = useState<string | null>(null);
+  const [reflectFb, setReflectFb] = useState<string | null>(null);
   const [p4Done, setP4Done] = useState(false);
 
   // Parte 5 — Reflexión
@@ -393,12 +438,39 @@ export default function World1Eval() {
   };
 
   // ----- Parte 4: Builder -----
+  // La longitud solo habilita el botón; el contenido se valida al pulsarlo (§14/§16),
+  // así el usuario recibe una razón en vez de un botón muerto sin explicación.
   const p4Valid = Object.values(p4).every((v) => v.trim().length >= 5);
-  const submitP4 = () => { setP4Done(true); addXP(30); };
+  const P4_LABELS: Record<string, string> = { rol: 'Rol', tarea: 'Tarea', ctx: 'Contexto', fmt: 'Formato' };
+  const submitP4 = () => {
+    const malos = Object.entries(p4)
+      .filter(([, v]) => looksGibberish(v))
+      .map(([k]) => P4_LABELS[k] ?? k);
+    if (malos.length > 0) {
+      setP4Fb(`Completa con palabras reales: ${malos.join(', ')}. Escribe lo que le pedirías de verdad a la IA.`);
+      return;
+    }
+    setP4Fb(null);
+    setP4Done(true);
+    addXP(30);
+  };
 
   // ----- Parte 5: Reflexión -----
   const reflectValid = reflect.trim().length >= 80;
-  const sealReflect = () => { setSealed(true); addXP(25); };
+  const sealReflect = () => {
+    const t = reflect.trim();
+    if (looksRandom(t)) {
+      setReflectFb('Parece texto de relleno. Escribe tu respuesta real con tus propias palabras.');
+      return;
+    }
+    if (!containsTopic(t)) {
+      setReflectFb('Conéctalo con el Mundo 1: qué pensabas antes sobre la IA o la tecnología, y qué ves diferente ahora.');
+      return;
+    }
+    setReflectFb(null);
+    setSealed(true);
+    addXP(25);
+  };
 
   // ----- Resultado / Badge cálculos -----
   const quizPct = Math.round((p1Score / 15) * 100);
@@ -646,16 +718,16 @@ export default function World1Eval() {
             <Text style={[styles.lessonTitle, { fontSize: 16 }]}>Construye un prompt real</Text>
             <Text style={styles.lessonSub}>Elige un problema de tu vida real y construye el prompt con los 4 ingredientes.</Text>
             <Text style={styles.builderLabel}>🎭 Rol — ¿Quién debe ser la IA?</Text>
-            <TextInput style={styles.builderInput} value={p4.rol} onChangeText={(v) => setP4((p) => ({ ...p, rol: v }))} editable={!p4Done}
+            <TextInput style={styles.builderInput} value={p4.rol} onChangeText={(v) => { setP4((p) => ({ ...p, rol: v })); if (p4Fb) setP4Fb(null); }} editable={!p4Done}
               placeholder="Ej: maestro de ciencias para bachillerato, coach de productividad..." placeholderTextColor="#b8bcc0" />
             <Text style={styles.builderLabel}>🎯 Tarea — ¿Qué debe hacer exactamente?</Text>
-            <TextInput style={styles.builderInput} value={p4.tarea} onChangeText={(v) => setP4((p) => ({ ...p, tarea: v }))} editable={!p4Done}
+            <TextInput style={styles.builderInput} value={p4.tarea} onChangeText={(v) => { setP4((p) => ({ ...p, tarea: v })); if (p4Fb) setP4Fb(null); }} editable={!p4Done}
               placeholder="Ej: explícame los tipos de enlace químico, crea un plan de estudio..." placeholderTextColor="#b8bcc0" />
             <Text style={styles.builderLabel}>📋 Contexto — ¿Cuál es la situación?</Text>
-            <TextInput style={styles.builderInput} value={p4.ctx} onChangeText={(v) => setP4((p) => ({ ...p, ctx: v }))} editable={!p4Done}
+            <TextInput style={styles.builderInput} value={p4.ctx} onChangeText={(v) => { setP4((p) => ({ ...p, ctx: v })); if (p4Fb) setP4Fb(null); }} editable={!p4Done}
               placeholder="Ej: soy de 10° grado, tengo examen mañana, trabajo mejor con analogías..." placeholderTextColor="#b8bcc0" />
             <Text style={styles.builderLabel}>📐 Formato — ¿Cómo quieres la respuesta?</Text>
-            <TextInput style={styles.builderInput} value={p4.fmt} onChangeText={(v) => setP4((p) => ({ ...p, fmt: v }))} editable={!p4Done}
+            <TextInput style={styles.builderInput} value={p4.fmt} onChangeText={(v) => { setP4((p) => ({ ...p, fmt: v })); if (p4Fb) setP4Fb(null); }} editable={!p4Done}
               placeholder="Ej: lista de 5 puntos, máximo 150 palabras, con ejemplos al final..." placeholderTextColor="#b8bcc0" />
             <Text style={[styles.lessonSub, { marginTop: 12, marginBottom: 4 }]}>Vista previa de tu prompt:</Text>
             <View style={[p4Done && { borderWidth: 2, borderColor: '#10b981', borderRadius: 12 }]}>
@@ -664,6 +736,11 @@ export default function World1Eval() {
             {p4Done && (
               <View style={[styles.feedbackBar, styles.fbCorrect, { marginTop: 12 }]}>
                 <Text style={styles.fbCorrectText}>✅ ¡Prompt construido! Contiene los 4 ingredientes. Este es el tipo de prompt que obtiene resultados reales. +30 XP</Text>
+              </View>
+            )}
+            {!p4Done && p4Fb && (
+              <View style={[styles.feedbackBar, styles.fbWrong, { marginTop: 12 }]}>
+                <Text style={styles.fbWrongText}>{p4Fb}</Text>
               </View>
             )}
           </View>
@@ -681,7 +758,7 @@ export default function World1Eval() {
             <TextInput
               style={[styles.reflectArea, sealed && { backgroundColor: '#f0fdf4', borderColor: '#10b981' }]}
               value={reflect}
-              onChangeText={setReflect}
+              onChangeText={(v) => { setReflect(v); if (reflectFb) setReflectFb(null); }}
               editable={!sealed}
               multiline
               textAlignVertical="top"
@@ -692,6 +769,11 @@ export default function World1Eval() {
             {sealed && (
               <View style={[styles.feedbackBar, styles.fbCorrect, { marginTop: 4 }]}>
                 <Text style={styles.fbCorrectText}>✅ Reflexión sellada. Queda guardada en tu portafolio IA Explorer. +25 XP</Text>
+              </View>
+            )}
+            {!sealed && reflectFb && (
+              <View style={[styles.feedbackBar, styles.fbWrong, { marginTop: 4 }]}>
+                <Text style={styles.fbWrongText}>{reflectFb}</Text>
               </View>
             )}
             <View style={[styles.hl, styles.hlIndigo, { marginTop: 8 }]}>

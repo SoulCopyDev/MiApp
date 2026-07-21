@@ -17,6 +17,7 @@ import { useGameStore } from '../store/gameStore';
 import { useReportProgress } from '../components/LevelProgress';
 import { colors, typography } from '../theme';
 import XPToast from '../components/XPToast';
+import { pickN, shuffleDistinct } from '../utils/shuffle';
 
 type DragItem = { text: string; correct: string };
 type MatchPair = { left: string; right: string };
@@ -142,10 +143,6 @@ const SORT_ITEMS = [
   { bold: 'Desplegar:', rest: ' Ya entrenado, puede responder bien a situaciones nuevas' },
 ];
 
-const pickN = <T,>(arr: T[], n: number): T[] => {
-  const shuffled = [...arr].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, n);
-};
 
 export default function GameLevel1() {
   const [step, setStep] = useState(0);
@@ -213,7 +210,7 @@ export default function GameLevel1() {
 
   useEffect(() => {
     if (step === 5) {
-      setRightOrder(pickN(matchPairs.map(p => p.right), matchPairs.length).sort(() => Math.random() - 0.5));
+      setRightOrder(shuffleDistinct(matchPairs.map(p => p.right)));
       setMatchLeft(null); setMatchDone(0);
       setMatchedLeft(new Set()); setMatchedRight(new Set());
     }

@@ -10,6 +10,7 @@ import { useGameStore } from '../store/gameStore';
 import { useReportProgress } from '../components/LevelProgress';
 import { colors, typography } from '../theme';
 import XPToast from '../components/XPToast';
+import { pickN } from '../utils/shuffle';
 
 // ---------- Tipos ----------
 type TFItem = { stmt: string; correct: boolean; explain: string };
@@ -197,10 +198,6 @@ const CONTENT_STEPS = 18;
 // 1 = Casos reales · 6 = Sesgo · 8 = ¿Miente o alucina? · 11 = Lo imposible · 14 = Prompt injection
 const THEORY_STEPS = new Set([1, 6, 8, 11, 14]);
 
-const pickN = <T,>(arr: T[], n: number): T[] => {
-  const shuffled = [...arr].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, n);
-};
 
 // Baraja las opciones de un MCQ preservando cuál es la correcta (evita que la
 // respuesta correcta caiga siempre en la misma posición o sea siempre la más larga).

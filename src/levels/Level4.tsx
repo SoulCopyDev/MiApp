@@ -18,6 +18,7 @@ import { useGameStore } from '../store/gameStore';
 import { useReportProgress } from '../components/LevelProgress';
 import { colors, typography } from '../theme';
 import XPToast from '../components/XPToast';
+import { pickN } from '../utils/shuffle';
 
 // ---------- Tipos y constantes ----------
 interface TFItem {
@@ -104,10 +105,6 @@ const GIFTS = [
   '🎁 Regalo 3: Un mensaje especial — construye el prompt para sorprenderle',
 ];
 
-const pickN = <T,>(arr: T[], n: number): T[] => {
-  const shuffled = [...arr].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, n);
-};
 
 
 const TAG_STYLES: Record<string, { bg: string; color: string }> = {

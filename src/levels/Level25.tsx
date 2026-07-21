@@ -6,6 +6,7 @@ import { useGameStore } from '../store/gameStore';
 import { useReportProgress } from '../components/LevelProgress';
 import { typography } from '../theme';
 import XPToast from '../components/XPToast';
+import { pickN, shuffleDistinct } from '../utils/shuffle';
 
 // ═══════════════════════════════════════════════════════════
 // Nivel 25 · Crea tu Chatbot Personalizado
@@ -44,7 +45,6 @@ type TFItem = { stmt: string; correct: boolean; explain: string };
 type SprintItem = { text: string; good: boolean };
 
 // ── Helpers ──
-const pickN = <T,>(arr: T[], n: number): T[] => [...arr].sort(() => Math.random() - 0.5).slice(0, n);
 const shuffleOpts = (q: QuizQ): QuizQ => {
   const paired = q.opts.map((opt, i) => ({ opt, isCorrect: i === q.correct }));
   for (let j = paired.length - 1; j > 0; j--) { const k = Math.floor(Math.random() * (j + 1)); [paired[j], paired[k]] = [paired[k], paired[j]]; }
@@ -214,7 +214,7 @@ export default function World5Level1() {
   const errorsQ = useRef(pickN(ERRORS_POOL, 4).map(shuffleOpts)).current;
   const quizQ = useRef(pickN(QUIZ_POOL, 4).map(shuffleOpts)).current;
   const tfQ = useRef(pickN(TF_POOL, 5)).current;
-  const rightOrder = useRef(matchPairs.map((p) => p.right).sort(() => Math.random() - 0.5)).current;
+  const rightOrder = useRef(shuffleDistinct(matchPairs.map((p) => p.right))).current;
   const compareFlip = useRef(Math.random() < 0.5).current; // true → respuesta cálida en A
 
   // Estado por-módulo

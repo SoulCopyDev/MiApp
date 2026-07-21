@@ -19,10 +19,18 @@ const TOTAL_STEPS = 7; // 0:intro + 5 partes + 1:complete
 // (El HTML declara 250 y se contradice diciendo "3 partes" y "5 partes".)
 const MAX_XP = 260;
 
-const pickN = <T,>(arr: T[], n: number): T[] => {
-  const shuffled = [...arr].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, n);
+// Fisher-Yates. `.sort(() => Math.random() - 0.5)` NO es un barajado uniforme
+// (el comparador es inconsistente y sesga el resultado); aquí la equidad de la
+// selección depende de esto, así que se hace bien.
+const shuffle = <T,>(arr: T[]): T[] => {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
 };
+const pickN = <T,>(arr: T[], n: number): T[] => shuffle(arr).slice(0, n);
 // Las 32 preguntas de la pool traen correct:1 — barajar es obligatorio (§5).
 const shuffleOpts = (q: QuizItem): QuizItem => {
   const paired = q.opts.map((opt, i) => ({ opt, isCorrect: i === q.correct }));
@@ -96,6 +104,17 @@ const FAKE_POOL: FakeItem[] = [
   { text: 'Una imagen generada por IA pertenece automáticamente a quien la generó (sin restricciones legales)', correct: 'depende', explain: 'DEPENDE. Zona gris legal real. Varía por país.' },
   { text: 'El "problema de alineación" es el corazón de la investigación en seguridad de IA actual', correct: 'ok', explain: 'VERDAD. Anthropic, DeepMind Safety, MIRI invierten millones en esto.' },
   { text: 'Lovable, Bolt y Bubble son herramientas no-code que permiten construir apps reales sin programar', correct: 'ok', explain: 'VERDAD. Revolución 2023-2026. Personas sin saber programar ya construyen apps reales.' },
+  // — Mitos añadidos para equilibrar la clave (ver `pickFakeItems`) —
+  { text: 'Si una IA te responde citando fuentes y estudios, esas fuentes siempre existen de verdad', correct: 'no', explain: 'MITO. Los modelos también alucinan CITAS: inventan títulos, autores y DOIs con formato perfecto. Verifica cada fuente antes de usarla.' },
+  { text: 'Los modelos aprenden de tus conversaciones en tiempo real y se actualizan solos mientras hablas', correct: 'no', explain: 'MITO. Confunde entrenamiento con inferencia. El modelo está congelado; solo "recuerda" dentro de la ventana de contexto de esa conversación.' },
+  { text: 'Entrenar un modelo grande de IA no tiene un impacto ambiental relevante', correct: 'no', explain: 'MITO. Entrenar y servir modelos consume energía y agua de refrigeración a gran escala. Por eso importa elegir el modelo del tamaño adecuado a la tarea.' },
+  // — Zonas grises: el criterio propio se demuestra aquí, no en los extremos —
+  { text: 'Usar IA para escribir un trabajo del colegio es hacer trampa', correct: 'depende', explain: 'DEPENDE. De las reglas de tu profesor y de si declaras el uso. Usarla para entender y estructurar no es lo mismo que entregar su texto como tuyo.' },
+  { text: 'Es seguro contarle tus problemas personales a un chatbot', correct: 'depende', explain: 'DEPENDE. Para ordenar ideas puede servir; para una crisis real necesitas a un humano. Y ojo con qué datos sensibles escribes y dónde acaban.' },
+  { text: 'La IA va a destruir más empleos de los que crea', correct: 'depende', explain: 'DEPENDE. La evidencia es mixta y varía por sector y plazo: transforma tareas más que eliminar oficios completos. Cualquiera que lo afirme con certeza está vendiendo algo.' },
+  { text: 'Un modelo open source es más seguro que uno cerrado', correct: 'depende', explain: 'DEPENDE. Auditable por cualquiera (bueno), pero también sin barreras contra el uso indebido (malo). "Abierto" describe el acceso, no la seguridad.' },
+  { text: 'Si una tarea es repetitiva, siempre conviene automatizarla con IA', correct: 'depende', explain: 'DEPENDE. Del volumen, del coste de equivocarse y de si hay una decisión humana de por medio. Automatizar algo delicado que haces dos veces al año no compensa.' },
+  { text: 'Lo que escribes en un chatbot gratuito es privado', correct: 'depende', explain: 'DEPENDE. Según el proveedor y tu configuración: varios usan las conversaciones para entrenar salvo que lo desactives. Regla simple: no escribas lo que no dirías en público.' },
 ];
 
 const BUILDER_TOOL = {
@@ -109,6 +128,21 @@ const BUILDER_TOOL = {
   ],
 };
 
+/**
+ * Selección estratificada del Fake Detector — la clave no debe ser adivinable (§15).
+ *
+ * Se aparta a propósito del HTML: su pool traía 7 `ok` / 4 `no` / 1 `depende`, así que
+ * marcar "Verdad" en todo sin leer sacaba ~75% (verificado en web). La pool es ahora
+ * 7/7/7 y cada intento toma 3+3+2 — la categoría con 2 rota al azar para que el reparto
+ * tampoco sea predecible entre partidas. Techo de quien adivina a ciegas: 3 de 8.
+ */
+const pickFakeItems = (): FakeItem[] => {
+  const kinds = shuffle(['ok', 'no', 'depende']);
+  return shuffle(
+    kinds.flatMap((k, i) => pickN(FAKE_POOL.filter((f) => f.correct === k), i === 2 ? 2 : 3))
+  );
+};
+
 // ===================== COMPONENTE =====================
 export default function World6Level7() {
   const completeLevel = useGameStore((s) => s.completeLevel);
@@ -120,7 +154,7 @@ export default function World6Level7() {
 
   // Pools aleatorios
   const [masterQItems] = useState(() => pickN(MASTER_Q_POOL, 15).map(shuffleOpts));
-  const [fakeItems] = useState(() => pickN(FAKE_POOL, 8));
+  const [fakeItems] = useState(pickFakeItems);
   const awarded = useRef<Set<string>>(new Set());
 
   // Estados de módulos

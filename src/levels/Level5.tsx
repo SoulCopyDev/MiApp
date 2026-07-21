@@ -18,6 +18,7 @@ import { useGameStore } from '../store/gameStore';
 import { useReportProgress } from '../components/LevelProgress';
 import { colors, typography } from '../theme';
 import XPToast from '../components/XPToast';
+import { pickN, shuffleDistinct } from '../utils/shuffle';
 
 // ---------- Tipos ----------
 type EthicsItem = { scenario: string; correct: 'safe' | 'doubt' | 'bad'; explain: string };
@@ -31,10 +32,6 @@ type SprintEticaItem = { stmt: string; correct: boolean };
 const TOTAL_STEPS = 19; // 0:intro + 17 módulos + 1:complete
 const CONTENT_STEPS = 18;
 
-const pickN = <T,>(arr: T[], n: number): T[] => {
-  const shuffled = [...arr].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, n);
-};
 
 // ===================== POOLS DE DATOS =====================
 
@@ -307,7 +304,7 @@ export default function World1Level5() {
     if (step === 7) { setTfAnswers({}); setTfChecked(false); }
     if (step === 9) setFakeAnswers({});
     if (step === 11) {
-      const order = [0, 1, 2, 3, 4].sort(() => Math.random() - 0.5);
+      const order = shuffleDistinct([0, 1, 2, 3, 4]);
       setSortOrder(order);
       setSortOk(false);
       setSortMarks({});

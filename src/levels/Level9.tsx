@@ -17,6 +17,7 @@ import { useGameStore } from '../store/gameStore';
 import { useReportProgress } from '../components/LevelProgress';
 import { colors, typography } from '../theme';
 import XPToast from '../components/XPToast';
+import { pickN, shuffle } from '../utils/shuffle';
 
 // ---------- Tipos ----------
 type GenreItem = {
@@ -50,10 +51,6 @@ const CONTENT_STEPS = 18;
 // 4 = Modifica el tono · 8 = IA como director · 13 = Crea un meme · 15 = ¿Cuándo no usar IA?
 const THEORY_STEPS = new Set([4, 8, 13, 15]);
 
-const pickN = <T,>(arr: T[], n: number): T[] => {
-  const shuffled = [...arr].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, n);
-};
 
 // Baraja las opciones de un MCQ preservando cuál es la correcta (evita que la
 // respuesta correcta caiga siempre en la misma posición).
@@ -390,7 +387,7 @@ export default function World2Level3() {
 
   // Módulo 2 — matching con dropdown
   const genreKeys = Object.keys(genreItem.genres);
-  const [shuffledGenres] = useState(() => [...genreKeys].sort(() => Math.random() - 0.5));
+  const [shuffledGenres] = useState(() => shuffle(genreKeys));
   const [genreAnswers, setGenreAnswers] = useState<Record<number, string>>({});
   const [openGenreDropdown, setOpenGenreDropdown] = useState<number | null>(null);
   const [genreChecked, setGenreChecked] = useState(false);

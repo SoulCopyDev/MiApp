@@ -14,6 +14,8 @@ import { useGameStore } from '../store/gameStore';
 import { useReportProgress } from '../components/LevelProgress';
 import { typography } from '../theme';
 import XPToast from '../components/XPToast';
+import { pickN as pickRandom, shuffleDistinct } from '../utils/shuffle';
+import { useChipDrag } from '../hooks/useChipDrag';
 
 // ─── Tipos de módulo ──────────────────────────────────────
 interface TheoryStep {
@@ -103,10 +105,6 @@ type Step =
   | CompletionStep;
 
 // ─── Pools de datos (extraídos del HTML) ──────────────────
-const pickRandom = <T,>(arr: T[], count: number): T[] => {
-  const shuffled = [...arr].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, count);
-};
 
 // Baraja las opciones de una MCQ y remapea el índice correcto (evita que la
 // correcta caiga siempre en la misma posición — estándar v2.2 §5/§27).
@@ -693,11 +691,11 @@ export default function World4Level2() {
     setReflectText('');
 
     if (current.type === 'sort') {
-      setSOrder([...Array(5).keys()].sort(() => Math.random() - 0.5));
+      setSOrder(shuffleDistinct([...Array(5).keys()]));
     }
     if (current.type === 'matching') {
       const pairs = (current as MatchingStep).pairs;
-      setMRightOrder(pairs.map(p => p.right).sort(() => Math.random() - 0.5));
+      setMRightOrder(shuffleDistinct(pairs.map(p => p.right)));
     }
   }, [step]);
 
@@ -828,6 +826,7 @@ export default function World4Level2() {
             dSelected={dSelected}
             onSelect={setDSelected}
             onDrop={(zone: string) => { if (dSelected) { setDPlaced(p => ({ ...p, [dSelected]: zone })); setDSelected(null); } }}
+            onDropItem={(id: string, zone: string) => { setDPlaced(p => ({ ...p, [id]: zone })); setDSelected(null); }}
             onRemove={(id: string) => { setDPlaced(p => { const n = { ...p }; delete n[id]; return n; }); }}
             dOk={dOk}
           />
@@ -970,14 +969,24 @@ export default function World4Level2() {
 }
 
 // ─── Componentes de módulos interactivos ─────────────────
-const DragDropComponent = ({ mod, dPlaced, dSelected, onSelect, onDrop, onRemove, dOk }: any) => (
+const DragDropComponent = ({ mod, dPlaced, dSelected, onSelect, onDrop, onDropItem, onRemove, dOk }: any) => {
+  // Arrastre HTML5 además del tap-para-colocar (en móvil lo cubre touchDragShim).
+  useChipDrag({
+    prefix: 'l20',
+    itemIds: mod.items.map((i: any) => i.id),
+    zoneIds: mod.colClass,
+    placed: dPlaced,
+    onDrop: onDropItem,
+    disabled: dOk,
+  });
+  return (
   <View>
     <StepTag color="#fff3ee" textColor="#9a3412" label="Módulo · Clasificar" />
     <Text style={styles.lessonTitle}>{mod.title}</Text>
     <Text style={styles.bodyText}>{mod.instruction}</Text>
     <View style={styles.chipsPool}>
       {mod.items.filter((item: any) => !dPlaced[item.id]).map((item: any) => (
-        <TouchableOpacity key={item.id} style={[styles.chip, dSelected === item.id && styles.chipSelected]} onPress={() => onSelect(item.id)}>
+        <TouchableOpacity key={item.id} {...({ nativeID: `l20-chip-${item.id}` } as any)} style={[styles.chip, dSelected === item.id && styles.chipSelected]} onPress={() => onSelect(item.id)}>
           <Text style={styles.chipText}>{item.text}</Text>
         </TouchableOpacity>
       ))}
@@ -986,7 +995,7 @@ const DragDropComponent = ({ mod, dPlaced, dSelected, onSelect, onDrop, onRemove
       {mod.zones.map((zone: string, zi: number) => {
         const col = mod.colClass[zi]; // valor semántico ('fortaleza'/'cuidado'), no el texto de display
         return (
-        <TouchableOpacity key={zi} style={[styles.dropCol, Object.values(dPlaced).includes(col) && styles.dropColHasItem]} onPress={() => onDrop(col)}>
+        <TouchableOpacity key={zi} {...({ nativeID: `l20-zone-${col}` } as any)} style={[styles.dropCol, Object.values(dPlaced).includes(col) && styles.dropColHasItem]} onPress={() => onDrop(col)}>
           <Text style={[styles.dropHeader, { backgroundColor: zi === 0 ? '#eef2ff' : '#fef2f2', color: zi === 0 ? '#3730a3' : '#991b1b' }]}>{zone}</Text>
           <View style={styles.dropArea}>
             {Object.entries(dPlaced).filter(([, z]) => z === col).map(([id]) => {
@@ -1004,7 +1013,8 @@ const DragDropComponent = ({ mod, dPlaced, dSelected, onSelect, onDrop, onRemove
     </View>
     {dOk && <View style={styles.feedbackOk}><Text style={styles.feedbackText}>✅ ¡Clasificación correcta!</Text></View>}
   </View>
-);
+  );
+};
 
 const MatchingComponent = ({ mod, mLeft, mDone, mRightOrder, onSelectLeft, onSelectRight, mOk }: any) => (
   <View>

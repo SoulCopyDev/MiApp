@@ -18,6 +18,7 @@ import { useGameStore } from '../store/gameStore';
 import { useReportProgress } from '../components/LevelProgress';
 import { colors, typography } from '../theme';
 import XPToast from '../components/XPToast';
+import { pickN } from '../utils/shuffle';
 
 // ---------- Tipos y constantes ----------
 type DiagItem = {
@@ -82,10 +83,6 @@ const TOTAL_STEPS = 20; // 0:intro + 18 módulos + 1:complete
 const CONTENT_STEPS = 18;
 
 // Función helper
-const pickN = <T,>(arr: T[], n: number): T[] => {
-  const shuffled = [...arr].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, n);
-};
 
 // Baraja las opciones de una MCQ y remapea el índice correcto (evita que la
 // respuesta correcta caiga siempre en la misma posición — estándar v2.2 §5/§27).

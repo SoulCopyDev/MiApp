@@ -6,6 +6,8 @@ import { useGameStore } from '../store/gameStore';
 import { useReportProgress } from '../components/LevelProgress';
 import { typography } from '../theme';
 import XPToast from '../components/XPToast';
+import { pickN as pickRandom, shuffleDistinct } from '../utils/shuffle';
+import { useChipDrag } from '../hooks/useChipDrag';
 
 // ═══════════════════════════════════════════════════════════
 // Nivel 21 · Gemini — La IA que vive en el ecosistema Google
@@ -27,10 +29,6 @@ interface CompletionStep { type: 'completion'; title: string; xp: number; }
 type Step = TheoryStep | DragDropStep | MatchingStep | SortStep | QuizStep | VFStep | FillBlanksStep | PromptCompareStep | ReflectStep | CompletionStep;
 
 // ── Helpers ──
-const pickRandom = <T,>(arr: T[], count: number): T[] => {
-  const shuffled = [...arr].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, count);
-};
 // Baraja las opciones de una MCQ y remapea el índice correcto (§5/§27).
 const shuffleOpts = <T extends { opts: string[]; correct: number }>(item: T): T => {
   const paired = item.opts.map((opt, i) => ({ opt, isCorrect: i === item.correct }));
@@ -574,8 +572,8 @@ export default function World4Level3() {
     setFAnswers({}); setFChecked(false);
     setPPicks({}); setPChecked(false);
     setReflectText('');
-    if (cur.type === 'sort') setSOrder([...Array(5).keys()].sort(() => Math.random() - 0.5));
-    if (cur.type === 'matching') setMRightOrder((cur as MatchingStep).pairs.map(p => p.right).sort(() => Math.random() - 0.5));
+    if (cur.type === 'sort') setSOrder(shuffleDistinct([...Array(5).keys()]));
+    if (cur.type === 'matching') setMRightOrder(shuffleDistinct((cur as MatchingStep).pairs.map(p => p.right)));
   }, [step]);
 
   // Solo XP local (display + toast). El store se actualiza UNA vez en completeLevel al final (§26).
@@ -699,6 +697,7 @@ export default function World4Level3() {
           <DragDropComponent mod={cur as DragDropStep} dPlaced={dPlaced} dSelected={dSelected}
             onSelect={setDSelected}
             onDrop={(col: string) => { if (dSelected) { setDPlaced(p => ({ ...p, [dSelected]: col })); setDSelected(null); } }}
+            onDropItem={(id: string, col: string) => { setDPlaced(p => ({ ...p, [id]: col })); setDSelected(null); }}
             onRemove={(id: string) => setDPlaced(p => { const n = { ...p }; delete n[id]; return n; })}
             dOk={dOk} />
         )}
@@ -791,14 +790,24 @@ export default function World4Level3() {
 }
 
 // ── Componentes interactivos ──
-const DragDropComponent = ({ mod, dPlaced, dSelected, onSelect, onDrop, onRemove }: any) => (
+const DragDropComponent = ({ mod, dPlaced, dSelected, onSelect, onDrop, onDropItem, onRemove, dOk }: any) => {
+  // Arrastre HTML5 además del tap-para-colocar (en móvil lo cubre touchDragShim).
+  useChipDrag({
+    prefix: 'l21',
+    itemIds: mod.items.map((i: any) => i.id),
+    zoneIds: mod.colClass,
+    placed: dPlaced,
+    onDrop: onDropItem,
+    disabled: dOk,
+  });
+  return (
   <View>
     <StepTag color="#e8f0fe" textColor="#1a56db" label="🎯 Clasificar" />
     <Text style={styles.lessonTitle}>{mod.title}</Text>
     <Text style={styles.bodyText}>{mod.instruction}</Text>
     <View style={styles.chipsPool}>
       {mod.items.filter((it: any) => !dPlaced[it.id]).map((it: any) => (
-        <TouchableOpacity key={it.id} style={[styles.chip, dSelected === it.id && styles.chipSel]} onPress={() => onSelect(dSelected === it.id ? null : it.id)}>
+        <TouchableOpacity key={it.id} {...({ nativeID: `l21-chip-${it.id}` } as any)} style={[styles.chip, dSelected === it.id && styles.chipSel]} onPress={() => onSelect(dSelected === it.id ? null : it.id)}>
           <Text style={styles.chipText}>{it.text}</Text>
         </TouchableOpacity>
       ))}
@@ -808,7 +817,7 @@ const DragDropComponent = ({ mod, dPlaced, dSelected, onSelect, onDrop, onRemove
         const col = mod.colClass[zi];
         const has = Object.values(dPlaced).includes(col);
         return (
-          <TouchableOpacity key={zi} style={[styles.dropCol, has && styles.dropColHas]} onPress={() => onDrop(col)}>
+          <TouchableOpacity key={zi} {...({ nativeID: `l21-zone-${col}` } as any)} style={[styles.dropCol, has && styles.dropColHas]} onPress={() => onDrop(col)}>
             <Text style={[styles.dropHeader, { backgroundColor: zi === 0 ? '#e8f0fe' : '#fef2f2', color: zi === 0 ? '#1e3a8a' : '#991b1b' }]}>{zone}</Text>
             <View style={styles.dropArea}>
               {Object.entries(dPlaced).filter(([, z]) => z === col).map(([id]) => {
@@ -825,7 +834,8 @@ const DragDropComponent = ({ mod, dPlaced, dSelected, onSelect, onDrop, onRemove
       })}
     </View>
   </View>
-);
+  );
+};
 
 const MatchingComponent = ({ mod, mLeft, mDone, mRightOrder, mWrong, onSelectLeft, onSelectRight }: any) => (
   <View>

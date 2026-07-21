@@ -10,6 +10,7 @@ import { useGameStore } from '../store/gameStore';
 import { useReportProgress } from '../components/LevelProgress';
 import { typography } from '../theme';
 import XPToast from '../components/XPToast';
+import { pickN, shuffleDistinct } from '../utils/shuffle';
 
 // ---------- Tipos ----------
 type CompareItem = { task: string; bad: string; good: string; badWhy: string; goodWhy: string };
@@ -26,7 +27,6 @@ type SortStep = { b: string; t: string };
 const TOTAL_STEPS = 22;
 const CONTENT_STEPS = 20;
 
-const pickN = <T,>(arr: T[], n: number): T[] => [...arr].sort(() => Math.random() - 0.5).slice(0, n);
 
 // ===================== POOLS (fuente: nivel-07.html) =====================
 
@@ -249,7 +249,7 @@ export default function World2Level1() {
   const [tfChecked, setTfChecked] = useState(false);
 
   // Módulo 10 — ranker
-  const [rankerOrder, setRankerOrder] = useState<number[]>([0, 1, 2].sort(() => Math.random() - 0.5));
+  const [rankerOrder, setRankerOrder] = useState<number[]>(shuffleDistinct([0, 1, 2]));
   const [rankerChecked, setRankerChecked] = useState(false);
   const [rankerSwapA, setRankerSwapA] = useState<number | null>(null);
   const [rankerFb, setRankerFb] = useState<{ ok: boolean; msg: string } | null>(null);
@@ -302,10 +302,10 @@ export default function World2Level1() {
   // Reset por módulo al entrar
   useEffect(() => {
     if (step === 3) setCompareIdx(0);
-    if (step === 5) { setMatchLeft(null); setMatchedL(new Set()); setMatchedR(new Set()); setMatchFb(null); setWrongFlash(null); setRightOrder(matchPairs.map((p) => p.right).sort(() => Math.random() - 0.5)); }
-    if (step === 7) { setSortOrder([0, 1, 2, 3, 4].sort(() => Math.random() - 0.5)); setSortOk(false); setSortMarks({}); setSortFb(null); }
+    if (step === 5) { setMatchLeft(null); setMatchedL(new Set()); setMatchedR(new Set()); setMatchFb(null); setWrongFlash(null); setRightOrder(shuffleDistinct(matchPairs.map((p) => p.right))); }
+    if (step === 7) { setSortOrder(shuffleDistinct([0, 1, 2, 3, 4])); setSortOk(false); setSortMarks({}); setSortFb(null); }
     if (step === 8) { setTfAnswers({}); setTfChecked(false); }
-    if (step === 10) { setRankerOrder([0, 1, 2].sort(() => Math.random() - 0.5)); setRankerChecked(false); setRankerSwapA(null); setRankerFb(null); }
+    if (step === 10) { setRankerOrder(shuffleDistinct([0, 1, 2])); setRankerChecked(false); setRankerSwapA(null); setRankerFb(null); }
     if (step === 12) { setTecnicaQ(0); setTecnicaAnswered(false); setTecnicaSel(null); setTecnicaDone(false); setTecnicaCorrect(0); setTecnicaPromptVal(''); }
     if (step === 14) { setQuizAnswers({}); setQuizChecked(false); }
     if (step === 16) { setFillSel({}); setFillChecked({}); }
