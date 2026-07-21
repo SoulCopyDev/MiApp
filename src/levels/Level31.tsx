@@ -6,6 +6,7 @@ import { useGameStore } from '../store/gameStore';
 import { useReportProgress } from '../components/LevelProgress';
 import { typography } from '../theme';
 import XPToast from '../components/XPToast';
+import { pickN, shuffle } from '../utils/shuffle';
 
 // ═══════════════════════════════════════════════════════════
 // Nivel 31 · AGI: ¿Qué Pasaría si la IA Pensara Sola? (Mundo 6, inicio)
@@ -43,8 +44,6 @@ type SprintItem = { text: string; good: boolean };
 type FillItem = { before: string; after: string; opts: string[]; correct: number; explain: string };
 type BuilderConfig = { xp: number; rows: { key: string; label: string; opts: string[] }[] };
 
-const pickN = <T,>(arr: T[], n: number): T[] => [...arr].sort(() => Math.random() - 0.5).slice(0, n);
-const shuffle = <T,>(arr: T[]): T[] => [...arr].sort(() => Math.random() - 0.5);
 const shuffleOpts = (q: QuizQ): QuizQ => {
   const paired = q.opts.map((opt, i) => ({ opt, isCorrect: i === q.correct }));
   for (let j = paired.length - 1; j > 0; j--) { const k = Math.floor(Math.random() * (j + 1)); [paired[j], paired[k]] = [paired[k], paired[j]]; }

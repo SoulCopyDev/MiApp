@@ -6,6 +6,7 @@ import { useGameStore } from '../store/gameStore';
 import { useReportProgress } from '../components/LevelProgress';
 import { typography } from '../theme';
 import XPToast from '../components/XPToast';
+import { pickN } from '../utils/shuffle';
 
 // ═══════════════════════════════════════════════════════════
 // Nivel 24 · ¿Cuál Herramienta Uso? Elige como un Pro
@@ -31,7 +32,6 @@ interface CompletionStep { type: 'completion'; xp: number; }
 type Step = TheoryStep | QuizStep | VFStep | SprintStep | CompletionStep;
 
 // ── Helpers ──
-const pickN = <T,>(arr: T[], n: number): T[] => [...arr].sort(() => Math.random() - 0.5).slice(0, n);
 const shuffleOpts = <T extends { options: string[]; correct: number }>(item: T): T => {
   const paired = item.options.map((opt, i) => ({ opt, isCorrect: i === item.correct }));
   for (let j = paired.length - 1; j > 0; j--) { const k = Math.floor(Math.random() * (j + 1)); [paired[j], paired[k]] = [paired[k], paired[j]]; }

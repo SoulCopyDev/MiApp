@@ -10,6 +10,7 @@ import { useGameStore } from '../store/gameStore';
 import { useReportProgress } from '../components/LevelProgress';
 import { colors, typography } from '../theme';
 import XPToast from '../components/XPToast';
+import { pickN } from '../utils/shuffle';
 
 // ---------- Tipos ----------
 type MCQ = { q?: string; opts: string[]; correct: number; explain: string };
@@ -25,7 +26,6 @@ const CONTENT_STEPS = 18;
 // "Volver" solo en módulos puramente informativos (leer + Continuar, sin ejercicio puntuado).
 const THEORY_STEPS = new Set([1, 4, 7, 10, 13, 15]);
 
-const pickN = <T,>(arr: T[], n: number): T[] => [...arr].sort(() => Math.random() - 0.5).slice(0, n);
 
 // Baraja las opciones de un MCQ preservando cuál es la correcta.
 function shuffleMCQ<T extends { opts: string[]; correct: number }>(q: T): T {

@@ -14,6 +14,7 @@ import { useGameStore } from '../store/gameStore';
 import { useReportProgress } from '../components/LevelProgress';
 import { typography } from '../theme';
 import XPToast from '../components/XPToast';
+import { shuffle, pickN as pickRandom } from '../utils/shuffle';
 
 // ─── Tipos de módulo ──────────────────────────────────────
 interface TheoryStep {
@@ -103,10 +104,6 @@ type Step =
   | CompletionStep;
 
 // ─── Pools de datos (extraídos del HTML) ──────────────────
-const pickRandom = <T,>(arr: T[], count: number): T[] => {
-  const shuffled = [...arr].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, count);
-};
 
 // Baraja las opciones de una MCQ y remapea el índice correcto (evita que la
 // correcta caiga siempre en la misma posición — estándar v2.2 §5/§27).
@@ -693,11 +690,11 @@ export default function World4Level2() {
     setReflectText('');
 
     if (current.type === 'sort') {
-      setSOrder([...Array(5).keys()].sort(() => Math.random() - 0.5));
+      setSOrder(shuffle([...Array(5).keys()]));
     }
     if (current.type === 'matching') {
       const pairs = (current as MatchingStep).pairs;
-      setMRightOrder(pairs.map(p => p.right).sort(() => Math.random() - 0.5));
+      setMRightOrder(shuffle(pairs.map(p => p.right)));
     }
   }, [step]);
 

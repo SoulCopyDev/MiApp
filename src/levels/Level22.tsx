@@ -6,6 +6,7 @@ import { useGameStore } from '../store/gameStore';
 import { useReportProgress } from '../components/LevelProgress';
 import { typography } from '../theme';
 import XPToast from '../components/XPToast';
+import { pickN, shuffle } from '../utils/shuffle';
 
 // ═══════════════════════════════════════════════════════════
 // Nivel 22 · Grok — La IA con personalidad propia
@@ -29,7 +30,6 @@ interface CompletionStep { type: 'completion'; xp: number; }
 type Step = TheoryStep | DragDropStep | MatchingStep | SortStep | QuizStep | VFStep | FillBlanksStep | PromptCompareStep | ScenarioStep | WordBuilderStep | ReflectStep | CompletionStep;
 
 // ── Helpers ──
-const pickN = <T,>(arr: T[], n: number): T[] => [...arr].sort(() => Math.random() - 0.5).slice(0, n);
 // Baraja opciones de una MCQ y remapea el índice correcto (§5/§27).
 const shuffleOptions = <T extends { options: string[]; correct: number }>(item: T): T => {
   const paired = item.options.map((opt, i) => ({ opt, isCorrect: i === item.correct }));
@@ -503,8 +503,8 @@ export default function World4Level4() {
     setScSel(null); setScChecked(false);
     setWbSel([]); setWbChecked(false);
     setReflectText('');
-    if (cur.type === 'sort') setSOrder([...Array(5).keys()].sort(() => Math.random() - 0.5));
-    if (cur.type === 'matching') setMRightOrder((cur as MatchingStep).pairs.map(p => p.right).sort(() => Math.random() - 0.5));
+    if (cur.type === 'sort') setSOrder(shuffle([...Array(5).keys()]));
+    if (cur.type === 'matching') setMRightOrder(shuffle((cur as MatchingStep).pairs.map(p => p.right)));
   }, [step]);
 
   const addXP = useCallback((amount: number) => {

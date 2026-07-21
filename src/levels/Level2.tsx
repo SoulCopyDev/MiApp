@@ -18,6 +18,7 @@ import { useGameStore } from '../store/gameStore';
 import { useReportProgress } from '../components/LevelProgress';
 import { colors, typography } from '../theme';
 import XPToast from '../components/XPToast';
+import { pickN, shuffle } from '../utils/shuffle';
 
 // ---------- Tipos y constantes ----------
 type DragItem = { text: string; correct: string };
@@ -191,10 +192,6 @@ const LLM_SORT_STEPS: SortStep[] = [
   { bold: 'Respuesta:', rest: ' junta todos los tokens y te la muestra' },
 ];
 
-const pickN = <T,>(arr: T[], n: number): T[] => {
-  const shuffled = [...arr].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, n);
-};
 
 
 function shuffleQuizOptions(q: QuizQuestion): QuizQuestion {
@@ -312,7 +309,7 @@ export default function GameLevel2({ navigation: propsNavigation, setAllowBack }
 
   useEffect(() => {
     if (step === 5) {
-      setRightOrder(pickN(matchPairs.map(p => p.right), matchPairs.length).sort(() => Math.random() - 0.5));
+      setRightOrder(shuffle(matchPairs.map(p => p.right)));
       setMatchLeft(null);
       setMatchDone(0);
       setMatchedLeft(new Set());

@@ -6,6 +6,7 @@ import { useGameStore } from '../store/gameStore';
 import { useReportProgress } from '../components/LevelProgress';
 import { typography } from '../theme';
 import XPToast from '../components/XPToast';
+import { pickN } from '../utils/shuffle';
 
 // ═══════════════════════════════════════════════════════════
 // Nivel 35 · IA y Tu Salud: La Medicina que Viene por Ti (Mundo 6)
@@ -41,7 +42,6 @@ type SprintItem = { text: string; good: boolean };
 type BuilderConfig = { xp: number; rows: { key: string; label: string; opts: string[] }[] };
 type ExCard = { emoji: string; name: string; how: React.ReactNode; fact: string };
 
-const pickN = <T,>(arr: T[], n: number): T[] => [...arr].sort(() => Math.random() - 0.5).slice(0, n);
 const shuffleOpts = (q: QuizQ): QuizQ => {
   const paired = q.opts.map((opt, i) => ({ opt, isCorrect: i === q.correct }));
   for (let j = paired.length - 1; j > 0; j--) { const k = Math.floor(Math.random() * (j + 1)); [paired[j], paired[k]] = [paired[k], paired[j]]; }

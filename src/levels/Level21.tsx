@@ -6,6 +6,7 @@ import { useGameStore } from '../store/gameStore';
 import { useReportProgress } from '../components/LevelProgress';
 import { typography } from '../theme';
 import XPToast from '../components/XPToast';
+import { shuffle, pickN as pickRandom } from '../utils/shuffle';
 
 // ═══════════════════════════════════════════════════════════
 // Nivel 21 · Gemini — La IA que vive en el ecosistema Google
@@ -27,10 +28,6 @@ interface CompletionStep { type: 'completion'; title: string; xp: number; }
 type Step = TheoryStep | DragDropStep | MatchingStep | SortStep | QuizStep | VFStep | FillBlanksStep | PromptCompareStep | ReflectStep | CompletionStep;
 
 // ── Helpers ──
-const pickRandom = <T,>(arr: T[], count: number): T[] => {
-  const shuffled = [...arr].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, count);
-};
 // Baraja las opciones de una MCQ y remapea el índice correcto (§5/§27).
 const shuffleOpts = <T extends { opts: string[]; correct: number }>(item: T): T => {
   const paired = item.opts.map((opt, i) => ({ opt, isCorrect: i === item.correct }));
@@ -574,8 +571,8 @@ export default function World4Level3() {
     setFAnswers({}); setFChecked(false);
     setPPicks({}); setPChecked(false);
     setReflectText('');
-    if (cur.type === 'sort') setSOrder([...Array(5).keys()].sort(() => Math.random() - 0.5));
-    if (cur.type === 'matching') setMRightOrder((cur as MatchingStep).pairs.map(p => p.right).sort(() => Math.random() - 0.5));
+    if (cur.type === 'sort') setSOrder(shuffle([...Array(5).keys()]));
+    if (cur.type === 'matching') setMRightOrder(shuffle((cur as MatchingStep).pairs.map(p => p.right)));
   }, [step]);
 
   // Solo XP local (display + toast). El store se actualiza UNA vez en completeLevel al final (§26).

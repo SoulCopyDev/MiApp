@@ -6,6 +6,7 @@ import { useGameStore } from '../store/gameStore';
 import { useReportProgress } from '../components/LevelProgress';
 import { typography } from '../theme';
 import XPToast from '../components/XPToast';
+import { pickN, shuffle } from '../utils/shuffle';
 
 // ═══════════════════════════════════════════════════════════
 // Nivel 28 · Diseña una App con IA — Sin Código
@@ -37,7 +38,6 @@ type TFItem = { stmt: string; correct: boolean; explain: string };
 type ScenarioChoice = { title: string; text: string; correct: boolean; explain: string };
 type BuilderConfig = { xp: number; rows: { key: string; label: string; opts: string[] }[] };
 
-const pickN = <T,>(arr: T[], n: number): T[] => [...arr].sort(() => Math.random() - 0.5).slice(0, n);
 const shuffleOpts = (q: QuizQ): QuizQ => {
   const paired = q.opts.map((opt, i) => ({ opt, isCorrect: i === q.correct }));
   for (let j = paired.length - 1; j > 0; j--) { const k = Math.floor(Math.random() * (j + 1)); [paired[j], paired[k]] = [paired[k], paired[j]]; }
@@ -217,7 +217,7 @@ export default function World5Level4() {
   const finalQ = useRef(pickN(FINAL_POOL, 5).map(shuffleOpts)).current;
   const tfQ = useRef(pickN(TF_POOL, 5)).current;
   const screenItems = useRef(pickN(SCREEN_POOL, 8)).current;
-  const scnOrder = useRef(BTN_SCN.map((_, i) => i).sort(() => Math.random() - 0.5)).current;
+  const scnOrder = useRef(shuffle(BTN_SCN.map((_, i) => i))).current;
 
   // Drag (3 categorías)
   const [dragPlaced, setDragPlaced] = useState<{ [k: number]: 'core' | 'auth' | 'settings' }>({});
@@ -279,7 +279,7 @@ export default function World5Level4() {
   const awardOnce = (amount: number) => { if (!awarded.current.has(step)) { awarded.current.add(step); if (amount > 0) addXP(amount); } };
 
   function shuffledSort(): number[] {
-    let o = [0, 1, 2, 3, 4, 5].sort(() => Math.random() - 0.5);
+    let o = shuffle([0, 1, 2, 3, 4, 5]);
     if (o.every((v, i) => v === i)) o = [1, 0, 2, 3, 4, 5];
     return o;
   }

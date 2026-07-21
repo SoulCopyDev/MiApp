@@ -6,6 +6,7 @@ import { useGameStore } from '../store/gameStore';
 import { useReportProgress } from '../components/LevelProgress';
 import { typography } from '../theme';
 import XPToast from '../components/XPToast';
+import { pickN, shuffle } from '../utils/shuffle';
 
 // ═══════════════════════════════════════════════════════════
 // Nivel 29 · Comparte tu Creación con el Mundo
@@ -41,8 +42,6 @@ type TribeChoice = { title: string; text: string; correct: boolean; explain: str
 type SortItem = { l: string; r: string };
 type BuilderConfig = { xp: number; rows: { key: string; label: string; opts: string[] }[] };
 
-const pickN = <T,>(arr: T[], n: number): T[] => [...arr].sort(() => Math.random() - 0.5).slice(0, n);
-const shuffle = <T,>(arr: T[]): T[] => [...arr].sort(() => Math.random() - 0.5);
 const shuffleOpts = (q: QuizQ): QuizQ => {
   const paired = q.opts.map((opt, i) => ({ opt, isCorrect: i === q.correct }));
   for (let j = paired.length - 1; j > 0; j--) { const k = Math.floor(Math.random() * (j + 1)); [paired[j], paired[k]] = [paired[k], paired[j]]; }
@@ -308,7 +307,7 @@ export default function World5Level5() {
   const awardOnce = (amount: number) => { if (!awarded.current.has(step)) { awarded.current.add(step); if (amount > 0) addXP(amount); } };
 
   function shuffledSort(): number[] {
-    let o = [0, 1, 2, 3, 4, 5].sort(() => Math.random() - 0.5);
+    let o = shuffle([0, 1, 2, 3, 4, 5]);
     if (o.every((v, i) => v === i)) o = [1, 0, 2, 3, 4, 5];
     return o;
   }

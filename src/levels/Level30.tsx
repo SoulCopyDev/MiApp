@@ -6,6 +6,7 @@ import { useGameStore } from '../store/gameStore';
 import { useReportProgress } from '../components/LevelProgress';
 import { typography } from '../theme';
 import XPToast from '../components/XPToast';
+import { pickN, shuffle } from '../utils/shuffle';
 
 // ═══════════════════════════════════════════════════════════
 // Nivel 30 · Presenta tu Proyecto (cierre Mundo 5)
@@ -42,7 +43,6 @@ type SortItem = { l: string; r: string };
 type FillItem = { before: string; after: string; opts: string[]; correct: number; explain: string };
 type BuilderConfig = { xp: number; rows: { key: string; label: string; opts: string[] }[] };
 
-const pickN = <T,>(arr: T[], n: number): T[] => [...arr].sort(() => Math.random() - 0.5).slice(0, n);
 const shuffleOpts = (q: QuizQ): QuizQ => {
   const paired = q.opts.map((opt, i) => ({ opt, isCorrect: i === q.correct }));
   for (let j = paired.length - 1; j > 0; j--) { const k = Math.floor(Math.random() * (j + 1)); [paired[j], paired[k]] = [paired[k], paired[j]]; }
@@ -223,7 +223,7 @@ export default function World5Level6() {
   const tfQ = useRef(pickN(TF_POOL, 5)).current;
   const slidesItems = useRef(pickN(SLIDES_POOL, 8)).current;
   const fillItem = useRef(pickN(FILL_POOL, 1)[0]).current;
-  const scnOrder = useRef([...HARD_Q_SCN.keys()].sort(() => Math.random() - 0.5)).current;
+  const scnOrder = useRef(shuffle([...HARD_Q_SCN.keys()])).current;
 
   // Reflexión
   const [reflectText, setReflectText] = useState('');
@@ -318,7 +318,7 @@ export default function World5Level6() {
 
   function shuffledSort(n: number): number[] {
     const base = Array.from({ length: n }, (_, i) => i);
-    let o = [...base].sort(() => Math.random() - 0.5);
+    let o = shuffle(base);
     if (o.every((v, i) => v === i)) { [o[0], o[1]] = [o[1], o[0]]; }
     return o;
   }
