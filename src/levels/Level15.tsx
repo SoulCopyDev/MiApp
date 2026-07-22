@@ -119,7 +119,7 @@ const QUIZZES: Record<number, QuizMod> = {
 
 // Módulo 2 · Matching
 const MATCH_PAIRS = [
-  { left: '🎬 Sora (OpenAI)', right: 'Genera videos de hasta 60s desde texto con calidad cinematográfica' },
+  { left: '🎬 Veo (Google)', right: 'Genera video y sonido a la vez, integrado con las apps de Google' },
   { left: '✂️ Runway ML', right: 'Especialista en edición: quita fondos y añade efectos especiales con IA' },
   { left: '🎥 Pika Labs', right: 'Anima imágenes estáticas y crea cortos artísticos animados' },
   { left: '🇨🇳 Kling AI', right: 'Genera videos ultra realistas, fuerte en movimientos de personas' },
@@ -150,7 +150,7 @@ const VF_ITEMS_2 = [
 // Módulo 15 · Drag & drop (gratis vs de pago). zone 0 = gratis, 1 = pago.
 const DD_ITEMS: { text: string; zone: 0 | 1; why: string }[] = [
   { text: 'Pika Labs — plan gratuito limitado', zone: 0, why: 'Pika ofrece un plan gratuito (con límites) para empezar.' },
-  { text: 'Sora Pro — acceso de pago ($20/mes)', zone: 1, why: 'Sora Pro requiere una suscripción de pago mensual.' },
+  { text: 'Kling — plan de pago para clips largos', zone: 1, why: 'Kling da unos pocos créditos gratis; para clips largos o en alta calidad hay que pagar.' },
   { text: 'CapCut AI — gratuito con funciones de IA', zone: 0, why: 'CapCut incluye funciones de IA en su plan gratuito.' },
   { text: 'Runway Pro — plan de pago profesional', zone: 1, why: 'Runway Pro es un plan de pago para uso profesional.' },
   { text: 'Luma Dream Machine — plan gratuito básico', zone: 0, why: 'Luma Dream Machine tiene un plan gratuito básico.' },
@@ -171,7 +171,7 @@ const BUILDERS: Record<number, { icon: string; label: string; title: string; int
   },
   5: {
     icon: '💭', label: 'Reflexión', title: 'La pregunta del millón',
-    intro: 'En 2024, el video musical "The Hardest Part" de Washed Out fue el primer video de un artista importante hecho completamente con IA (usando Sora). Fue nominado a premios de innovación y criticado por animadores.',
+    intro: 'En 2024, el video musical "The Hardest Part" de Washed Out fue el primer video de un artista importante hecho completamente con IA. Se generó con Sora — la herramienta que cerró dos años después. El video sigue existiendo; la herramienta que lo hizo, no.',
     box: '🤔 ¿Quién es el "artista": quien escribe el prompt o la IA que lo genera?\n🎬 ¿Puede una IA "sentir" lo que quiere expresar artísticamente?\n⚖️ ¿Es justo que una IA compita con animadores que estudian años su oficio?',
     placeholder: '¿Crees que un video creado con IA es arte verdadero? ¿Por qué sí o por qué no?',
     fb: '💭 ¡Tu reflexión toca aspectos muy importantes! Filósofos, artistas y tecnólogos debaten esto exactamente ahora mismo.',
@@ -183,7 +183,7 @@ const BUILDERS: Record<number, { icon: string; label: string; title: string; int
     box: '🎬 Escena: descripción visual detallada\n💬 Diálogo (si hay): lo que dicen los personajes\n🎨 Estilo visual: realista, anime, documental, ciencia ficción...\n🎵 Música/sonido: ¿qué se escucha?\n📌 Mensaje: ¿qué quieres que sienta el espectador?',
     example: '"Un niño de 8 años en Cartagena ve un mural enorme de mariposas. Se detiene. Las mariposas cobran vida y vuelan. El niño sonríe. Estilo realista-mágico. Música: marimba suave. Mensaje: la magia existe en lo cotidiano."',
     placeholder: 'Escribe tu guión de 30 segundos: escena + diálogo + estilo + música + mensaje...',
-    fb: '🎬 ¡Ese guión tiene potencial! Escena clara, estilo definido y un mensaje. Con Sora o Runway podrías verlo hecho video en minutos.',
+    fb: '🎬 ¡Ese guión tiene potencial! Escena clara, estilo definido y un mensaje. Con Veo, Runway o la herramienta que esté de moda cuando leas esto, podrías verlo hecho video en minutos.',
     terms: VIDEO_TERMS, topicMsg: 'Escribe un guión: escena, estilo, música o mensaje de tu cortometraje.',
   },
   17: {
@@ -197,7 +197,7 @@ const BUILDERS: Record<number, { icon: string; label: string; title: string; int
   19: {
     icon: '💭', label: 'Reflexión final', title: 'Tú y el video con IA',
     intro: 'Has recorrido un mundo increíble: cómo funciona el video de IA, deepfakes, copyright, herramientas y el futuro del cine. Ahora te preguntamos:',
-    box: '🎬 ¿Qué proyecto de video con IA harías hoy si tuvieras acceso a Sora?\n✨ ¿Qué fue lo que más te sorprendió de este nivel?\n⚖️ ¿El video de IA hace el mundo más interesante o más peligroso?',
+    box: '🎬 ¿Qué proyecto de video con IA harías hoy si tuvieras la mejor herramienta a mano?\n✨ ¿Qué fue lo que más te sorprendió de este nivel?\n⚖️ ¿El video de IA hace el mundo más interesante o más peligroso?',
     placeholder: 'Escribe tu reflexión final sobre la IA que filma...',
     fb: '🎬 ¡Esa reflexión demuestra que eres un pensador crítico sobre la tecnología! Esa mezcla de creatividad y pensamiento crítico es justo lo que el mundo necesita.',
     terms: REFLECT_TERMS, topicMsg: 'Comparte tu reflexión: qué proyecto harías, qué te sorprendió, o si el video con IA es más interesante o peligroso.',
@@ -568,11 +568,15 @@ export default function Level15() {
         <>
           <ModuleType icon="🎬" label="Introducción" />
           <Title>¿Puede la IA hacer una película?</Title>
-          <Body>En 2023, el mundo se quedó sin palabras cuando OpenAI mostró <B>Sora</B>: una IA capaz de generar videos de hasta un minuto con calidad cinematográfica. Perros en la nieve, ciudades futuristas, océanos en tormenta — todo desde texto, sin cámaras ni actores.</Body>
-          <Body>En este nivel vas a entender cómo funciona la <B>generación de video con IA</B>, conocer las herramientas de hoy y explorar su potencial creativo y sus riesgos más serios.</Body>
+          <Body>En 2024, el mundo se quedó sin palabras con <B>Sora</B>, de OpenAI: videos de hasta un minuto con calidad de cine. Perros en la nieve, ciudades futuristas, océanos en tormenta — todo desde texto, sin cámaras ni actores.</Body>
+          <Body>En <B>abril de 2026, Sora cerró.</B> No porque funcionara mal: costaba cerca de un millón de dólares al día y casi nadie pagaba por él. La herramienta más asombrosa del momento desapareció en dos años.</Body>
           <InfoBox>
-            <B>Las herramientas líderes hoy:</B>{'\n'}
-            🎬 <B>Sora</B> (OpenAI) — videos de alta calidad desde texto{'\n'}
+            <B>Empieza este nivel con esa idea en la cabeza:</B> las herramientas van y vienen. Los nombres de esta lista van a cambiar — puede que alguno ya no exista cuando leas esto. Lo que no caduca es saber <B>qué pedirle</B> a una IA de video y <B>cómo detectar</B> cuándo te están engañando con una.
+          </InfoBox>
+          <Body>En este nivel vas a entender cómo funciona la <B>generación de video con IA</B>, conocer las herramientas del momento y explorar su potencial creativo y sus riesgos más serios.</Body>
+          <InfoBox>
+            <B>Herramientas del momento:</B>{'\n'}
+            🎬 <B>Veo</B> (Google) — video con sonido incluido{'\n'}
             🎞️ <B>Runway ML</B> — edición y generación creativa{'\n'}
             🎥 <B>Pika Labs</B> — animación y efectos especiales{'\n'}
             🇨🇳 <B>Kling AI</B> (China) — videos ultra realistas
@@ -596,7 +600,7 @@ export default function Level15() {
       case 2: return (
         <>
           <ModuleType icon="🔗" label="Matching" />
-          <Title>Sora, Runway y Pika</Title>
+          <Title>Veo, Runway y Pika</Title>
           <Body style={{ marginBottom: 16 }}>Conecta cada herramienta con su descripción. Toca una del lado izquierdo, luego la correcta del lado derecho.</Body>
           <View style={styles.matchGrid}>
             <View style={styles.matchCol}>

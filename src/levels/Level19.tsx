@@ -10,6 +10,7 @@ import { typography } from '../theme';
 import { exitLevel } from '../utils/exitLevel';
 import XPToast from '../components/XPToast';
 import { shuffleDistinct } from '../utils/shuffle';
+import { MODOS_RESPUESTA } from '../content/aiLandscape';
 
 // ===================== PALETA (tema claro verde/lima, Mundo 4 "El Gran Torneo") =====================
 const C = {
@@ -71,32 +72,32 @@ const SORT_SESION = [
 
 type TFItem = { stmt: string; correct: boolean; explain: string };
 const TF_POOL: TFItem[] = [
-  { stmt: 'ChatGPT puede buscar noticias de hoy en internet sin ninguna configuración extra.', correct: false, explain: '¡Mito! La versión básica no busca en internet. Para noticias de hoy, usa Google o Gemini con búsqueda activada.' },
-  { stmt: 'Puedes subir fotos a ChatGPT y pedirle que las describa o analice.', correct: true, explain: '¡Verdad! Con GPT-4o puedes subir imágenes. ChatGPT puede explicar lo que ve, analizar un gráfico o leer texto en una foto.' },
-  { stmt: 'ChatGPT recuerda todo lo que hablaste en conversaciones de días anteriores.', correct: false, explain: '¡Mito! Cada conversación nueva empieza desde cero. Tienes que darle el contexto de nuevo cada vez.' },
+  { stmt: 'ChatGPT no puede consultar internet: solo sabe lo que aprendió cuando lo entrenaron.', correct: false, explain: '¡Mito! Hoy busca en la web y te muestra los enlaces. Pero ojo: que traiga enlaces no significa que los haya leído bien. Ábrelos tú si el dato importa.' },
+  { stmt: 'Puedes subir fotos a ChatGPT y pedirle que las describa o analice.', correct: true, explain: '¡Verdad! Puedes subir imágenes y ChatGPT explica lo que ve: analiza un gráfico, lee el texto de una foto o revisa un ejercicio de tu cuaderno.' },
+  { stmt: 'Puedes dar por hecho que ChatGPT recordará lo que le contaste hace semanas.', correct: false, explain: '¡Mito! Hoy sí tiene memoria entre conversaciones, pero es limitada y se puede desactivar. Si un dato es importante para tu pedido, vuelve a dárselo: no lo des por hecho.' },
   { stmt: 'Los GPTs personalizados son versiones de ChatGPT entrenadas para temas específicos.', correct: true, explain: '¡Verdad! Los GPTs son como apps dentro de ChatGPT. Hay GPTs para idiomas, matemáticas, cocina y miles de temas más.' },
-  { stmt: 'GPT-4o es exactamente igual que GPT-3.5, solo con diferente nombre.', correct: false, explain: '¡Mito! Son muy diferentes. GPT-4o puede ver imágenes, usar voz, generar imágenes con DALL-E y razona mucho mejor.' },
-  { stmt: 'DALL-E es la herramienta de ChatGPT para generar imágenes desde texto.', correct: true, explain: '¡Verdad! Describes lo que quieres ver y DALL-E crea la imagen en segundos. Solo disponible con GPT-4o.' },
+  { stmt: 'Siempre conviene pedirle que razone paso a paso, sea cual sea la pregunta.', correct: false, explain: '¡Mito! Para un problema de lógica o matemáticas, razonar ayuda muchísimo. Pero para "¿cómo se dice hola en japonés?" solo te hace esperar de más. Elegir el modo también es criterio.' },
+  { stmt: 'DALL-E es la herramienta de ChatGPT para generar imágenes desde texto.', correct: true, explain: '¡Verdad! Describes lo que quieres ver y la imagen aparece en segundos. Está integrada dentro de ChatGPT.' },
   { stmt: 'Si ChatGPT te da una estadística, siempre es correcta y no necesitas verificar.', correct: false, explain: '¡Cuidado! ChatGPT puede alucinar e inventar datos que suenan reales. Siempre verifica los datos importantes.' },
   { stmt: 'Puedes usar ChatGPT para practicar un idioma nuevo conversando con él.', correct: true, explain: '¡Verdad! Uno de sus mejores usos. Puedes hablar en inglés, francés o cualquier idioma y pedirle que corrija tus errores.' },
   { stmt: 'ChatGPT puede escribir código de programación y explicar cómo funciona.', correct: true, explain: '¡Verdad! Puedes pedirle que escriba código en Python, que lo explique línea por línea o que encuentre errores.' },
   { stmt: 'Copiar la respuesta de ChatGPT y entregarla como tu tarea es una buena forma de aprender.', correct: false, explain: '¡Mito peligroso! Copiar no es aprender. Lo correcto es pedirle que te EXPLIQUE los conceptos para escribir con tus propias palabras.' },
 ];
 
-type DetectiveItem = { task: string; respA: { text: string; hint: string }; respB: { text: string; hint: string }; cual4o: 'A' | 'B'; explain: string };
+type DetectiveItem = { task: string; respA: { text: string; hint: string }; respB: { text: string; hint: string }; mejor: 'A' | 'B'; explain: string };
 const DETECTIVE_POOL: DetectiveItem[] = [
   { task: 'Le preguntaron: ¿Qué es la fotosíntesis?',
     respA: { text: 'La fotosíntesis es el proceso por el cual las plantas convierten luz solar en energía. Toman CO2 del aire y agua del suelo, y con la luz producen glucosa y liberan oxígeno. Es como si las plantas tuvieran una fábrica solar dentro de cada hoja.', hint: 'Usa metáforas y lenguaje accesible' },
     respB: { text: 'La fotosíntesis es un proceso bioquímico en los cloroplastos. Involucra las fotorreacciones en los tilacoides y el ciclo de Calvin en el estroma. Ecuación general: 6CO2 + 6H2O + luz → C6H12O6 + 6O2.', hint: 'Respuesta técnica y formal' },
-    cual4o: 'A', explain: 'La respuesta A es GPT-4o: usa analogías (fábrica solar), lenguaje claro y adapta la explicación. La B es correcta pero muy técnica, sin considerar quién pregunta.' },
+    mejor: 'A', explain: 'La A te sirve más: usa una analogía (fábrica solar) y adapta el lenguaje a quien pregunta. La B no está equivocada — es correcta — pero es tan técnica que no ayuda a entender. Una respuesta puede ser cierta y aun así ser mala.' },
   { task: 'Le pidieron: Ayúdame a planear mis vacaciones en Brasil',
     respA: { text: 'Para tus vacaciones en Brasil considera: 1) ¿Destino: playa (Río, Florianópolis) o naturaleza (Amazonas)? 2) Época: evita enero-marzo en Río por lluvias. 3) Presupuesto: hay opciones económicas fuera de zonas turísticas. ¿Cuántos días tienes y qué te emociona más?', hint: 'Hace preguntas personalizadas' },
     respB: { text: 'Brasil es un país hermoso. Río de Janeiro tiene el Cristo Redentor y Copacabana. São Paulo es la ciudad más grande. El Amazonas es la selva más grande del mundo. Hay muchas cosas para ver y hacer.', hint: 'Información genérica sin personalización' },
-    cual4o: 'A', explain: 'La respuesta A es GPT-4o: da consejos específicos, anticipa problemas (lluvias) y hace preguntas para personalizar. La B es genérica y no te ayuda a planear nada concreto.' },
+    mejor: 'A', explain: 'La A te sirve más: da consejos concretos, anticipa un problema (las lluvias) y te devuelve preguntas para afinar. La B suena bien pero es información genérica que ya sabías: no te ayuda a decidir nada.' },
   { task: 'Le preguntaron: ¿Por qué el cielo es azul?',
     respA: { text: 'El cielo es azul porque el aire dispersa la luz azul más que otros colores. Es como si el aire fuera un filtro que esparce el azul en todas direcciones. Por eso al atardecer el cielo es naranja: la luz viaja más lejos y el azul ya no llega a tus ojos.', hint: 'Conecta con el atardecer también' },
     respB: { text: 'El cielo es azul por la dispersión de Rayleigh. Las moléculas de gas dispersan longitudes de onda cortas (azul) más que las largas (rojo). Por eso cuando miramos el cielo vemos luz azul dispersada en todas direcciones.', hint: 'Explicación correcta pero básica' },
-    cual4o: 'A', explain: 'La respuesta A es GPT-4o: anticipa la pregunta del atardecer y usa una analogía del filtro. La B es correcta pero no va más allá de la pregunta inicial.' },
+    mejor: 'A', explain: 'La A te sirve más: usa la analogía del filtro y se adelanta a la siguiente pregunta (¿y el atardecer?). La B es correcta y hasta más precisa, pero se queda exactamente en lo que le preguntaste.' },
 ];
 
 type QuizItem = { q: string; opts: string[]; correct: number; explain: string };
@@ -109,7 +110,7 @@ const QUIZ_POOL: QuizItem[] = [
     correct: 2, explain: 'Copiar es trampa y no sirve para aprender. ChatGPT debe ser el profe que te guía, no el que hace la tarea por ti.' },
   { q: 'Lucas, 12 años, de Buenos Aires quiere crear una imagen de un dinosaurio en la ciudad. ¿Qué herramienta usa?',
     opts: ['El modo de voz', 'DALL-E, el generador de imágenes de ChatGPT', 'Los GPTs personalizados', 'La función de código'],
-    correct: 1, explain: 'DALL-E convierte texto en imágenes. Lucas escribe la descripción y ChatGPT genera la imagen automáticamente. Solo funciona con GPT-4o.' },
+    correct: 1, explain: 'DALL-E convierte texto en imágenes. Lucas escribe la descripción y ChatGPT genera la imagen automáticamente.' },
   { q: '¿Para qué sirven los GPTs personalizados de ChatGPT?',
     opts: ['Para hacer ChatGPT más rápido', 'Para tener versiones entrenadas en temas específicos', 'Para guardar conversaciones entre sesiones', 'Para traducir textos mejor'],
     correct: 1, explain: 'Los GPTs son como apps dentro de ChatGPT. Hay miles especializados en cocina, idiomas, programación, matemáticas y mucho más.' },
@@ -119,9 +120,9 @@ const QUIZ_POOL: QuizItem[] = [
   { q: 'ChatGPT dice que un personaje histórico dijo una frase famosa. ¿Qué debes hacer?',
     opts: ['Publicarlo de inmediato en redes sociales', 'Creértelo porque ChatGPT siempre tiene razón', 'Buscar la cita en una fuente confiable para verificarla', 'Pedirle más citas del mismo personaje'],
     correct: 2, explain: '¡Siempre verifica! ChatGPT puede alucinar e inventar citas que suenan reales. Para datos históricos, confirma en fuentes confiables.' },
-  { q: '¿Qué ventaja tiene GPT-4o sobre GPT-3.5?',
-    opts: ['Es completamente gratis siempre', 'Puede ver imágenes, razona mejor y tiene acceso a DALL-E', 'Recuerda todas tus conversaciones anteriores', 'Nunca se equivoca en ningún tema'],
-    correct: 1, explain: 'GPT-4o puede ver imágenes, generar imágenes con DALL-E y razona mejor. Pero ninguna versión recuerda conversaciones anteriores y todas pueden equivocarse.' },
+  { q: '¿Cuándo conviene pedirle a ChatGPT que razone paso a paso en vez de responder al instante?',
+    opts: ['Siempre, porque el modo que razona es el mejor para absolutamente cualquier tarea', 'Cuando el problema tiene varios pasos o hay que comparar y decidir', 'Solo cuando la respuesta que necesitas es muy larga y con mucho detalle', 'Únicamente si estás pagando la versión más cara del asistente que uses'],
+    correct: 1, explain: 'Razonar paso a paso sirve cuando hay varios pasos, comparaciones o trampas lógicas. Para una traducción o un resumen corto solo te hace esperar más. Saber cuándo pedir cada modo es parte del criterio.' },
   { q: 'Kai, 10 años, de Japón quiere un juego de preguntas sobre animales. ¿Cuál prompt es mejor?',
     opts: ['Preguntas de animales', 'Hazme un juego de 10 preguntas sobre animales salvajes de África para niños de 10 años. Incluye 4 opciones y la respuesta correcta al final.', 'Dame información de animales', 'Animales salvajes África'],
     correct: 1, explain: 'Excelente prompt: especifica el tipo (juego), el tema, la audiencia (10 años), la cantidad (10) y el formato. Cuanto más específico, mejor resultado.' },
@@ -129,27 +130,27 @@ const QUIZ_POOL: QuizItem[] = [
 
 type FillItem = { before: string; after: string; opts: string[]; correct: number; explain: string };
 const FILL_POOL: FillItem[] = [
-  { before: 'La herramienta de ChatGPT que convierte texto en imágenes se llama ', after: '.', opts: ['DALL-E', 'Google', 'Bing', 'Stable'], correct: 0, explain: '"DALL-E" es la herramienta de OpenAI para generar imágenes. Está integrada en ChatGPT con GPT-4o.' },
+  { before: 'La herramienta de ChatGPT que convierte texto en imágenes se llama ', after: '.', opts: ['DALL-E', 'Google', 'Bing', 'Stable'], correct: 0, explain: '"DALL-E" es la herramienta de OpenAI para generar imágenes. Está integrada dentro de ChatGPT.' },
   { before: 'Los ', after: ' son versiones de ChatGPT entrenadas para tareas específicas, como aprender idiomas.', opts: ['GPTs', 'Bots', 'Apps', 'Modos'], correct: 0, explain: '"GPTs" son como apps dentro de ChatGPT. Hay miles creados por la comunidad y por OpenAI.' },
   { before: 'Cuando ChatGPT inventa información falsa con total confianza, se llama ', after: '.', opts: ['alucinación', 'error', 'bug', 'trampa'], correct: 0, explain: '"Alucinación" es el término técnico. La IA predice texto que suena real pero puede ser completamente falso.' },
-  { before: 'La versión más avanzada de ChatGPT actualmente se llama GPT-', after: '.', opts: ['4o', '3.5', '5', 'Ultra'], correct: 0, explain: '"GPT-4o" (la "o" es de "omni", que significa "todo") puede procesar texto, imágenes y voz.' },
+  { before: 'Cuando un problema tiene varios pasos, conviene pedirle a ChatGPT que ', after: ' paso a paso.', opts: ['razone', 'traduzca', 'resuma', 'dibuje'], correct: 0, explain: '"Razone". Pedirle que piense paso a paso hace que se tome más tiempo y acierte más en problemas de lógica y matemáticas.' },
   { before: 'La empresa que creó ChatGPT se llama ', after: '.', opts: ['OpenAI', 'Google', 'Microsoft', 'Apple'], correct: 0, explain: '"OpenAI" fundó ChatGPT en 2022. Microsoft invirtió en ellos, por eso Bing y Copilot usan su tecnología.' },
   { before: 'Para que ChatGPT responda como un experto, le das una ', after: ' como "eres un profe de física divertido".', opts: ['identidad', 'contraseña', 'imagen', 'canción'], correct: 0, explain: '"Identidad" o rol. Darle una identidad específica cambia completamente su forma de responder. ¡Es el Truco 4 del Nivel 7!' },
 ];
 
 const SPRINT_POOL: TFItem[] = [
   { stmt: 'ChatGPT puede generar imágenes usando DALL-E', correct: true, explain: '' },
-  { stmt: 'ChatGPT recuerda automáticamente todas tus conversaciones anteriores', correct: false, explain: '' },
-  { stmt: 'GPT-4o puede analizar imágenes que le envías', correct: true, explain: '' },
+  { stmt: 'Puedes confiar en que recuerda todo lo que le contaste hace meses', correct: false, explain: '' },
+  { stmt: 'ChatGPT puede analizar una foto que le envías', correct: true, explain: '' },
   { stmt: 'Copiar la respuesta de ChatGPT y entregarla como tu tarea es correcto', correct: false, explain: '' },
   { stmt: 'Los GPTs personalizados son versiones especializadas de ChatGPT', correct: true, explain: '' },
   { stmt: 'ChatGPT siempre dice la verdad y nunca se equivoca', correct: false, explain: '' },
-  { stmt: 'Puedes hablarle a ChatGPT con tu voz usando el modo de voz', correct: true, explain: '' },
+  { stmt: 'El modo de voz de ChatGPT funciona sin conexión a internet', correct: false, explain: '' },
   { stmt: 'ChatGPT puede ayudarte a escribir código de programación', correct: true, explain: '' },
-  { stmt: 'GPT-3.5 y GPT-4o son exactamente iguales en capacidades', correct: false, explain: '' },
+  { stmt: 'Pedirle que razone paso a paso es igual de útil en todas las preguntas', correct: false, explain: '' },
   { stmt: 'Es buena idea verificar los datos importantes que te da ChatGPT', correct: true, explain: '' },
   { stmt: 'Puedes pedirle a ChatGPT que te haga un quiz para estudiar', correct: true, explain: '' },
-  { stmt: 'ChatGPT conoce resultados de partidos de ayer sin buscar en internet', correct: false, explain: '' },
+  { stmt: 'Sin buscar en internet, ChatGPT sabe los resultados deportivos de ayer', correct: false, explain: '' },
 ];
 
 type EthicsItem = { scenario: string; correct: 'safe' | 'doubt' | 'bad'; explain: string };
@@ -193,7 +194,7 @@ const EX_CARDS: ExCardItem[] = [
   { emoji: '🎨', name: 'Superpoder 1: Crear imágenes', sub: 'Dibuja cualquier cosa con DALL-E', tag: 'DALL-E',
     how: 'Lena, 11 años, de Berlín necesitaba una imagen de un volcán para su presentación de geografía. Le escribió a ChatGPT: "Dibuja un volcán en erupción visto desde arriba, estilo ilustración científica colorida." En 10 segundos tenía la imagen perfecta. ',
     howBold: '¡Sin saber dibujar, sin buscar en Google!',
-    fact: 'Para usar DALL-E necesitas GPT-4o. Cuanto más detallada sea tu descripción, mejor sale la imagen.' },
+    fact: 'Cuanto más detallada sea tu descripción, mejor sale la imagen. Estilo, sujeto, ambiente y emoción: los cuatro juntos.' },
   { emoji: '🎤', name: 'Superpoder 2: Modo de voz', sub: 'Habla y escucha como una conversación real', tag: 'VOZ',
     how: 'Yuki, 11 años, de Tokio quiere mejorar su inglés. Activa el modo de voz y le dice en inglés: "Hablemos sobre mi anime favorito. Corrígeme si me equivoco." ChatGPT responde en voz y lo corrige suavemente. ',
     howBold: '¡Mejor que muchas clases!',
@@ -212,15 +213,15 @@ const EX_CARDS: ExCardItem[] = [
     fact: 'ChatGPT puede escribir código en más de 50 lenguajes. También puede encontrar errores en tu código y explicarte cómo arreglarlos.' },
 ];
 
-const DRAG_POOL: { text: string; correct: '35' | '4o' }[] = [
-  { text: 'Subir una foto de mi examen para que la corrija', correct: '4o' },
-  { text: 'Preguntar cuánto es 15% de 200 pesos', correct: '35' },
-  { text: 'Pedirle que genere una imagen de un volcán', correct: '4o' },
-  { text: 'Hacer un resumen de un texto que le pego', correct: '35' },
-  { text: 'Analizar un gráfico de mi trabajo de ciencias', correct: '4o' },
-  { text: 'Pedir ideas para un proyecto escolar', correct: '35' },
-  { text: 'Hablarle por voz y que me responda con voz', correct: '4o' },
-  { text: 'Preguntar cómo se dice "hola" en japonés', correct: '35' },
+const DRAG_POOL: { text: string; correct: 'rapido' | 'razona' }[] = [
+  { text: 'Preguntar cómo se dice "hola" en japonés', correct: 'rapido' },
+  { text: 'Resolver un problema de matemáticas de varios pasos', correct: 'razona' },
+  { text: 'Resumir en 3 líneas un texto que le pego', correct: 'rapido' },
+  { text: 'Encontrar el error en mi código y explicar por qué falla', correct: 'razona' },
+  { text: 'Pedir 10 ideas para el nombre de mi proyecto', correct: 'rapido' },
+  { text: 'Comparar 4 celulares y recomendarme uno con argumentos', correct: 'razona' },
+  { text: 'Corregir la ortografía de un párrafo', correct: 'rapido' },
+  { text: 'Resolver un acertijo de lógica con trampa', correct: 'razona' },
 ];
 
 const TOTAL_STEPS = 22;   // 0=intro … 21=completado
@@ -254,11 +255,11 @@ export default function Level19() {
   const [detDone, setDetDone] = useState(false);
 
   // Drag
-  const [ddPlaced, setDdPlaced] = useState<{ [idx: number]: '35' | '4o' }>({});
+  const [ddPlaced, setDdPlaced] = useState<{ [idx: number]: 'rapido' | 'razona' }>({});
   const [ddSel, setDdSel] = useState<number | null>(null);
   const [ddChecked, setDdChecked] = useState(false);
   const [ddSolved, setDdSolved] = useState(false);
-  const [ddOverZone, setDdOverZone] = useState<'35' | '4o' | null>(null);
+  const [ddOverZone, setDdOverZone] = useState<'rapido' | 'razona' | null>(null);
   const ddPlacedRef = useRef(ddPlaced);
   useEffect(() => { ddPlacedRef.current = ddPlaced; }, [ddPlaced]);
   const ddIdxRef = useRef<number | null>(null);
@@ -374,7 +375,7 @@ export default function Level19() {
         el.addEventListener('dragend', onDragEnd);
         cleanups.push(() => { el.removeEventListener('dragstart', onDragStart); el.removeEventListener('dragend', onDragEnd); });
       });
-      (['35', '4o'] as const).forEach(zone => {
+      (['rapido', 'razona'] as const).forEach(zone => {
         const el = document.getElementById(`dd-zone-${zone}`);
         if (!el) return;
         const onOver = (e: Event) => { e.preventDefault(); setDdOverZone(zone); };
@@ -404,7 +405,7 @@ export default function Level19() {
     if (detSel !== null) return;
     setDetSel(side);
     const item = DETECTIVE_POOL[detQ];
-    const ok = side === item.cual4o;
+    const ok = side === item.mejor;
     const running = detCorrect + (ok ? 1 : 0);
     if (ok) setDetCorrect(running);
     if (Platform.OS === 'android') Vibration.vibrate(60);
@@ -414,7 +415,7 @@ export default function Level19() {
     }, 1400);
   };
 
-  const ddPlace = (zone: '35' | '4o') => {
+  const ddPlace = (zone: 'rapido' | 'razona') => {
     if (ddSel === null || ddPlaced[ddSel] !== undefined || ddSolved) return;
     setDdPlaced(p => ({ ...p, [ddSel]: zone }));
     setDdSel(null);
@@ -575,7 +576,7 @@ export default function Level19() {
           <Title>¡ChatGPT: tu compañero de aventuras!</Title>
           <Text style={styles.subtitle}>Ya conoces los trucos del prompting. Ahora vas a conocer a fondo a ChatGPT, el LLM más famoso del mundo, y todas sus herramientas secretas.</Text>
           <CardRow icon="🌟" iconBg="#86efac" tint={C.greenLight} tintBorder={C.greenBorder} title="¿Por qué ChatGPT es tan famoso?">Lo usa gente de más de 180 países, desde niños aprendiendo idiomas en Japón hasta científicos en Australia. ¡Más de 100 millones de personas lo usan cada mes!</CardRow>
-          <CardRow icon="🆕" iconBg="#d9f99d" tint="#f7fee7" tintBorder="#d9f99d" title="3 mecánicas nuevas hoy">Modo Detective (detecta cuál es GPT-4o) + Constructor de Imagen para DALL-E + Mi Sesión Perfecta de estudio</CardRow>
+          <CardRow icon="🆕" iconBg="#d9f99d" tint="#f7fee7" tintBorder="#d9f99d" title="3 mecánicas nuevas hoy">Modo Detective (juzga qué respuesta te sirve) + Constructor de Imagen para DALL-E + Mi Sesión Perfecta de estudio</CardRow>
           <CardRow icon="⭐" iconBg="#e2e8f0" tint={C.card2} title="Hasta 265 XP · 20 módulos · Nivel 19 de 36">{'Mundo 4: El Gran Torneo de Herramientas'}</CardRow>
         </>
       );
@@ -590,7 +591,7 @@ export default function Level19() {
           <StepItem n={3}><B>GPTs personalizados:</B> Son como apps dentro de ChatGPT. Hay GPTs para cocinar, aprender matemáticas, hacer arte y miles de cosas más.</StepItem>
           <StepItem n={4}><B>Analiza archivos:</B> Puedes subir un PDF o una foto de tu tarea y pedirle que lo explique, resuma o corrija.</StepItem>
           <StepItem n={5}><B>Escribe código:</B> Si algún día quieres crear una app, ChatGPT puede escribir el código y explicarte cómo funciona.</StepItem>
-          <HlBox variant="green"><B>¿Gratis o de pago?</B>{'\n'}La versión gratuita (GPT-3.5 y algo de GPT-4o) ya es muy poderosa. La versión de pago (Plus) te da acceso completo a GPT-4o sin límites.</HlBox>
+          <HlBox variant="green"><B>¿Gratis o de pago?</B>{'\n'}La versión gratuita ya es muy poderosa y alcanza de sobra para todo lo de este curso. Pagar te da más mensajes por día y acceso más amplio a los modos que razonan. Los nombres de los planes cambian seguido: mira siempre qué te ofrece el plan gratis antes de pensar en pagar.</HlBox>
         </>
       );
 
@@ -629,7 +630,8 @@ export default function Level19() {
         return (
           <>
             <Tag>🆕 Módulo 3 · Modo Detective</Tag>
-            <Title>Detective: ¿cuál es GPT-4o?</Title>
+            <Title>Detective: ¿cuál respuesta te sirve más?</Title>
+            <Body>Las dos respuestas son correctas. Ninguna miente. Tu trabajo es decidir cuál te ayuda de verdad — porque una IA puede tener razón y aun así no servirte.</Body>
             {!detDone ? (
               <>
                 <Text style={styles.progressNote}>Caso {detQ + 1} de {DETECTIVE_POOL.length} · {detCorrect} correctos</Text>
@@ -637,8 +639,8 @@ export default function Level19() {
                 {(['A', 'B'] as const).map(side => {
                   const resp = side === 'A' ? item.respA : item.respB;
                   const sel = detSel === side;
-                  const isCorrect = detSel !== null && side === item.cual4o;
-                  const isWrong = sel && side !== item.cual4o;
+                  const isCorrect = detSel !== null && side === item.mejor;
+                  const isWrong = sel && side !== item.mejor;
                   return (
                     <TouchableOpacity key={side} style={[styles.detCard, isCorrect && styles.optCorrect, isWrong && styles.optWrong]} disabled={detSel !== null} onPress={() => answerDet(side)}>
                       <Text style={styles.detLabel}>Respuesta {side}</Text>
@@ -647,44 +649,45 @@ export default function Level19() {
                     </TouchableOpacity>
                   );
                 })}
-                {detSel !== null && <Fb ok={detSel === item.cual4o}>{detSel === item.cual4o ? '✅ ¡Correcto detective! ' : '❌ ¡Casi! '}{item.explain}</Fb>}
+                {detSel !== null && <Fb ok={detSel === item.mejor}>{detSel === item.mejor ? '✅ ¡Correcto detective! ' : '❌ ¡Casi! '}{item.explain}</Fb>}
               </>
-            ) : <Fb ok>🕵️ Detective completado: {detCorrect}/{DETECTIVE_POOL.length}. GPT-4o suele usar analogías, anticipar preguntas y adaptar el tono.</Fb>}
+            ) : <Fb ok>🕵️ Detective completado: {detCorrect}/{DETECTIVE_POOL.length}. Una buena respuesta se adapta a quien pregunta, usa analogías y se adelanta a lo que vas a querer saber después. Eso lo juzgas tú, no la IA.</Fb>}
           </>
         );
       }
 
       case 4: return (
         <>
-          <Tag>📖 Módulo 4 · GPT-3.5 vs GPT-4o</Tag>
-          <Title>GPT-3.5 vs GPT-4o: ¿cuál usar?</Title>
-          <Body>ChatGPT tiene dos versiones principales. No son iguales, GPT-4o es la versión profesional. Pero GPT-3.5 sigue siendo muy útil para muchas cosas.</Body>
+          <Tag>📖 Módulo 4 · Rápido vs. razonar</Tag>
+          <Title>¿Respuesta al instante o que se tome su tiempo?</Title>
+          <Body>Los nombres de las versiones cambian cada pocos meses — hoy se llaman de una forma y el año que viene de otra. Pero hay una elección que llevas años pudiendo hacer y que no va a desaparecer: <B>pedirle que responda ya, o pedirle que piense antes.</B></Body>
           <View style={styles.vsGrid}>
             <View style={[styles.vsCol, { backgroundColor: C.card2 }]}>
-              <View style={[styles.vsHeader, { backgroundColor: '#e2e8f0' }]}><Text style={[styles.vsHeaderText, { color: '#475569' }]}>GPT-3.5</Text></View>
-              {['✅ Completamente gratis', '✅ Muy rápido', '✅ Bueno para texto', '❌ No ve imágenes', '❌ No tiene voz nativa', '⚠️ Más errores en lógica'].map((t, i) => (
+              <View style={[styles.vsHeader, { backgroundColor: '#e2e8f0' }]}><Text style={[styles.vsHeaderText, { color: '#475569' }]}>⚡ Rápido</Text></View>
+              {['✅ Responde al instante', '✅ Perfecto para conversar', '✅ Ideal para ideas sueltas', '⚠️ Se equivoca más en lógica', '⚠️ Salta pasos sin avisar', '⚠️ No muestra cómo llegó'].map((t, i) => (
                 <Text key={i} style={styles.vsItem}>{t}</Text>
               ))}
             </View>
             <View style={[styles.vsCol, { backgroundColor: C.greenLight }]}>
-              <View style={[styles.vsHeader, { backgroundColor: C.greenBorder }]}><Text style={[styles.vsHeaderText, { color: C.okText }]}>GPT-4o</Text></View>
-              {['✅ Analiza imágenes', '✅ Modo de voz', '✅ DALL-E integrado', '✅ Razona mucho mejor', '✅ Menos errores', '⚠️ Versión gratis limitada'].map((t, i) => (
+              <View style={[styles.vsHeader, { backgroundColor: C.greenBorder }]}><Text style={[styles.vsHeaderText, { color: C.okText }]}>🧠 Razona</Text></View>
+              {['✅ Va paso a paso', '✅ Acierta más en problemas', '✅ Suele mostrar su proceso', '✅ Detecta trampas lógicas', '⚠️ Tarda bastante más', '⚠️ De más para lo simple'].map((t, i) => (
                 <Text key={i} style={styles.vsItem}>{t}</Text>
               ))}
             </View>
           </View>
-          <CardRow icon="💡" iconBg="#86efac" tint={C.greenLight} tintBorder={C.greenBorder} title="¿Cuándo usar GPT-3.5?">Para escribir textos, resumir, pedir explicaciones, traducir y practicar idiomas. ¡Para la mayoría de tareas escolares es más que suficiente!</CardRow>
-          <CardRow icon="🚀" iconBg="#d9f99d" tint="#f7fee7" tintBorder="#d9f99d" title="¿Cuándo necesitas GPT-4o?">Para analizar imágenes o fotos, generar imágenes con DALL-E, usar el modo de voz, o resolver problemas de lógica y matemáticas muy complejos.</CardRow>
-          <HlBox variant="green"><B>Truco de experto:</B>{'\n'}Empieza siempre con GPT-3.5 (es gratis). Si la respuesta no es suficientemente buena, cambia a GPT-4o. ¡Aprovecha los límites gratuitos de cada versión!</HlBox>
+          <CardRow icon="⚡" iconBg="#86efac" tint={C.greenLight} tintBorder={C.greenBorder} title={`¿Cuándo basta el ${MODOS_RESPUESTA.rapido.nombre.toLowerCase()}?`}>{MODOS_RESPUESTA.rapido.bueno.join('. ')}.</CardRow>
+          <CardRow icon="🧠" iconBg="#d9f99d" tint="#f7fee7" tintBorder="#d9f99d" title="¿Cuándo pedirle que razone?">{MODOS_RESPUESTA.razona.bueno.join('. ')}.</CardRow>
+          <HlBox variant="green"><B>Cómo se pide:</B>{'\n'}En algunas apps hay un botón ("pensar", "razonar", "modo extendido"). En todas funciona escribirlo: <B>"piénsalo paso a paso antes de responder"</B>. Ese truco te sirve en cualquier asistente, tenga el botón o no.</HlBox>
+          <HlBox variant="amber"><B>No pidas siempre el más potente.</B>{'\n'}Para "¿cómo se dice hola en japonés?" el modo que razona solo te hace esperar. Elegir bien también es criterio — y ese criterio te sirve aunque mañana cambien todos los nombres.</HlBox>
         </>
       );
 
       case 5: return (
         <>
-          <Tag>🧩 Módulo 5 · ¿Cuál versión usas?</Tag>
-          <Title>¿GPT-3.5 o GPT-4o?</Title>
-          <Text style={styles.subtitle}>Clasifica cada tarea según qué versión de ChatGPT usarías. Toca un chip y luego su columna (o arrástralo).</Text>
-          <Card><Text style={styles.cardText}>GPT-3.5 para texto, resúmenes, preguntas simples. GPT-4o para imágenes, voz, lógica compleja.</Text></Card>
+          <Tag>🧩 Módulo 5 · ¿Rápido o razonando?</Tag>
+          <Title>¿Le pides respuesta ya o que lo piense?</Title>
+          <Text style={styles.subtitle}>Clasifica cada tarea según cómo se la pedirías. Toca un chip y luego su columna (o arrástralo).</Text>
+          <Card><Text style={styles.cardText}>Rápido: una respuesta directa, un resumen, una traducción, ideas sueltas. Razonando: varios pasos, comparar y decidir, encontrar un error, trampas lógicas.</Text></Card>
           <View style={styles.chipWrap}>
             {dragItems.map((item, i) => ddPlaced[i] === undefined ? (
               <TouchableOpacity key={i} id={`dd-chip-${i}`} style={[styles.chip, ddSel === i && styles.chipOn]} disabled={ddSolved} onPress={() => setDdSel(ddSel === i ? null : i)}>
@@ -694,9 +697,9 @@ export default function Level19() {
             {ddAllPlaced && <Text style={{ color: C.placeholder, fontSize: 11 }}>Todas clasificadas ✓</Text>}
           </View>
           <View style={styles.dropRow}>
-            {(['35', '4o'] as const).map(zone => (
+            {(['rapido', 'razona'] as const).map(zone => (
               <TouchableOpacity key={zone} id={`dd-zone-${zone}`} activeOpacity={0.85} style={[styles.dropZone, ddOverZone === zone && styles.dropZoneOver]} disabled={ddSolved} onPress={() => ddPlace(zone)}>
-                <Text style={styles.dropHeader}>{zone === '35' ? '⚡ GPT-3.5' : '🌟 GPT-4o'}</Text>
+                <Text style={styles.dropHeader}>{zone === 'rapido' ? '⚡ Rápido' : '🧠 Razonando'}</Text>
                 {dragItems.map((item, idx) => ddPlaced[idx] === zone ? (
                   <TouchableOpacity key={idx} disabled={ddSolved} onPress={() => ddReturn(idx)} style={[styles.dropChip, ddChecked && (item.correct === zone ? styles.dropChipOk : styles.dropChipBad)]}>
                     <Text style={[styles.dropChipText, ddChecked && { color: item.correct === zone ? C.okText : C.failText }]}>{ddChecked ? (item.correct === zone ? '✓ ' : '✕ ') : ''}{item.text}</Text>
@@ -705,8 +708,8 @@ export default function Level19() {
               </TouchableOpacity>
             ))}
           </View>
-          {ddChecked && ddSolved && <Fb ok>✅ ¡Perfecto! Sabes cuándo cada versión es la mejor.</Fb>}
-          {ddChecked && !ddSolved && <Fb ok={false}>❌ Algunas no están bien (en rojo). Recuerda: imágenes, voz y análisis visual → GPT-4o; texto simple y cálculos → GPT-3.5. Toca las ✕ para reintentar.</Fb>}
+          {ddChecked && ddSolved && <Fb ok>✅ ¡Perfecto! Ya sabes cuándo pedir cada modo — y eso te va a seguir sirviendo cuando los nombres cambien.</Fb>}
+          {ddChecked && !ddSolved && <Fb ok={false}>❌ Algunas no están bien (en rojo). La pregunta clave: ¿hay <B>varios pasos</B> o hay que <B>comparar y decidir</B>? Entonces razonando. ¿Es una respuesta directa? Entonces rápido. Toca las ✕ para reintentar.</Fb>}
         </>
       );
 
@@ -766,7 +769,7 @@ export default function Level19() {
               <Text style={styles.exampleMonoText}>"Ilustración digital colorida estilo anime, un robot azul pequeño bailando tango en una plaza de Buenos Aires de noche, con expresión alegre y luces de colores reflejadas en el suelo mojado."</Text>
             </View>
           </Card>
-          <HlBox variant="green"><B>Solo con GPT-4o:</B>{'\n'}DALL-E solo funciona con GPT-4o. Si estás en GPT-3.5, ChatGPT te dirá que no puede generar imágenes. ¡Así puedes saber en qué versión estás!</HlBox>
+          <HlBox variant="green"><B>Ojo con el texto dentro de la imagen:</B>{'\n'}Si pides un cartel con palabras, muchas veces salen letras raras o mal escritas. Es de los fallos más comunes: pide la imagen sin texto y añádelo tú después.</HlBox>
         </>
       );
 
@@ -791,7 +794,7 @@ export default function Level19() {
             <Text style={styles.imgOutputLabel}>Tu prompt para DALL-E</Text>
             {imgComplete ? <Text style={styles.imgOutputText}>{imgPrompt}</Text> : <Text style={[styles.imgOutputText, { color: C.placeholder, fontStyle: 'italic' }]}>Selecciona las 4 opciones para ver el prompt completo.</Text>}
           </View>
-          <HlBox variant="lime"><B>Pruébalo de verdad:</B>{'\n'}Copia el prompt y abre ChatGPT con GPT-4o. Pega el prompt y escribe "crea esta imagen". ¡Tendrás tu ilustración en segundos!</HlBox>
+          <HlBox variant="lime"><B>Pruébalo de verdad:</B>{'\n'}Copia el prompt, abre ChatGPT y escribe "crea esta imagen". ¡Tendrás tu ilustración en segundos!</HlBox>
         </>
       );
 
@@ -859,7 +862,7 @@ export default function Level19() {
             <Text style={styles.scenarioText}>Yuki quería ver sus series de anime favoritas en inglés para mejorar su vocabulario. Pero no entendía nada y se frustraba. Sus clases de inglés en la escuela eran muy formales y aburridas. <Text style={styles.bold}>Necesitaba práctica real y conversacional.</Text></Text>
           </View>
           <CardRow icon="📅" iconBg="#86efac" tint={C.greenLight} tintBorder={C.greenBorder} title="Lo que hizo Yuki - Mes 1">Activó el modo de voz y le dijo en inglés: "You are a friendly English teacher for Japanese kids. Let's talk about My Hero Academia. Speak slowly and correct my mistakes gently." Practicaba 15 minutos cada noche.</CardRow>
-          <CardRow icon="📱" iconBg="#86efac" tint={C.greenLight} tintBorder={C.greenBorder} title="Lo que hizo Yuki - Mes 2">Empezó a subir capturas de sus series favoritas a ChatGPT con GPT-4o y preguntaba: "What does this character say here? Explain the expression." <B>Aprendía vocabulario del contexto que ya le encantaba.</B></CardRow>
+          <CardRow icon="📱" iconBg="#86efac" tint={C.greenLight} tintBorder={C.greenBorder} title="Lo que hizo Yuki - Mes 2">Empezó a subir capturas de sus series favoritas a ChatGPT y preguntaba: "What does this character say here? Explain the expression." <B>Aprendía vocabulario del contexto que ya le encantaba.</B></CardRow>
           <CardRow icon="🏆" iconBg="#d9f99d" tint="#f7fee7" tintBorder="#d9f99d" title="El resultado - 3 meses después">Yuki pasó de entender 10% del inglés a conversarlo con fluidez básica. En su siguiente examen sacó la nota más alta de su clase. <B>30 minutos diarios con ChatGPT hicieron más que 2 años de clases tradicionales.</B></CardRow>
           <HlBox variant="green"><B>Lo que puedes aprender de Yuki:</B>{'\n'}La clave fue la consistencia (todos los días), el contexto que le gustaba (anime) y pedir correcciones sin vergüenza. ¡ChatGPT nunca se ríe de tus errores, siempre te ayuda a mejorar!</HlBox>
         </>
@@ -1042,7 +1045,7 @@ export default function Level19() {
           <Text style={styles.completeSub}>Terminaste "ChatGPT: tu compañero de aventuras". ¡Ahora eres un experto en ChatGPT y sabes usar todas sus herramientas secretas!</Text>
           <Text style={styles.xpGained}>+<Text style={{ color: C.green }}>{xp}</Text> XP</Text>
           <View style={styles.skillsBox}>
-            {['Conozco los 5 superpoderes de ChatGPT: imágenes, voz, GPTs, archivos y código', 'Sé cuándo usar GPT-3.5 y cuándo necesito GPT-4o', 'Puedo crear prompts detallados para DALL-E y generar imágenes', 'Sé usar ChatGPT para estudiar de forma inteligente sin trampa', 'Detecto las alucinaciones y sé cuándo verificar información', 'Sé cuándo ChatGPT no es la herramienta correcta y cuál usar'].map((s, i, arr) => (
+            {['Conozco los 5 superpoderes de ChatGPT: imágenes, voz, GPTs, archivos y código', 'Sé cuándo pedir respuesta rápida y cuándo pedirle que razone', 'Puedo crear prompts detallados para DALL-E y generar imágenes', 'Sé usar ChatGPT para estudiar de forma inteligente sin trampa', 'Detecto las alucinaciones y sé cuándo verificar información', 'Sé cuándo ChatGPT no es la herramienta correcta y cuál usar'].map((s, i, arr) => (
               <View key={i} style={[styles.skillRow, i === arr.length - 1 && { marginBottom: 0 }]}>
                 <Text style={styles.skillCheck}>✓</Text><Text style={styles.skillText}>{s}</Text>
               </View>
@@ -1070,7 +1073,7 @@ export default function Level19() {
       case 2: return { label: 'Continuar →', enabled: true, onPress: next };
       case 1: case 4: case 6: case 8: case 11: case 13: case 15:
         return { label: 'Entendido →', enabled: true, onPress: next };
-      case 3: return detDone ? { label: 'Continuar →', enabled: true, onPress: next } : { label: 'Elige una respuesta', enabled: false, note: 'Toca la que creas que es GPT-4o', onPress: () => {} };
+      case 3: return detDone ? { label: 'Continuar →', enabled: true, onPress: next } : { label: 'Elige una respuesta', enabled: false, note: 'Toca la que creas que te sirve más', onPress: () => {} };
       case 5:
         if (!ddChecked || (!ddSolved && !ddAllCorrect)) return { label: 'Verificar →', enabled: ddAllPlaced || devMode, note: `Clasifica las ${dragItems.length} tareas · +20 XP`, onPress: verifyDd };
         return { label: 'Continuar →', enabled: true, onPress: next };
@@ -1180,7 +1183,7 @@ const styles = StyleSheet.create({
   hlBox: { paddingVertical: 12, paddingHorizontal: 14, borderTopRightRadius: 12, borderBottomRightRadius: 12, borderLeftWidth: 3, marginTop: 9, marginBottom: 13 },
   hlText: { fontSize: 12, lineHeight: 20, fontWeight: '500' },
 
-  // VS grid (GPT-3.5 vs GPT-4o)
+  // VS grid (rápido vs razonando)
   vsGrid: { flexDirection: 'row', gap: 8, marginTop: 4, marginBottom: 11 },
   vsCol: { flex: 1, borderRadius: 12, padding: 11, borderWidth: 1, borderColor: C.border },
   vsHeader: { marginBottom: 7, paddingVertical: 4, paddingHorizontal: 6, borderRadius: 7, alignItems: 'center' },
