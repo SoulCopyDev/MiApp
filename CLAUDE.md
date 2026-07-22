@@ -1,5 +1,8 @@
 # CLAUDE.md — AI Explorer
 
+> ⚠️ **Este repo es el proyecto para MENORES (9–17), y está congelado.**
+> El producto para adultos 18+ vive en un **repo separado**. No mezclar contenido entre ambos: enseñan catálogos de herramientas distintos porque las edades mínimas de las herramientas son incompatibles (Claude es 18+ sin excepción). Ver [`README.md`](./README.md).
+
 Referencia técnica completa del proyecto. Actualizar cuando cambien arquitectura, entidades, dependencias o convenciones.
 
 ## Contexto adicional (leer según tarea)
@@ -71,6 +74,8 @@ MiApp/
     ├── config/
     │   ├── avatarEmojis.ts  # Lista de emojis de avatar disponibles
     │   └── downloadConfig.ts # URLs de descarga de la app (APK, Play Store, App Store)
+    ├── content/
+    │   └── aiLandscape.ts   # Capa ÚNICA de datos volátiles de IA (modelos, herramientas, año de revisión)
     ├── components/
     │   ├── WebSidebar.tsx   # Sidebar de navegación para desktop (solo web)
     │   ├── WebPhoneFrame.tsx # Tarjeta centrada tipo teléfono para niveles/evals en web desktop
@@ -422,6 +427,7 @@ export const DOWNLOAD_CONFIG = {
 - **Niveles nuevos:** siempre incrementar `version` en `gameStore.ts` para disparar migración.
 - **dailyMission.ts:** no importar nada de `gameStore.ts` (evita dependencia circular — usa tipos estructurales propios).
 - **Fechas de racha:** usar `getLocalDate()` del store (hora local, no UTC).
+- **Datos volátiles de IA:** nunca hardcodear nombres de modelos, versiones, precios ni "el año actual" dentro de un nivel. Todo eso vive en `src/content/aiLandscape.ts` con `revisadoEn` + `fuente`. Ver `AUDIT-CONTENIDO.md` §9. Preferir ejes pedagógicos que no caduquen ("rápido vs. razonando") sobre nombres de versión ("GPT-3.5 vs GPT-4o", que duró 14 meses).
 - **Salir de un nivel:** usar `exitLevel()` de `src/utils/exitLevel.ts` (nunca `navigation.goBack()` ni `router.back()` directo). En web `Alert.alert` no dispara sus botones y `router.back()` no hace nada sin historial → `exitLevel()` usa `window.confirm` en web y cae a `/map` si no hay pantalla previa. Pasar `{ confirm: false }` al completar el nivel.
 
 ### Sin tests
