@@ -118,6 +118,10 @@ node .claude/cdp.mjs "<expresión JS a evaluar en la página>"
 Helpers que conviene inyectar al inicio de cada sesión (`window.__nodes`, `window.__click` por texto, `window.__type` para `TextInput`): los clicks deben despachar `pointerdown/mousedown/pointerup/mouseup/click`, porque RNW ignora un `.click()` pelado. Para escribir en un `TextInput` hay que usar el setter nativo de `HTMLTextAreaElement.prototype.value` + `input` event, o React no ve el cambio.
 
 **Limitación conocida:** CDP no dispara drag & drop HTML5 — los módulos de arrastre se verifican por el camino de tap-para-colocar.
+| CLEAN-01 | ✅ Resuelto | PR #14 — limpieza código muerto (BaseLevel, useFonts, src/types, ~105 decls/imports, 4 tokens theme, props legacy LevelProps en 39 archivos) |
+| BUG-01 | ✅ Resuelto | PR #14 — XPToast ahora respeta props bgColor/textColor (8 callers los pasaban) |
+| BUG-02 | ✅ Resuelto | PR #14 — Level1 nativeID → id en TouchableOpacity (prop inválida en types RN) |
+| BUG-03 | ✅ Resuelto | PR #14 — EvalFinal reconecta completeLevel(43) al botón de cierre (nunca marcaba completado) |
 
 ## Scripts disponibles
 

@@ -240,9 +240,9 @@ Flujo típico: contenido/pregunta → interacción → feedback → resultado co
 
 ### Agregar un nuevo mundo
 
-1. Crear carpeta `src/levels/World{N}/` con sus Level{M}.tsx
+1. Crear `src/levels/Level{N}.tsx` para cada nivel del mundo (numeración global continua)
 2. Agregar world a `INITIAL_WORLDS` en `gameStore.ts`
-3. Registrar todos sus niveles en `LevelScreen.tsx`
+3. Registrar todos sus niveles en `LevelScreen.tsx` (`LEVEL_COMPONENTS`)
 4. Agregar color scheme en `WORLD_COLORS` en `src/utils/trophies.ts`
 5. **Incrementar `version`** en persist (la migración lo maneja automáticamente)
 

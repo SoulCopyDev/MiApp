@@ -45,16 +45,18 @@ function checkQuiz() {
 
 ## Agregar un nivel nuevo
 
-1. Crear `src/levels/World{N}/Level{M}.tsx` (usar nivel existente del mismo mundo como referencia)
-2. Registrar en `LevelScreen.tsx` → `levelComponents[N][M] = World{N}Level{M}`
+Estructura plana con numeración global continua N1–N43 (ver CLAUDE.md).
+
+1. Crear `src/levels/Level{N}.tsx` (siguiente N disponible; usar un nivel existente como referencia)
+2. Registrar en `LevelScreen.tsx` → `LEVEL_COMPONENTS[N] = Level{N}`
 3. Agregar entrada en `INITIAL_WORLDS` en `gameStore.ts` (si no existe)
 4. **Incrementar `version`** en persist config de `gameStore.ts`
 
 ## Agregar un mundo nuevo
 
-1. Crear carpeta `src/levels/World{N}/` con todos sus niveles
+1. Crear `src/levels/Level{N}.tsx` para cada nivel del mundo (numeración global continua)
 2. Agregar world completo en `INITIAL_WORLDS` en `gameStore.ts`
-3. Registrar todos los niveles en `LevelScreen.tsx`
+3. Registrar todos los niveles en `LevelScreen.tsx` (`LEVEL_COMPONENTS`)
 4. Agregar color scheme en `WORLD_COLORS` en `src/utils/trophies.ts`
 5. Incrementar `version` en persist
 
